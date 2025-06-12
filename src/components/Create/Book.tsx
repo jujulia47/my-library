@@ -1,6 +1,6 @@
 "use client";
 
-import createBook from "@/actions/books";
+import createBook from "@/actions/createBooks";
 import { Database } from "@/utils/typings/supabase";
 import { useState } from "react";
 
@@ -12,7 +12,7 @@ type SerieProps = {
 
 //passando props para esse componente ser client side e o SerieList que é server side fica onde recebe esse componente
 //Precisa ser client side para conseguir validar os input conforme o usuário for clicando
-const NewBook = ({ series }: SerieProps) => {
+const CreateBook = ({ series }: SerieProps) => {
   const [singleBook, setSingleBook] = useState<string>("");
   const [library, setLibrary] = useState<string>("");
   const [status, setStatus] = useState<string>("");
@@ -212,4 +212,4 @@ const NewBook = ({ series }: SerieProps) => {
   );
 };
 
-export default NewBook;
+export default CreateBook;

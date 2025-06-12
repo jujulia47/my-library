@@ -1,5 +1,6 @@
 // import Image from "next/image";
-import NewBook from "@/components/NewBook";
+import CreateBook from "@/components/Create/Book";
+import CreateSerie from "@/components/Create/Serie";
 import { serieList } from "@/services/serie"
 
 
@@ -9,7 +10,8 @@ export default async function Home() {
   return (
     <section>
       Hello World!
-      < NewBook series={series}/>
+      {/* < CreateBook series={series}/> */}
+      < CreateSerie />
     </section>
   );
 }
