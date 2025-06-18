@@ -1,0 +1,64 @@
+import supabase from "@/utils/supabaseClient";
+
+export default async function updateBook(formData: FormData) {
+  const id = formData.get("id");
+  const title = formData.get("title") as string;
+  const author = formData.get("author") as string;
+  const cover = formData.get("cover") as string;
+  const single_book_value = formData.get("single_book");
+  const single_book = single_book_value === "true" ? true : false;
+  const serie_id = formData.get("serie_id");
+  const volume = Number(formData.get("volume") || 0);
+  const category = formData.get("category") as string;
+  const pages = Number(formData.get("pages") || 0);
+  const language = formData.get("language") as string;
+  const library_value = formData.get("library");
+  const library = library_value === "true" ? true : false;
+  const acquisition_date = (formData.get("acquisition_date") as string) || null;
+  const status = formData.get("status") as string;
+  const init_date = (formData.get("init_date") as string) || null;
+  const finish_date = (formData.get("finish_date") as string) || null;
+  const current_page = Number(formData.get("current_page") || 0);
+  const rating = Number(formData.get("rating") || 0);
+  const physical = formData.get("physical") as string;
+  const audiobook = formData.get("audiobook") as string;
+  const ebook = formData.get("ebook") as string;
+  const comments = formData.get("comments") as string;
+
+  console.log("idddd", id);
+
+  const { data, error } = await supabase
+    .from("book")
+    .update([
+      {
+        title,
+        author,
+        cover,
+        is_single_book: single_book,
+        serie_id,
+        volume,
+        category,
+        pages,
+        language,
+        library,
+        acquisition_date,
+        status,
+        init_date,
+        finish_date,
+        current_page,
+        rating,
+        version: [physical, audiobook, ebook],
+        comments,
+      },
+    ])
+    .eq("id", id)
+    .select();
+
+  if (error) {
+    console.log(error);
+  }
+
+  if (data) {
+    console.log("update", data);
+  }
+}

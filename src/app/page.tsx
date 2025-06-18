@@ -1,6 +1,8 @@
 // import Image from "next/image";
 import CreateBook from "@/components/Create/Book";
 import CreateSerie from "@/components/Create/Serie";
+import updateBook from "@/actions/updateBook";
+
 import { serieList } from "@/services/serie"
 
 
