@@ -1,5 +1,5 @@
 import UpdateBook from "@/components/Update/Book";
-import { bookList } from "@/services/book";
+import { bookById } from "@/services/book";
 import { serieList } from "@/services/serie"
 
 export default async function Page({
@@ -8,7 +8,7 @@ export default async function Page({
   params: Promise<{ id: number }>;
 }) {
   const { id } = await params;
-  const book = await bookList(id);
+  const book = await bookById(id);
   const series = await serieList();
 
 

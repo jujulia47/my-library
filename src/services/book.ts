@@ -3,16 +3,34 @@
 import supabase from "@/utils/supabaseClient";
 import { Database } from "@/utils/typings/supabase";
 
-type Book = Database["public"]["Tables"]["book"]["Update"];
+type BookUpdate = Database["public"]["Tables"]["book"]["Update"];
+type BookRead = Database["public"]["Tables"]["book"]["Row"];
 
-export async function bookList(id: any) {
+
+export async function bookById(id: number) {
   console.log("get book", id);
   
   const { data, error } = await supabase
     .from("book")
     .select()
     .eq("id", id)
-    .overrideTypes<Book[]>();
+    .overrideTypes<BookUpdate[]>();
+
+  if (error) {
+    console.log(error);
+  }
+  if (data) {
+    console.log(data);
+  }
+
+  return data
+}
+
+export async function bookList() {
+  const { data, error } = await supabase
+    .from("book")
+    .select()
+    .overrideTypes<BookRead[]>();
 
   if (error) {
     console.log(error);
