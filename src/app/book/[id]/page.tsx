@@ -20,10 +20,9 @@ export default async function Page({
 
   return (
     <>
-      <div>My Post: {id}</div>
-      <div>
+      <main>
         <UpdateBook id={id} book={book} series={series}/>
-      </div>
+      </main>
     </>
   );
 }
