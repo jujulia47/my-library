@@ -29,7 +29,7 @@ export type Database = {
           serie_id: number | null
           status: string
           title: string
-          version: string[] | null
+          version: Database["public"]["Enums"]["versions"][] | null
           volume: number | null
         }
         Insert: {
@@ -51,7 +51,7 @@ export type Database = {
           serie_id?: number | null
           status: string
           title: string
-          version?: string[] | null
+          version?: Database["public"]["Enums"]["versions"][] | null
           volume?: number | null
         }
         Update: {
@@ -73,7 +73,7 @@ export type Database = {
           serie_id?: number | null
           status?: string
           title?: string
-          version?: string[] | null
+          version?: Database["public"]["Enums"]["versions"][] | null
           volume?: number | null
         }
         Relationships: [
@@ -255,36 +255,36 @@ export type Database = {
       }
       serie: {
         Row: {
+          collection_complete: boolean | null
           created_at: string
           current_book_id: number | null
           finish_date: string | null
           id: number
           init_date: string | null
-          library_collection: boolean | null
           qty_volumes: number | null
           rating: number | null
           serie_name: string | null
           status: string | null
         }
         Insert: {
+          collection_complete?: boolean | null
           created_at?: string
           current_book_id?: number | null
           finish_date?: string | null
           id?: number
           init_date?: string | null
-          library_collection?: boolean | null
           qty_volumes?: number | null
           rating?: number | null
           serie_name?: string | null
           status?: string | null
         }
         Update: {
+          collection_complete?: boolean | null
           created_at?: string
           current_book_id?: number | null
           finish_date?: string | null
           id?: number
           init_date?: string | null
-          library_collection?: boolean | null
           qty_volumes?: number | null
           rating?: number | null
           serie_name?: string | null
@@ -346,7 +346,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      versions: "physical" | "audiobook" | "ebook"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -461,6 +461,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      versions: ["physical", "audiobook", "ebook"],
+    },
   },
 } as const
