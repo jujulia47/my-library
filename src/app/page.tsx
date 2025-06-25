@@ -3,6 +3,7 @@
 // import CreateBook from "@/components/Create/Book";
 // import CreateSerie from "@/components/Create/Serie";
 import ReadBook from "@/components/Read/ReadBook"
+import ReadQuote from "@/components/Read/ReadQuote";
 import ReadSerie from "@/components/Read/ReadSerie"
 import ReadWishlist from "@/components/Read/ReadWishlist";
 
@@ -19,6 +20,7 @@ export default async function Home() {
       < ReadBook />
       < ReadSerie />
       < ReadWishlist />
+      < ReadQuote />
     </section>
   );
 }
