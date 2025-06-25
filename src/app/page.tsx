@@ -6,7 +6,7 @@ import ReadBook from "@/components/Read/ReadBook"
 import ReadQuote from "@/components/Read/ReadQuote";
 import ReadSerie from "@/components/Read/ReadSerie"
 import ReadWishlist from "@/components/Read/ReadWishlist";
-
+import ReadCollection from "@/components/Read/ReadCollection";
 // import { serieList } from "@/services/serie"
 
 
@@ -21,6 +21,7 @@ export default async function Home() {
       < ReadSerie />
       < ReadWishlist />
       < ReadQuote />
+      < ReadCollection />
     </section>
   );
 }
