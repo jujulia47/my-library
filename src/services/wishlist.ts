@@ -1,15 +1,13 @@
-"use server";
-
 import supabase from "@/utils/supabaseClient";
 import { Database } from "@/utils/typings/supabase";
 
-type SerieRead = Database["public"]["Tables"]["serie"]["Row"];
+type WishlistRead = Database["public"]["Tables"]["wishlist"]["Row"];
 
-export async function serieList() {
+export async function wishlistList() {
   const { data, error } = await supabase
-    .from("serie")
+    .from("wishlist")
     .select()
-    .overrideTypes<SerieRead[]>();
+    .overrideTypes<WishlistRead[]>();
 
   if (error) {
     console.log(error);
@@ -20,4 +18,4 @@ export async function serieList() {
 
   return data
 }
-
+  

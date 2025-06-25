@@ -1,15 +1,13 @@
-"use server";
-
 import supabase from "@/utils/supabaseClient";
 import { Database } from "@/utils/typings/supabase";
 
-type SerieRead = Database["public"]["Tables"]["serie"]["Row"];
+type CollectionRead = Database["public"]["Tables"]["collection"]["Row"];
 
-export async function serieList() {
+export async function collectionList() {
   const { data, error } = await supabase
-    .from("serie")
+    .from("collection")
     .select()
-    .overrideTypes<SerieRead[]>();
+    .overrideTypes<CollectionRead[]>();
 
   if (error) {
     console.log(error);
@@ -20,4 +18,3 @@ export async function serieList() {
 
   return data
 }
-
