@@ -1,17 +1,18 @@
-import { bookList } from "@/services/book";
+import { serieList } from "@/services/serie";
 import Link from "next/link";
 import DeleteBtn from "./DeleteBtn";
 import clsx from "clsx";
-import { deleteBook } from "@/actions/deleteBook";
+import { deleteSerie } from "@/actions/deleteSerie";
+
 
 export default async function ReadBook() {
-  const books = await bookList();
+  const series = await serieList();
 
   return (
     <section
       className="min-h-screen py-10 px-2 font-serif bg-[#E1D9C9]"
     >
-      <h3 className="text-2xl font-bold mb-4 text-center">Books</h3>
+      <h3 className="text-2xl font-bold mb-4 text-center">Series</h3>
       <div className="max-w-4xl mx-auto">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm rounded-xl border border-[#AE9372] bg-[#E1D9C9]">
@@ -21,13 +22,13 @@ export default async function ReadBook() {
                   className="px-4 py-3 text-left font-bold uppercase tracking-wider text-[#212E40] rounded-tl-xl"
                   style={{ fontSize: "13px" }}
                 >
-                  Título
+                  Série
                 </th>
                 <th
                   className="px-4 py-3 text-left font-bold uppercase tracking-wider text-[#212E40]"
                   style={{ fontSize: "13px" }}
                 >
-                  Autor
+                  Volumes
                 </th>
                 <th
                   className="px-4 py-3 text-center font-bold uppercase tracking-wider text-[#212E40]"
@@ -50,32 +51,32 @@ export default async function ReadBook() {
               </tr>
             </thead>
             <tbody>
-              {books?.map((book, idx) => (
+              {series?.map((serie, idx) => (
                 <tr
-                  key={book.id}
+                  key={serie.id}
                   className="border-b last:border-b-0"
                   style={{
                     borderColor: "#AE9372",
                     background: idx % 2 === 0 ? "#fff" : "bg-[#E1D9C9]",
                   }}
                 >
-                  {/* titulo */}
+                  {/* Nome da série */}
                   <td
                     className="px-4 py-3 text-[#173125] whitespace-nowrap font-medium"
                     style={{ fontSize: "15px" }}
                   >
-                    {book.title}
+                    {serie.serie_name}
                   </td>
-                  {/* autor */}
+                  {/* Quantidade de volumes */}
                   <td
                     className="px-4 py-3 text-[#424C21] whitespace-nowrap"
                     style={{ fontSize: "15px" }}
                   >
-                    {book.author}
+                    {serie.qty_volumes}
                   </td>
-                  {/* status */}
+                  {/* Status */}
                   <td className="px-4 py-3 text-center whitespace-nowrap">
-                    {book.status === "reading" ? (
+                    {serie.status === "reading" ? (
                       <div className="relative inline-block group">
                         <span
                           className={clsx(
@@ -83,7 +84,7 @@ export default async function ReadBook() {
                             "bg-[#2B4A73]"
                           )}
                         >
-                          {book.status}
+                          {serie.status}
                         </span>
 
                         {/* Tooltip só aparece no hover */}
@@ -93,18 +94,18 @@ export default async function ReadBook() {
                               Início da leitura:
                             </span>
                             <span className="text-[13px] text-[#424C21] font-normal font-serif">
-                              {book.init_date
-                                ? new Date(book.init_date).toLocaleDateString()
+                              {serie.init_date
+                                ? new Date(serie.init_date).toLocaleDateString()
                                 : "-"}
                             </span>
                           </div>
 
                           <div className="flex gap-3 items-center">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#212E40] font-serif">
-                              Página atual:
+                              Volume atual:
                             </span>
                             <span className="text-[13px] text-[#424C21] font-normal font-serif">
-                              {book.current_page ?? "-"}
+                              {serie.current_book_id ?? "-"}
                             </span>
                           </div>
                         </div>
@@ -115,25 +116,25 @@ export default async function ReadBook() {
                         className={clsx(
                           "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#E1D9C9]",
                           {
-                            "bg-[#424C21]": book.status === "finish",
-                            "bg-[#B28B2B]": book.status === "tbr",
-                            "bg-[#8B3737]": book.status === "abandoned",
+                            "bg-[#424C21]": serie.status === "finish",
+                            "bg-[#B28B2B]": serie.status === "tbr",
+                            "bg-[#8B3737]": serie.status === "abandoned",
                           }
                         )}
                       >
-                        {book.status}
+                        {serie.status}
                       </span>
                     )}
                   </td>
-                  {/* avaliacao */}
+                  {/* Avaliação */}
                   <td
                     className="px-4 py-3 text-center whitespace-nowrap"
                     style={{ fontSize: "15px" }}
                   >
-                    {book.rating ? (
+                    {serie.rating ? (
                       <span
                         className="flex items-center justify-center gap-0.5"
-                        aria-label={`Avaliação: ${book.rating} de 5`}
+                        aria-label={`Avaliação: ${serie.rating} de 5`}
                       >
                         {Array.from({ length: 5 }).map((_, i) => (
                           <svg
@@ -142,7 +143,7 @@ export default async function ReadBook() {
                             height="14"
                             viewBox="0 0 20 20"
                             fill={
-                              i < Number(book.rating) ? "#B28B2B" : "none"
+                              i < Number(serie.rating) ? "#B28B2B" : "none"
                             }
                             stroke="#B28B2B"
                             strokeWidth="1.2"
@@ -161,11 +162,11 @@ export default async function ReadBook() {
                     )}
                   </td>
 
-                  {/* ações */}
+                  {/* Ações */}
                   <td className="px-4 py-3 whitespace-nowrap flex gap-3 items-center justify-center">
                     {/* Editar */}
                     <Link
-                      href={`/book/${book.id}`}
+                      href={`/serie/${serie.id}`}
                       className="p-1.5 rounded transition hover:bg-[#B27D57]/10"
                       aria-label="Editar"
                       title="Editar"
@@ -188,7 +189,7 @@ export default async function ReadBook() {
                     </Link>
                     {/* Visualizar */}
                     <Link
-                      href={`/book/view/${book.id}`}
+                      href={`/serie/view/${serie.id}`}
                       className="p-1.5 rounded transition hover:bg-[#424C21]/10"
                       aria-label="Visualizar"
                       title="Visualizar"
@@ -206,7 +207,7 @@ export default async function ReadBook() {
                       </svg>
                     </Link>
                     {/* Excluir */}
-                    <DeleteBtn id={book.id} action={deleteBook} />
+                    <DeleteBtn id={serie.id} action={deleteSerie} />
                   </td>
                 </tr>
               ))}
