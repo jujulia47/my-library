@@ -12,7 +12,6 @@ export default async function Home() {
 
   return (
     <section>
-      Hello World!
       {/* < CreateBook series={series}/> */}
       {/* < CreateSerie /> */}
       < ReadBook />
