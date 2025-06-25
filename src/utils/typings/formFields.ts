@@ -26,3 +26,8 @@ export interface CheckboxFieldProps extends React.InputHTMLAttributes<HTMLInputE
   label: string;
   className?: string;
 }
+
+export interface DeleteBtnProps {
+  id: number;
+  action: (id: number) => Promise<void>;
+}
