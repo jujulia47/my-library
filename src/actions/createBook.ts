@@ -34,30 +34,6 @@ export default async function createBook(formData: FormData) {
   const quote = formData.get("quote") as string
   const quote_page = Number(formData.get("quote_page") || 0)
 
-  // console.log("title", title, typeof title);
-  // console.log("author", author, typeof author);
-  // console.log("cover", cover, typeof cover);
-  // console.log("single_book", single_book, typeof single_book);
-  // console.log("serie", serie_id, typeof serie_id);
-  // console.log("volume", volume, typeof volume);
-  // console.log("category", category, typeof category);
-  // console.log("pages", pages, typeof pages);
-  // console.log("language", language, typeof language);
-  // console.log("library", library, typeof library);
-  // console.log("acquisition_date", acquisition_date, typeof acquisition_date);
-  // console.log("status", status, typeof status);
-  // console.log("init_date", init_date, typeof init_date);
-  // console.log("finish_date", finish_date, typeof finish_date);
-  // console.log("current_page", current_page, typeof current_page);
-  // console.log("rating", rating, typeof rating);
-  // console.log("physical", physical, typeof physical);
-  // console.log("audiobook", audiobook, typeof audiobook);
-  // console.log("ebook", ebook, typeof ebook);
-  // console.log("comments", comments, typeof comments);
-  // console.log("quote", quote, typeof quote);
-  // console.log("quote_page", quote_page, typeof quote_page);
-
-
   let serieId: number | null | FormDataEntryValue  = serie_id;
 
   //Se o campo do input tem algum valor
@@ -127,7 +103,6 @@ export default async function createBook(formData: FormData) {
     .single<Book>()
     // .overrideTypes<Book[]>();
 
-
   if (error) {
     console.log(error, "erro");
   }
@@ -141,10 +116,9 @@ export default async function createBook(formData: FormData) {
     .insert([{quote, page: quote_page, book_id: data?.id}]);
 
   if (quoteError) {
-    console.error(quoteError);
+    console.log(quoteError);
   }
   if(quotes) {
     console.log(quotes);
-    
   }
 }

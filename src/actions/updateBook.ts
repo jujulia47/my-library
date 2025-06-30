@@ -25,8 +25,6 @@ export default async function updateBook(formData: FormData) {
   const ebook = formData.get("ebook") as string;
   const comments = formData.get("comments") as string;
 
-  console.log("idddd", id);
-
   const { data, error } = await supabase
     .from("book")
     .update([
@@ -59,6 +57,6 @@ export default async function updateBook(formData: FormData) {
   }
 
   if (data) {
-    console.log("update", data);
+    console.log(data);
   }
 }

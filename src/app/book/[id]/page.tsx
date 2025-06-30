@@ -11,9 +11,6 @@ export default async function Page({
   const book = await bookById(id);
   const series = await serieList();
 
-
-  console.log("slug", id);
-
   if (!book) {
     return <div>Sem livros disponíveis.</div>;
   }

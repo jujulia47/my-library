@@ -18,9 +18,6 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
   const [library, setLibrary] = useState<string>("");
   const [status, setStatus] = useState<string>("");
 
-  console.log("id", id);
-  console.log("book", book);
-
   return book.length > 0 ? (
     <section>
       <form
@@ -79,8 +76,6 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
           />
           <label htmlFor="false">Não</label>
         </fieldset>
-
-        {/* Campo para adicionar a série */}
 
         <fieldset disabled={singleBook === "true"}>
           <legend>Serie</legend>

@@ -11,14 +11,7 @@ import supabase from "@/utils/supabaseClient";
     const init_date = (formData.get("init_date") as string) || null;
     const finish_date = (formData.get("finish_date") as string) || null;
     const rating = Number(formData.get("rating") || 0);
-
-    // console.log("serie_name", serie_name, typeof serie_name);
-    // console.log("qty_volumes", qty_volumes, typeof qty_volumes);
-    // console.log("library_colection", collection_complete, typeof collection_complete);
-    // console.log("status", status, typeof status);
-    // console.log("init_date", init_date , typeof init_date );
-    // console.log("finish_date", finish_date, typeof finish_date);
-    // console.log("rating", rating, typeof rating);
+    const current_book_id = formData.get("current_book") as string;
 
     // salvar no Supabase...
     const { data, error } = await supabase
@@ -29,9 +22,10 @@ import supabase from "@/utils/supabaseClient";
           qty_volumes,
           collection_complete,
           status,
+          current_book_id,
           init_date,
           finish_date,
-          rating
+          rating,
         },
       ])
       .select();

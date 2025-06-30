@@ -8,7 +8,6 @@ type BookRead = Database["public"]["Tables"]["book"]["Row"];
 
 
 export async function bookById(id: number) {
-  console.log("get book", id);
   
   const { data, error } = await supabase
     .from("book")
