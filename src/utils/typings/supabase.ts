@@ -279,16 +279,16 @@ export type Database = {
           status?: string | null
         }
         Update: {
-          collection_complete?: boolean | null
-          created_at?: string
-          current_book_id?: number | null
-          finish_date?: string | null
-          id?: number
-          init_date?: string | null
-          qty_volumes?: number | null
-          rating?: number | null
-          serie_name?: string | null
-          status?: string | null
+          collection_complete: boolean | null
+          created_at: string
+          current_book_id: number | null
+          finish_date: string | null
+          id: number
+          init_date: string | null
+          qty_volumes: number | null
+          rating: number | null
+          serie_name: string | null
+          status: string | null
         }
         Relationships: [
           {
