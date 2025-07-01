@@ -58,11 +58,11 @@ export default function UpdateSerie({ id, books, serie }: UpdateSerieProps) {
 
             <InputField
               label="Quantidade de volumes:"
-              name="qty_volume"
+              name="qty_volumes"
               id=""
               className="border"
               type="number"
-              defaultValue={serie[0].qty_volumes ?? ""}
+              defaultValue={serie[0].qty_volumes ?? 0}
               required
             />
 
