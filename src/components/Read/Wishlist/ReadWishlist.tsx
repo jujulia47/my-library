@@ -91,7 +91,7 @@ export default async function ReadWishlist() {
                         className="flex items-center justify-center gap-0.5"
                         aria-label={`Avaliação: ${wishlist.rating} de 5`}
                       >
-                        {wishlist.serie_id}
+                        {wishlist.serie?.serie_name}
                       </span>
                     ) : (
                       <span className="text-[#B27D57]">-</span>

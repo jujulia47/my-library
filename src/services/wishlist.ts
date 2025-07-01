@@ -7,7 +7,7 @@ type WishlistUpdate = Database["public"]["Tables"]["wishlist"]["Update"];
 export async function wishlistList() {
   const { data, error } = await supabase
     .from("wishlist")
-    .select()
+    .select(`*, serie(id, serie_name)`)
     .overrideTypes<WishlistRead[]>();
 
   if (error) {

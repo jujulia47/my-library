@@ -74,7 +74,7 @@ export default async function ReadQuote() {
                     className="px-4 py-3 text-[#424C21] whitespace-nowrap"
                     style={{ fontSize: "15px" }}
                   >
-                    {quote.book_id}
+                    {quote.book.title}
                   </td>
 
                   <td
