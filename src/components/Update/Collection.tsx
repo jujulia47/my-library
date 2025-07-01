@@ -214,7 +214,7 @@ const UpdateCollection = ({
                   : "hover:-translate-y-0.5"
               )}
             >
-              Update
+              Atualizar
             </button>
           </div>
         </form>

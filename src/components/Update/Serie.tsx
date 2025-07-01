@@ -185,7 +185,7 @@ export default function UpdateSerie({ id, books, serie }: UpdateSerieProps) {
                 : "hover:-translate-y-0.5"
             )}
           >
-            Update
+            Atualizar
           </button>
         </form>
       </div>

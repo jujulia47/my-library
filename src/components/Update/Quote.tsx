@@ -65,7 +65,7 @@ export default function UpdateQuote({ id, books, quote }: UpdateQuoteProps) {
               hover:-translate-y-0.5
               focus:outline-none focus:ring-2 focus:ring-[#B27D57] focus:ring-opacity-50"
           >
-            Cadastrar
+            Atualizar
           </button>
         </form>
       </div>

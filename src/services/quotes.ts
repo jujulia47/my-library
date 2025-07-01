@@ -7,7 +7,7 @@ type QuoteUpdate = Database["public"]["Tables"]["quote"]["Update"];
 export async function quoteList() {
   const { data, error } = await supabase
     .from("quote")
-    .select(`*, book(id, itle)`)
+    .select(`*, book(id, title)`)
     .overrideTypes<QuoteRead[]>();
 
   if (error) {
