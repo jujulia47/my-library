@@ -44,60 +44,6 @@ export async function collectionById(id: number) {
   return data
 }
 
-export async function collectionBookById(id: number) {
-  
-  const { data, error } = await supabase
-    .from("collection_book")
-    .select()
-    .eq("id", id)
-    .overrideTypes<CollectionUpdate[]>();
-
-  if (error) {
-    console.log(error);
-  }
-  if (data) {
-    console.log(data);
-  }
-
-  return data
-}
-
-export async function collectionSerieById(id: number) {
-  
-  const { data, error } = await supabase
-    .from("collection_serie")
-    .select()
-    .eq("id", id)
-    .overrideTypes<CollectionUpdate[]>();
-
-  if (error) {
-    console.log(error);
-  }
-  if (data) {
-    console.log(data);
-  }
-
-  return data
-}
-
-export async function collectionWishlistById(id: number) {
-  
-  const { data, error } = await supabase
-    .from("collection_wishlist")
-    .select()
-    .eq("id", id)
-    .overrideTypes<CollectionUpdate[]>();
-
-  if (error) {
-    console.log(error);
-  }
-  if (data) {
-    console.log(data);
-  }
-
-  return data
-}
-
 export async function getCollectionWithRelations(id: number) {
   // Busca a coleção principal
   const { data: collection, error: collectionError } = await supabase
