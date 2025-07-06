@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 
-export default function EmptyBooks({message, href, btnText, svg}: {message: string, href: string, btnText: string, svg: React.ReactNode}) {
+export default function EmptyTable({message, href, btnText, svg}: {message: string, href: string, btnText: string, svg: React.ReactNode}) {
   return (
     <div className="flex flex-col items-center justify-center h-full py-24">
       {svg}
