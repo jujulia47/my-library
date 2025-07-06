@@ -6,7 +6,7 @@ import clsx from "clsx";
 const SelectField = ({ label, className, options, ...props }: SelectFieldProps) => {
   return (
     <section className="space-y-2">
-      <label htmlFor={props.id || props.name} className="block text-sm font-medium text-[#5A3522] mb-1 ml-1">
+      <label htmlFor={props.id || props.name} className="block text-[14px] font-medium text-[#5A3522] mb-1 ml-1">
         {label}
       </label>
 

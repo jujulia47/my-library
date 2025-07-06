@@ -24,14 +24,14 @@ const MultiSelectWithTags: React.FC<MultiSelectWithTagsProps> = ({
 }) => {
   // Remove already selected from dropdown options
   const availableOptions = options.filter(
-    (opt) => !selected.some((sel) => sel.value === opt.value)
+    (opt) => !selected?.some((sel) => sel.value === opt.value)
   );
 
   return (
-    <div>
-      <label className="block mb-2 font-medium text-[#7F4B30]">{label}</label>
+    <div className="mb-4">
+      <label className="block mb-2 text-[14px] font-medium text-[#7F4B30]">{label}</label>
       <select
-        className="w-full border rounded-lg px-3 py-2 focus:ring-[#B27D57] focus:border-[#B27D57]"
+        className="w-full border border-[#7F4B30] rounded-lg px-3 py-2 focus:ring-[#B27D57] focus:border-[#7F4B30] text-[#5A3522]"
         onChange={(e) => {
           const value = e.target.value;
           const opt = options.find((o) => o.value === value);
@@ -52,7 +52,7 @@ const MultiSelectWithTags: React.FC<MultiSelectWithTagsProps> = ({
         ))}
       </select>
       <div className="flex flex-wrap gap-2 mt-2">
-        {selected.map((item) => (
+        {selected?.map((item) => (
           <span
             key={item.value}
             className="flex items-center bg-[#B27D57] text-[#E1D9C9] px-3 py-1 rounded-full text-sm shadow"
