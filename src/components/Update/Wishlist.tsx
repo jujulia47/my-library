@@ -6,6 +6,7 @@ import { useState } from "react";
 import InputField from "../FormFields/InputField";
 import SelectField from "../FormFields/SelectField";
 import ToggleSwitch from "../FormFields/ToggleSwitch";
+import { useRouter } from "next/navigation";
 
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
 type Wishlist = Database["public"]["Tables"]["wishlist"]["Update"];
@@ -19,11 +20,16 @@ type UpdateWishlistProps = {
 const UpdateWishlist = ({ id, series, wishlist }: UpdateWishlistProps) => {
   const [singleBook, setSingleBook] = useState<boolean>(wishlist[0].is_single_book ?? false);
 
+  const router = useRouter();
+
   return wishlist.length > 0 ? (
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
         <form
-          action={updateWishlist}
+          action={async (formData) => {
+            await updateWishlist(formData);
+            router.push("/wishlist");
+          }}
           className="p-8 rounded-2xl transition-all duration-300 
             bg-[#E1D9C9]
             shadow-[8px_8px_16px_#c9c2b3,-8px_-8px_16px_#f9f0df]
@@ -31,13 +37,13 @@ const UpdateWishlist = ({ id, series, wishlist }: UpdateWishlistProps) => {
             border border-[#AE9372]/30"
         >
           <input type="hidden" name="id" value={id} />
-          <div className="space-y-6">
+          <div className="space-y-6 text-[14px]">
             <InputField
               label="Book Title"
               type="text"
               name="book_name"
               required
-              className="w-full"
+              className="w-full text-[14px]"
               defaultValue={wishlist[0].book_name ?? ""}
             />
 
@@ -46,7 +52,7 @@ const UpdateWishlist = ({ id, series, wishlist }: UpdateWishlistProps) => {
               type="text"
               name="author"
               required
-              className="w-full"
+              className="w-full text-[14px]"
               defaultValue={wishlist[0].author ?? ""}
             />
 
@@ -57,7 +63,7 @@ const UpdateWishlist = ({ id, series, wishlist }: UpdateWishlistProps) => {
               checked={singleBook}
               value={singleBook.toString()}
               onChange={(e) => setSingleBook(e.target.checked)}
-              className="mb-4"
+              className="mb-4 text-[14px]"
             />
 
             <fieldset disabled={singleBook} className="space-y-4">
@@ -82,7 +88,7 @@ const UpdateWishlist = ({ id, series, wishlist }: UpdateWishlistProps) => {
               label="Volume"
               type="number"
               name="volume"
-              className="w-full"
+              className="w-full text-[14px]"
               defaultValue={wishlist[0].volume ?? ""}
               disabled={singleBook}
             />

@@ -4,17 +4,14 @@ import updateCollection from "@/actions/updateCollection";
 import { Database } from "@/utils/typings/supabase";
 import InputField from "../FormFields/InputField";
 import MultiSelectWithTags from "../FormFields/MultiSelectWithTags";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import clsx from "clsx";
+import { useRouter } from "next/navigation";
 
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
 type Book = Database["public"]["Tables"]["book"]["Row"];
 type Wishlist = Database["public"]["Tables"]["wishlist"]["Row"];
 type Collection = Database["public"]["Tables"]["collection"]["Update"];
-type CollectionBook = Database["public"]["Tables"]["collection_book"]["Row"];
-type CollectionSerie = Database["public"]["Tables"]["collection_serie"]["Row"];
-type CollectionWishlist = Database["public"]["Tables"]["collection_wishlist"]["Row"];
-// type CollectionRelations = CollectionBook[] | CollectionSerie[] | CollectionWishlist[];
 
 type RelationOption = {
   value: string;
@@ -48,21 +45,21 @@ const UpdateCollection = ({
 }: UpdateCollectionProps) => {
 
   const [selectedBooks, setSelectedBooks] = useState(
-    collectionRelations.books.map((book) => ({
+    collectionRelations?.books?.map((book) => ({
       value: book.value,
       label: book.label,
     }))
   );
   
   const [selectedSeries, setSelectedSeries] = useState(
-    collectionRelations.series.map((serie) => ({
+    collectionRelations?.series.map((serie) => ({
       value: serie.value,
       label: serie.label,
     }))
   );
   
   const [selectedWishlists, setSelectedWishlists] = useState(
-    collectionRelations.wishlist.map((wishBook) => ({
+    collectionRelations?.wishlist.map((wishBook) => ({
       value: wishBook.value,
       label: wishBook.label,
     }))
@@ -70,6 +67,8 @@ const UpdateCollection = ({
 
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   const handleFinishDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const finishDate = e.target.value;
@@ -84,7 +83,10 @@ const UpdateCollection = ({
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
         <form
-          action={updateCollection}
+          action={async (formData) => {
+            await updateCollection(formData);
+            router.push("/collection");
+          }}
           className="p-8 rounded-2xl transition-all duration-300 
             bg-[#E1D9C9]
             shadow-[8px_8px_16px_#c9c2b3,-8px_-8px_16px_#f9f0df]
@@ -109,7 +111,7 @@ const UpdateCollection = ({
               name="description"
               required
               defaultValue={collection[0]?.description ?? ""}
-              className="w-full"
+              className="w-full mb-4"
             />
           </div>
 
