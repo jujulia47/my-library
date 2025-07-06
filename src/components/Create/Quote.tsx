@@ -5,6 +5,7 @@ import { Database } from "@/utils/typings/supabase";
 import InputField from "../FormFields/InputField";
 import SelectField from "../FormFields/SelectField";
 import TextareaField from "../FormFields/TextareaField";
+import { useRouter } from "next/navigation";
 
 type Book = Database["public"]["Tables"]["book"]["Row"];
 
@@ -13,11 +14,15 @@ type QuoteProps = {
 };
 
 export default function CreateQuote({ books }: QuoteProps) {
+  const router = useRouter();
   return (
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
         <form
-          action={createQuote}
+          action={async (formData) => {
+            await createQuote(formData);
+            router.push("/quote");
+          }}
           className="p-8 rounded-2xl transition-all duration-300 
             bg-[#E1D9C9]
             shadow-[8px_8px_16px_#c9c2b3,-8px_-8px_16px_#f9f0df]
@@ -32,7 +37,7 @@ export default function CreateQuote({ books }: QuoteProps) {
                 <SelectField
                   label="Book"
                   name="book_id"
-                  required
+                  // required
                   options={
                     books?.map((book) => {
                       return {

@@ -6,6 +6,7 @@ import InputField from "../FormFields/InputField";
 import MultiSelectWithTags from "../FormFields/MultiSelectWithTags";
 import { useState } from "react";
 import clsx from "clsx";
+import { useRouter } from "next/navigation";
 
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
 type Book = Database["public"]["Tables"]["book"]["Row"];
@@ -18,6 +19,7 @@ type CollectionProps = {
 };
 
 const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
+  const router = useRouter()
   const [selectedBooks, setSelectedBooks] = useState<{value: string, label: string}[]>([]);
   const [selectedSeries, setSelectedSeries] = useState<{value: string, label: string}[]>([]);
   const [selectedWishlists, setSelectedWishlists] = useState<{value: string, label: string}[]>([]);
@@ -38,7 +40,10 @@ const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
         <form
-          action={createCollection}
+          action={async (formData) => {
+            await createCollection(formData);
+            router.push("/collection");
+          }}
           className="p-8 rounded-2xl transition-all duration-300 
             bg-[#E1D9C9]
             shadow-[8px_8px_16px_#c9c2b3,-8px_-8px_16px_#f9f0df]

@@ -7,6 +7,7 @@ import SelectField from "../FormFields/SelectField";
 import ToggleSwitch from "../FormFields/ToggleSwitch";
 import { Database } from "@/utils/typings/supabase";
 import clsx from "clsx";
+import { useRouter } from "next/navigation";
 
 type Book = Database["public"]["Tables"]["book"]["Row"];
 
@@ -15,6 +16,7 @@ type BookProps = {
 };
 
 export default function CreateSerie({ books }: BookProps) {
+  const router = useRouter();
   const [status, setStatus] = useState<string>("");
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
@@ -32,7 +34,10 @@ export default function CreateSerie({ books }: BookProps) {
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
         <form
-          action={createSerie}
+          action={async (formData) => {
+            await createSerie(formData);
+            router.push("/serie");
+          }}
           className="p-8 rounded-2xl transition-all duration-300 
             bg-[#E1D9C9]
             shadow-[8px_8px_16px_#c9c2b3,-8px_-8px_16px_#f9f0df]
