@@ -32,7 +32,7 @@ export default async function createBook(formData: FormData) {
   const ebook = formData.get("ebook") as string;
   const comments = formData.get("comments") as string;
   const quote = formData.get("quote") as string
-  const quote_page = Number(formData.get("quote_page") || 0)
+  const quote_page = Number(formData.get("quote_page") || null)
 
   let serieId: number | null | FormDataEntryValue  = serie_id;
 
@@ -110,15 +110,17 @@ export default async function createBook(formData: FormData) {
     console.log(data);
   }
 
-  // Agora cadastra as citações associadas a esse livro
-  const { data: quotes, error: quoteError } = await supabase
-    .from("quote")
-    .insert([{quote, page: quote_page, book_id: data?.id}]);
-
-  if (quoteError) {
-    console.log(quoteError);
-  }
-  if(quotes) {
-    console.log(quotes);
+  if(quote){
+    // Agora cadastra as citações associadas a esse livro
+    const { data: quotes, error: quoteError } = await supabase
+      .from("quote")
+      .insert([{quote, page: quote_page, book_id: data?.id}]);
+  
+    if (quoteError) {
+      console.log(quoteError);
+    }
+    if(quotes) {
+      console.log(quotes);
+    }
   }
 }
