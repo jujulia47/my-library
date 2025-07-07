@@ -69,7 +69,7 @@ const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
               type="text"
               name="description"
               required
-              className="w-full"
+              className="w-full mb-4"
             />
           </div>
 
