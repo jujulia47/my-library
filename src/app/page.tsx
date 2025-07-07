@@ -62,10 +62,9 @@ export default async function Home() {
         </h1>
         <blockquote className="mx-auto max-w-2xl text-center fantasy-quote">
           <p className="text-xl leading-relaxed">
-            "Nem todos os que vagueiam estão perdidos; os velhos que são fortes
-            não murcham,
+            ‘É um negócio perigoso, Frodo, sair da sua porta.
             <br />
-            raízes profundas não são atingidas pela geada."
+            Você pisa na estrada, e, se não controlar seus pés, não há como saber até onde você pode ser levado’
           </p>
           <footer className="mt-4 text-right text-lg font-medium">
             — J.R.R. Tolkien
