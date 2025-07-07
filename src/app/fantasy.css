@@ -1,0 +1,239 @@
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Uncial+Antiqua&display=swap');
+
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+*:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+:root {
+  --parchment: #f5f1e6;
+  --parchment-dark: #e8e0c9;
+  --parchment-light: #faf8f2;
+  --leather: #8b5a2b;
+  --gold: #c19a6b;
+  --gold-light: #d4b483;
+  --gold-dark: #8b6914;
+  --ink: #2c1810;
+  --wood: #5d4037;
+  --wood-light: #8d6e63;
+  --text-glow: 0 0 8px rgba(193, 154, 107, 0.6);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --transition: all 0.3s ease;
+}
+
+body, .fantasy-bg {
+  background: 
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29-22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23c19a6b' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, var(--parchment), var(--parchment-dark));
+  background-attachment: fixed;
+  background-size: cover, cover;
+  min-height: 100vh;
+  color: var(--ink);
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'IM Fell English SC', 'Uncial Antiqua', serif;
+  letter-spacing: 0.05em;
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@keyframes fantasy-star-glow {
+  0% { opacity: 1; text-shadow: 0 0 8px #fffbe6; }
+  100% { opacity: 0.7; text-shadow: 0 0 24px #fffbe6; }
+}
+
+@keyframes pageTurn {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(10deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.fantasy-particles-anim {
+  pointer-events: none;
+  position: fixed;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  opacity: 0.7;
+}
+
+.particles-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 4px rgba(217, 183, 111, 0.8));
+}
+
+.particles-svg circle {
+  animation: twinkle 3s infinite ease-in-out;
+  will-change: transform, opacity;
+}
+
+.fantasy-title {
+  font-family: 'Uncial Antiqua', 'IM Fell English SC', 'MedievalSharp', serif;
+  letter-spacing: 0.05em;
+  color: #7F4B30;
+  text-shadow: 0 2px 8px #f3e2c7, 0 1px 0 #bfa16f;
+}
+
+.fantasy-ornament {
+  color: #d9b76f;
+  font-size: 2.1rem;
+  text-shadow: 0 1px 0 #fffbe6, 0 0px 12px #bfa16f55;
+}
+
+.fantasy-stars {
+  position: absolute;
+  top: 8px; right: 18px;
+  font-size: 1.5rem;
+  color: #e7d6a1;
+  animation: fantasy-star-glow 2.2s infinite alternate;
+}
+
+.fantasy-hover:hover {
+  box-shadow: 0 0 16px 4px #bfa16f88, 0 2px 8px #bfa16f44;
+  background: #f3e2c7cc;
+  transition: box-shadow 0.3s, background 0.3s;
+}
+
+/* Melhorias de acessibilidade */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Efeito de brilho suave em elementos interativos */
+.hover-glow {
+  transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.hover-glow:hover {
+  filter: drop-shadow(0 0 8px rgba(193, 154, 107, 0.6));
+  transform: translateY(-2px);
+}
+
+.fantasy-block:hover {
+  animation: pageTurn 0.6s ease-in-out;
+}
+
+/* Tooltip personalizado */
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--wood);
+  color: var(--parchment);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0;
+  border-style: solid;
+  border-color: var(--wood) transparent transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+  bottom: calc(100% + 5px);
+}
+
+.fantasy-block {
+  background: var(--parchment-light);
+  border-radius: 8px;
+  border: 1px solid var(--gold-light);
+  box-shadow: 
+    var(--shadow-sm),
+    0 0 0 1px var(--gold-dark) inset;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fantasy-block.fantasy-hover:hover {
+  box-shadow: 0 0 32px 8px #d9b76f88, 0 2px 16px #bfa16f44;
+  background: #fffbe6cc;
+}
+
+.fantasy-quote {
+  color: var(--wood);
+  font-style: italic;
+  background: var(--parchment-dark);
+  border-left: 6px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  box-shadow: var(--shadow-sm);
+  padding: 1.8rem 2rem;
+  margin: 1.5rem 0;
+  border-right: 1px solid rgba(139, 90, 43, 0.1);
+  border-bottom: 1px solid rgba(139, 90, 43, 0.1);
+}
+
+.fantasy-frame {
+  border: 4px solid #d9b76f;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 #bfa16f99, 0 0 0 12px #fffbe6 inset;
+  position: relative;
+  overflow: hidden;
+}
