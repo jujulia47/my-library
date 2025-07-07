@@ -8,7 +8,7 @@ const ConfirmationPopUp = ({ message, onConfirm, onCancel }: ConfirmationPopUpPr
   return (
     <section className="fixed inset-0 bg-black/50 z-40">
       <section className="flex flex-col gap-4 p-4 bg-[#F3E2C7] rounded absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg z-50">
-        <h3 className="text-[14px] font-medium text-[#5A3522] mb-1 ml-1">{message}</h3>
+        <p className="text-[14px] font-medium text-[#5A3522] mb-1 ml-1">{message}</p>
         <article className="flex gap-2">
           <button type="button" className="px-4 py-2 bg-[#8B3737] text-[#F3E2C7] rounded font-bold" onClick={onCancel}>Não</button>
           <button
