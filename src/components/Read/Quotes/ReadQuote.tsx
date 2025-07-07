@@ -17,7 +17,7 @@ export default async function ReadQuote() {
           Citações cadastradas
         </h3>
         <Link
-          href="/create/quote"
+          href="/quote/new"
           className="px-6 py-2 bg-[#424C21] text-[#F3E2C7] rounded font-bold shadow hover:bg-[#7F4B30] transition-colors"
         >
           Nova Citação
@@ -27,7 +27,7 @@ export default async function ReadQuote() {
         <div className="flex-1 flex items-center justify-center">
           <EmptyTable
             message="Nenhuma citação cadastrada ainda."
-            href="/create/quote"
+            href="/quote/new"
             btnText="Cadastrar primeira citação"
             svg={
               <svg

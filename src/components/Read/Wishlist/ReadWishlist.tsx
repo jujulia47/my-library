@@ -17,7 +17,7 @@ export default async function ReadWishlist() {
           Wishlist cadastrada
         </h3>
         <Link
-          href="/create/wishlist"
+          href="/wishlist/new"
           className="px-6 py-2 bg-[#424C21] text-[#F3E2C7] rounded font-bold shadow hover:bg-[#7F4B30] transition-colors"
         >
           Novo livro na Wishlist
@@ -28,7 +28,7 @@ export default async function ReadWishlist() {
         <div className="flex-1 flex items-center justify-center">
           <EmptyTable
             message="Nenhum livro na wishlist ainda."
-            href="/create/wishlist"
+            href="/wishlist/new"
             btnText="Adicionar primeiro livro"
             svg={
               <svg

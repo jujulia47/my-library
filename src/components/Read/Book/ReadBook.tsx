@@ -19,7 +19,7 @@ export default async function ReadBook() {
           Livros cadastrados
         </h3>
         <Link
-          href="/create/book"
+          href="/book/new"
           className="px-6 py-2 bg-[#424C21] text-[#F3E2C7] rounded font-bold shadow hover:bg-[#7F4B30] transition-colors"
         >
           Novo Livro
@@ -30,7 +30,7 @@ export default async function ReadBook() {
         <div className="flex-1 flex items-center justify-center">
           <EmptyTable
             message="Nenhum livro cadastrado ainda."
-            href="/create/book"
+            href="/book/new"
             btnText="Cadastrar primeiro livro"
             svg={
               <svg

@@ -18,7 +18,7 @@ export default async function ReadSerie() {
           Séries cadastradas
         </h3>
         <Link
-          href="/create/serie"
+          href="/serie/new"
           className="px-6 py-2 bg-[#424C21] text-[#F3E2C7] rounded font-bold shadow hover:bg-[#7F4B30] transition-colors"
         >
           Nova Série
@@ -28,7 +28,7 @@ export default async function ReadSerie() {
         <div className="flex-1 flex items-center justify-center">
           <EmptyTable
             message="Nenhuma série cadastrada ainda."
-            href="/create/serie"
+            href="/serie/new"
             btnText="Cadastrar primeira série"
             svg={
               <svg

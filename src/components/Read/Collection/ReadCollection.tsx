@@ -17,7 +17,7 @@ export default async function ReadCollection() {
           Coleções cadastradas
         </h3>
         <Link
-          href="/create/collection"
+          href="/collection/new"
           className="px-6 py-2 bg-[#424C21] text-[#F3E2C7] rounded font-bold shadow hover:bg-[#7F4B30] transition-colors"
         >
           Nova Coleção
@@ -27,7 +27,7 @@ export default async function ReadCollection() {
         <div className="flex-1 flex items-center justify-center">
           <EmptyTable
             message="Nenhuma coleção cadastrada."
-            href="/create/collection"
+            href="/collection/new"
             btnText="Cadastrar primeira coleção"
             svg={
               <svg
