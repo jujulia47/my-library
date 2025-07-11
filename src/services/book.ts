@@ -29,6 +29,7 @@ export async function bookList() {
   const { data, error } = await supabase
     .from("book")
     .select()
+    .order("id", { ascending: true })
     .overrideTypes<BookRead[]>();
 
   if (error) {
