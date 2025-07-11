@@ -8,6 +8,8 @@ import ToggleSwitch from "../FormFields/ToggleSwitch";
 import { Database } from "@/utils/typings/supabase";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
+import ReturnBtn from "../ReturnBtn";
+import StarRating from "../FormFields/StarRating";
 
 type Book = Database["public"]["Tables"]["book"]["Row"];
 
@@ -21,18 +23,19 @@ export default function CreateSerie({ books }: BookProps) {
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
   const [collection_complete, setCollectionComplete] = useState<boolean>(false);
-
+  const [rating, setRating] = useState<number>(0);
   const handleFinishDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const finishDate = e.target.value;
     initDate && finishDate < initDate
       ? setDateError(
-        "A data de término não pode ser anterior à data de início."
-      )
+          "A data de término não pode ser anterior à data de início."
+        )
       : setDateError(null);
   };
   return (
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
+        <ReturnBtn href="/serie" btnText="Voltar" />
         <form
           action={async (formData) => {
             await createSerie(formData);
@@ -44,105 +47,84 @@ export default function CreateSerie({ books }: BookProps) {
             hover:shadow-[10px_10px_20px_#c9c2b3,-10px_-10px_20px_#f9f0df]
             border border-[#AE9372]/30"
         >
-          <div className="space-y-6">
-            <InputField
-              label="Nome da Série"
-              name="serie_name"
-              id=""
-              className="border"
-              type="text"
-              required
-            />
+          <div className="bg-[#F5F1E9] p-8 rounded-xl shadow-inner border border-[#E1D9C9] mb-8">
+            <div className="space-y-6">
+              <InputField
+                label="Nome da Série"
+                name="serie_name"
+                id=""
+                className="border"
+                type="text"
+                required
+              />
 
-            <InputField
-              label="Quantidade de volumes:"
-              name="qty_volume"
-              id=""
-              className="border"
-              type="number"
-              required
-            />
+              <InputField
+                label="Quantidade de volumes:"
+                name="qty_volume"
+                id=""
+                className="border"
+                type="number"
+                required
+              />
 
-            <ToggleSwitch
-              label="Coleção Completa"
-              name="collection_complete"
-              id="collection_complete"
-              checked={collection_complete}
-              value={collection_complete.toString()}
-              onChange={(e) => setCollectionComplete(e.target.checked)}
-              className="mb-4"
-            />
-          </div>
+              <ToggleSwitch
+                label="Coleção Completa"
+                name="collection_complete"
+                id="collection_complete"
+                checked={collection_complete}
+                value={collection_complete.toString()}
+                onChange={(e) => setCollectionComplete(e.target.checked)}
+                className="mb-4"
+              />
+              <SelectField
+                label="Status da Leitura"
+                name="status"
+                required
+                options={[
+                  { value: "tbr", label: "TBR" },
+                  { value: "reading", label: "Lendo" },
+                  { value: "finish", label: "Finalizado" },
+                  { value: "abandoned", label: "Abandonado" },
+                ]}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full"
+              />
 
-          <div>
-            <div className="space-y-8">
               <div className="space-y-6">
-                <SelectField
-                  label="Status da Leitura"
-                  name="status"
-                  required
-                  options={[
-                    { value: "tbr", label: "TBR" },
-                    { value: "reading", label: "Lendo" },
-                    { value: "finish", label: "Finalizado" },
-                    { value: "abandoned", label: "Abandonado" },
-                  ]}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full"
-                />
+                {["reading", "finish", "abandoned"].includes(status) && (
+                  <InputField
+                    label="Data de Início da Leitura"
+                    name="init_date"
+                    type="date"
+                    required
+                    className="w-full"
+                    onChange={(e) => {
+                      setInitDate(e.target.value);
+                    }}
+                  />
+                )}
 
-                <div className="space-y-6">
-                  {["reading", "finish", "abandoned"].includes(status) && (
-                    <InputField
-                      label="Data de Início da Leitura"
-                      name="init_date"
-                      type="date"
-                      required
-                      className="w-full"
-                      onChange={(e) => {
-                        setInitDate(e.target.value);
-                      }}
-                    />
-                  )}
-
-                  {status === "reading" && (
-                    <fieldset>
-                      {books?.length !== 0 && (
-                        <SelectField
-                          label="Current Book"
-                          name="current_book"
-                          options={
-                            books?.map((bookName) => {
-                              return {
-                                value: bookName.id ?? "",
-                                label: bookName.title ?? "",
-                              };
-                            }) || []
-                          }
-                        />
-                      )}
-                    </fieldset>
-                  )}
-
-                  {status === "finish" && (
-                    <div className="space-y-6">
-                      <InputField
-                        name="finish_date"
-                        label="Data finalização da Leitura"
-                        type="date"
-                        onChange={handleFinishDateChange}
-                        className="w-full"
+                {status === "reading" && (
+                  <fieldset>
+                    {books?.length !== 0 && (
+                      <SelectField
+                        label="Current Book"
+                        name="current_book"
+                        options={
+                          books?.map((bookName) => {
+                            return {
+                              value: bookName.id ?? "",
+                              label: bookName.title ?? "",
+                            };
+                          }) || []
+                        }
                       />
-                      <InputField
-                        name="rating"
-                        label="Avaliação"
-                        type="number"
-                        className="w-full"
-                      />
-                    </div>
-                  )}
+                    )}
+                  </fieldset>
+                )}
 
-                  {status === "abandoned" && (
+                {status === "finish" && (
+                  <div className="space-y-6">
                     <InputField
                       name="finish_date"
                       label="Data finalização da Leitura"
@@ -150,34 +132,52 @@ export default function CreateSerie({ books }: BookProps) {
                       onChange={handleFinishDateChange}
                       className="w-full"
                     />
-                  )}
-                </div>
-                {dateError && (
-                  <p className="text-red-600 text-sm mt-4">{dateError}</p>
+
+                    <StarRating
+                      name="rating"
+                      label="Avaliação"
+                      value={rating}
+                      onChange={setRating}
+                    />
+                  </div>
+                )}
+
+                {status === "abandoned" && (
+                  <InputField
+                    name="finish_date"
+                    label="Data finalização da Leitura"
+                    type="date"
+                    onChange={handleFinishDateChange}
+                    className="w-full"
+                  />
                 )}
               </div>
+              {dateError && (
+                <p className="text-red-600 text-sm mt-4">{dateError}</p>
+              )}
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={!!dateError}
-            className={clsx(
-              "w-full px-6 py-3 rounded-xl text-[#E1D9C9] font-medium cursor-pointer mt-8",
-              "bg-gradient-to-r from-[#B27D57] to-[#7F4B30]",
-              "shadow-[4px_4px_8px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.1)]",
-              "hover:shadow-[6px_6px_12px_rgba(0,0,0,0.25),-3px_-3px_6px_rgba(255,255,255,0.15)]",
-              "active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]",
-              "transition-all duration-200 transform",
-              "hover:-translate-y-0.5",
-              "focus:outline-none focus:ring-2 focus:ring-[#B27D57] focus:ring-opacity-50",
-              dateError
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:-translate-y-0.5"
-            )}
-          >
-            Cadastrar
-          </button>
+          <div className="flex justify-end mt-8">
+            <button
+              type="submit"
+              disabled={!!dateError}
+              className={clsx(
+                "w-full px-6 py-3 rounded-xl text-[#E1D9C9] font-medium cursor-pointer mt-8",
+                "bg-gradient-to-r from-[#B27D57] to-[#7F4B30]",
+                "shadow-[4px_4px_8px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.1)]",
+                "hover:shadow-[6px_6px_12px_rgba(0,0,0,0.25),-3px_-3px_6px_rgba(255,255,255,0.15)]",
+                "active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)]",
+                "transition-all duration-200 transform",
+                "hover:-translate-y-0.5",
+                "focus:outline-none focus:ring-2 focus:ring-[#B27D57] focus:ring-opacity-50",
+                dateError
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:-translate-y-0.5"
+              )}
+            >
+              Cadastrar
+            </button>
+          </div>
         </form>
       </div>
     </section>
