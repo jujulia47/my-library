@@ -10,6 +10,8 @@ import clsx from "clsx";
 import Link from "next/link";
 import CheckboxField from "../FormFields/CheckboxField";
 import { useRouter } from "next/navigation";
+import ReturnBtn from "../ReturnBtn";
+import StarRating from "../FormFields/StarRating";
 
 type Book = Database["public"]["Tables"]["book"]["Update"];
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
@@ -21,11 +23,15 @@ interface UpdateBookProps {
 }
 
 const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
-  const [singleBook, setSingleBook] = useState<boolean>(false);
-  const [library, setLibrary] = useState<boolean>(false);
-  const [status, setStatus] = useState<string>("");
-  const [initDate, setInitDate] = useState<string>("")
+  const [singleBook, setSingleBook] = useState<boolean>(
+    book[0].is_single_book || false
+  );
+  const [library, setLibrary] = useState<boolean>(book[0].library || false);
+  const [status, setStatus] = useState<string>(book[0].status || "");
+  const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
+  const [rating, setRating] = useState<number>(book[0]?.rating ?? 0);
+  const [openInput, setOpenInput] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState(1);
   const steps = [
     { title: "Informações Básicas", number: 1 },
@@ -47,12 +53,17 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
 
   const handleFinishDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const finishDate = e.target.value;
-    (initDate && finishDate < initDate) ? setDateError("A data de término não pode ser anterior à data de início.") : setDateError(null);
+    initDate && finishDate < initDate
+      ? setDateError(
+          "A data de término não pode ser anterior à data de início."
+        )
+      : setDateError(null);
   };
 
   return book.length > 0 ? (
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
+        <ReturnBtn href="/book" btnText="Voltar" />
         <form
           action={async (formData) => {
             await updateBook(formData);
@@ -75,8 +86,9 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                     <div
                       className="h-full bg-gradient-to-r from-[#B27D57] to-[#7F4B30] transition-all duration-500 ease-out"
                       style={{
-                        width: `${(currentStep - 1) * (100 / (steps.length - 1))
-                          }%`,
+                        width: `${
+                          (currentStep - 1) * (100 / (steps.length - 1))
+                        }%`,
                         height: "100%",
                         maxWidth: "100%",
                         borderRadius: "4px",
@@ -100,13 +112,13 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                       className={clsx(
                         "flex items-center justify-center w-12 h-12 rounded-full text-sm font-medium transition-all duration-300",
                         isActive &&
-                        "bg-gradient-to-br from-[#B27D57] to-[#8E5D3D] text-[#E1D9C9] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)] border border-[#AE9372]/30 scale-110",
+                          "bg-gradient-to-br from-[#B27D57] to-[#8E5D3D] text-[#E1D9C9] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)] border border-[#AE9372]/30 scale-110",
                         isCompleted &&
+                          !isActive &&
+                          "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
                         !isActive &&
-                        "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
-                        !isActive &&
-                        !isCompleted &&
-                        "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]"
+                          !isCompleted &&
+                          "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]"
                       )}
                     >
                       {isCompleted ? (
@@ -133,10 +145,10 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                         "mt-2 text-xs font-medium transition-colors",
                         isActive && "text-[#7F4B30] font-semibold",
                         isCompleted &&
-                        "text-[#424C21] group-hover:text-[#173125]",
+                          "text-[#424C21] group-hover:text-[#173125]",
                         !isActive &&
-                        !isCompleted &&
-                        "text-[#7F4B30] group-hover:text-[#7F4B30]"
+                          !isCompleted &&
+                          "text-[#7F4B30] group-hover:text-[#7F4B30]"
                       )}
                     >
                       {step.title}
@@ -224,34 +236,86 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                           className="mb-4"
                         />
                       </div>
+                      {singleBook === false && (
+                        <>
+                          <div className="mt-4" />
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              {openInput ? (
+                                <InputField
+                                  label="Adicionar nova Série"
+                                  type="text"
+                                  name="serie_name"
+                                  className="w-full"
+                                  disabled={singleBook}
+                                />
+                              ) : (
+                                <fieldset className="w-full">
+                                  {series?.length !== 0 && (
+                                    <SelectField
+                                      label="Série"
+                                      name="serie_id"
+                                      disabled={singleBook}
+                                      options={
+                                        series?.map((serieName) => ({
+                                          value: serieName.id ?? "",
+                                          label: serieName.serie_name ?? "",
+                                        })) || []
+                                      }
+                                    />
+                                  )}
+                                </fieldset>
+                              )}
+                            </div>
+                            <div className="relative group">
+                              <button
+                                type="button"
+                                onClick={() => setOpenInput(!openInput)}
+                                className={clsx(
+                                  "flex items-center justify-center w-8 h-8 rounded-full mt-6",
+                                  "text-[#7F4B30] font-medium text-lg bg-[#E1D9C9]",
+                                  "border border-[#AE9372]/30 cursor-pointer",
+                                  "shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)]",
+                                  "hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)]",
+                                  "active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
+                                  "transition-all duration-200 transform hover:scale-105",
+                                  "focus:outline-none focus:ring-2 focus:ring-[#B27D57] focus:ring-opacity-50",
+                                  "shrink-0"
+                                )}
+                                aria-label={
+                                  openInput
+                                    ? "Fechar formulário de nova série"
+                                    : "Adicionar nova série"
+                                }
+                              >
+                                {openInput ? "×" : "+"}
+                              </button>
+                              <span
+                                className={clsx(
+                                  "absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1",
+                                  "text-xs text-white bg-[#5A3522] rounded",
+                                  "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+                                  "whitespace-nowrap pointer-events-none",
+                                  "shadow-lg z-10",
+                                  "transform -translate-y-1 group-hover:translate-y-0 transition-transform duration-200"
+                                )}
+                              >
+                                {openInput
+                                  ? "Fechar"
+                                  : "Adicionar uma nova série"}
+                              </span>
+                            </div>
+                          </div>
 
-                      <fieldset>
-                        {series?.length !== 0 && (
-                          <SelectField
-                            label="Serie"
-                            name="serie_id"
+                          <InputField
+                            label="Volume"
+                            type="number"
+                            name="volume"
+                            className="w-full"
                             disabled={singleBook}
-                            // required={!singleBook}
-                            defaultValue={book[0]?.serie_id ?? ""}
-                            options={
-                              series?.map((serieName) => {
-                                return {
-                                  value: serieName.id ?? "",
-                                  label: serieName.serie_name ?? "",
-                                };
-                              }) || []
-                            }
                           />
-                        )}
-                      </fieldset>
-
-                      <InputField
-                        label="Volume"
-                        type="number"
-                        name="volume"
-                        defaultValue={book[0]?.volume ?? ""}
-                        className="w-full"
-                      />
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -270,7 +334,6 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                       className="mb-4"
                     />
                   </div>
-
 
                   {library && (
                     <InputField
@@ -310,7 +373,9 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                           type="date"
                           defaultValue={book[0]?.init_date ?? ""}
                           className="w-full"
-                          onChange={(e) => { setInitDate(e.target.value) }}
+                          onChange={(e) => {
+                            setInitDate(e.target.value);
+                          }}
                         />
                       )}
 
@@ -334,12 +399,11 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                             onChange={handleFinishDateChange}
                             className="w-full"
                           />
-                          <InputField
+                          <StarRating
                             name="rating"
                             label="Avaliação"
-                            type="number"
-                            defaultValue={book[0]?.rating ?? ""}
-                            className="w-full"
+                            value={Number(rating)}
+                            onChange={setRating}
                           />
                         </div>
                       )}
@@ -373,7 +437,9 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                   />
 
                   <fieldset className="flex flex-col gap-2 mt-6">
-                    <legend className="mb-2 font-semibold text-[#5A3522] text-base">Versão do Livro</legend>
+                    <legend className="mb-2 font-semibold text-[#5A3522] text-base">
+                      Versão do Livro
+                    </legend>
                     <div className="flex flex-row gap-8">
                       <CheckboxField
                         label="Físico"
