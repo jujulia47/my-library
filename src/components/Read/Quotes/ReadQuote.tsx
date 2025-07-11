@@ -129,7 +129,7 @@ export default async function ReadQuote() {
                     >
                       {/* Citação */}
                       <td
-                        className="px-4 py-3 text-[#173125] whitespace-nowrap font-medium"
+                        className="px-4 py-3 text-[#173125] whitespace-nowrap font-medium max-w-3xs overflow-hidden text-ellipsis line-clamp-<1> "
                         style={{ fontSize: "15px" }}
                       >
                         {quote.quote}
