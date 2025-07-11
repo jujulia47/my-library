@@ -7,6 +7,7 @@ import InputField from "../FormFields/InputField";
 import SelectField from "../FormFields/SelectField";
 import ToggleSwitch from "../FormFields/ToggleSwitch";
 import { useRouter } from "next/navigation";
+import ReturnBtn from "../ReturnBtn";
 
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
 
@@ -21,6 +22,7 @@ const CreateWishlist = ({ series }: SerieProps) => {
   return (
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
+        <ReturnBtn href="/wishlist" btnText="Voltar" />
         <form
           action={async (formData) => {
             await createWishlist(formData);

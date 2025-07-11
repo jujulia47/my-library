@@ -6,6 +6,7 @@ import InputField from "../FormFields/InputField";
 import SelectField from "../FormFields/SelectField";
 import TextareaField from "../FormFields/TextareaField";
 import { useRouter } from "next/navigation";
+import ReturnBtn from "../ReturnBtn";
 
 type Book = Database["public"]["Tables"]["book"]["Row"];
 
@@ -18,6 +19,7 @@ export default function CreateQuote({ books }: QuoteProps) {
   return (
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
+        <ReturnBtn href="/quote" btnText="Voltar" />
         <form
           action={async (formData) => {
             await createQuote(formData);
