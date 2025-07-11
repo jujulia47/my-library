@@ -1,3 +1,5 @@
+'use server'
+
 import supabase from "@/utils/supabaseClient";
 
 export async function deleteSerie(id: number) {
