@@ -24,6 +24,8 @@ export default function CreateSerie({ books }: BookProps) {
   const [dateError, setDateError] = useState<string | null>(null);
   const [collection_complete, setCollectionComplete] = useState<boolean>(false);
   const [rating, setRating] = useState<number>(0);
+  const [volumes, setVolumes] = useState<number | null>(null);
+
   const handleFinishDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const finishDate = e.target.value;
     initDate && finishDate < initDate
@@ -65,7 +67,18 @@ export default function CreateSerie({ books }: BookProps) {
                 className="border"
                 type="number"
                 required
+                onChange={(e) => {
+                  setVolumes(Number(e.target.value));
+                }}
               />
+
+              {volumes !== null && volumes < 2 ? (
+                <p className="text-red-600 text-sm mt-4">
+                  A série deve ter pelo menos 2 volumes.
+                </p>
+              ) : (
+                <></>
+              )}
 
               <ToggleSwitch
                 label="Coleção Completa"
@@ -160,9 +173,9 @@ export default function CreateSerie({ books }: BookProps) {
           <div className="flex justify-end mt-8">
             <button
               type="submit"
-              disabled={!!dateError}
+              disabled={volumes !== null && volumes < 2 || !!dateError}
               className={clsx(
-                "w-full px-6 py-3 rounded-xl text-[#E1D9C9] font-medium cursor-pointer mt-8",
+                "w-full px-6 py-3 rounded-xl text-[#E1D9C9] font-medium mt-8",
                 "bg-gradient-to-r from-[#B27D57] to-[#7F4B30]",
                 "shadow-[4px_4px_8px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.1)]",
                 "hover:shadow-[6px_6px_12px_rgba(0,0,0,0.25),-3px_-3px_6px_rgba(255,255,255,0.15)]",
@@ -170,9 +183,9 @@ export default function CreateSerie({ books }: BookProps) {
                 "transition-all duration-200 transform",
                 "hover:-translate-y-0.5",
                 "focus:outline-none focus:ring-2 focus:ring-[#B27D57] focus:ring-opacity-50",
-                dateError
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:-translate-y-0.5"
+                volumes !== null && volumes < 2 || dateError
+                  ? "opacity-50 cursor-not-allowed cursor-default"
+                  : "hover:-translate-y-0.5 cursor-pointer"
               )}
             >
               Cadastrar
