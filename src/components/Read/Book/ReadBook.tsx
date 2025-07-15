@@ -234,7 +234,7 @@ export default async function ReadBook() {
                       <td className="px-4 py-3 whitespace-nowrap flex gap-3 items-center justify-center">
                         {/* Editar */}
                         <Link
-                          href={`/book/${book.id}`}
+                          href={`/book/edit/${book.id}`}
                           className="p-1.5 rounded transition hover:bg-[#B27D57]/10"
                           aria-label="Editar"
                           title="Editar"
@@ -257,7 +257,7 @@ export default async function ReadBook() {
                         </Link>
                         {/* Visualizar */}
                         <Link
-                          href={`/book/view/${book.id}`}
+                          href={`/book/${book.slug}`}
                           className="p-1.5 rounded transition hover:bg-[#7F4B30]/10"
                           aria-label="Visualizar"
                           title="Visualizar"

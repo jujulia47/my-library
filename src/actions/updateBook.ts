@@ -3,6 +3,7 @@ import supabase from "@/utils/supabaseClient";
 export default async function updateBook(formData: FormData) {
   const id = formData.get("id");
   const title = formData.get("title") as string;
+  const slug = formData.get("slug") as string;
   const author = formData.get("author") as string;
   const cover = formData.get("cover") as string;
   const single_book_value = formData.get("single_book");
@@ -30,6 +31,7 @@ export default async function updateBook(formData: FormData) {
     .update([
       {
         title,
+        slug,
         author,
         cover,
         is_single_book: single_book,

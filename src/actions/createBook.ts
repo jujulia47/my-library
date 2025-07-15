@@ -8,6 +8,7 @@ type Book = Database["public"]["Tables"]["book"]["Row"];
 
 export default async function createBook(formData: FormData) {
   const title = formData.get("title") as string;
+  const slug = formData.get("slug") as string;
   const author = formData.get("author") as string;
   const cover = formData.get("cover") as string;
   const single_book_value = formData.get("single_book");
@@ -80,6 +81,7 @@ export default async function createBook(formData: FormData) {
     .insert([
       {
         title,
+        slug,
         author,
         cover,
         is_single_book: single_book,
