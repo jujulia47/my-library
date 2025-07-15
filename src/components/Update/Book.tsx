@@ -24,10 +24,10 @@ interface UpdateBookProps {
 
 const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
   const [singleBook, setSingleBook] = useState<boolean>(
-    book[0].is_single_book || false
+    book[0]?.is_single_book || false
   );
-  const [library, setLibrary] = useState<boolean>(book[0].library || false);
-  const [status, setStatus] = useState<string>(book[0].status || "");
+  const [library, setLibrary] = useState<boolean>(book[0]?.library || false);
+  const [status, setStatus] = useState<string>(book[0]?.status || "");
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
   const [rating, setRating] = useState<number>(book[0]?.rating ?? 0);
@@ -55,8 +55,8 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
     const finishDate = e.target.value;
     initDate && finishDate < initDate
       ? setDateError(
-          "A data de término não pode ser anterior à data de início."
-        )
+        "A data de término não pode ser anterior à data de início."
+      )
       : setDateError(null);
   };
 
@@ -86,9 +86,8 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                     <div
                       className="h-full bg-gradient-to-r from-[#B27D57] to-[#7F4B30] transition-all duration-500 ease-out"
                       style={{
-                        width: `${
-                          (currentStep - 1) * (100 / (steps.length - 1))
-                        }%`,
+                        width: `${(currentStep - 1) * (100 / (steps.length - 1))
+                          }%`,
                         height: "100%",
                         maxWidth: "100%",
                         borderRadius: "4px",
@@ -112,13 +111,13 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                       className={clsx(
                         "flex items-center justify-center w-12 h-12 rounded-full text-sm font-medium transition-all duration-300",
                         isActive &&
-                          "bg-gradient-to-br from-[#B27D57] to-[#8E5D3D] text-[#E1D9C9] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)] border border-[#AE9372]/30 scale-110",
+                        "bg-gradient-to-br from-[#B27D57] to-[#8E5D3D] text-[#E1D9C9] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)] border border-[#AE9372]/30 scale-110",
                         isCompleted &&
-                          !isActive &&
-                          "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
                         !isActive &&
-                          !isCompleted &&
-                          "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]"
+                        "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
+                        !isActive &&
+                        !isCompleted &&
+                        "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]"
                       )}
                     >
                       {isCompleted ? (
@@ -145,10 +144,10 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                         "mt-2 text-xs font-medium transition-colors",
                         isActive && "text-[#7F4B30] font-semibold",
                         isCompleted &&
-                          "text-[#424C21] group-hover:text-[#173125]",
+                        "text-[#424C21] group-hover:text-[#173125]",
                         !isActive &&
-                          !isCompleted &&
-                          "text-[#7F4B30] group-hover:text-[#7F4B30]"
+                        !isCompleted &&
+                        "text-[#7F4B30] group-hover:text-[#7F4B30]"
                       )}
                     >
                       {step.title}
@@ -199,19 +198,26 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                         defaultValue={book[0]?.pages ?? ""}
                         className="w-full"
                       />
+
+                      <InputField
+                        label="Slug"
+                        type="text"
+                        name="slug"
+                        defaultValue={book[0]?.slug ?? ""}
+                        className="w-full"
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-6 bg-[#F5F1E9]/50 p-8 rounded-xl shadow-inner border border-[#E1D9C9]">
                     <div className="space-y-4">
-                      <InputField
+                    <InputField
                         label="Categoria"
                         type="text"
                         name="category"
                         defaultValue={book[0]?.category ?? ""}
                         className="w-full"
                       />
-
                       <SelectField
                         label="Idioma"
                         name="language"
@@ -255,6 +261,7 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                                     <SelectField
                                       label="Série"
                                       name="serie_id"
+                                      defaultValue={book[0]?.serie_id ?? ""}
                                       disabled={singleBook}
                                       options={
                                         series?.map((serieName) => ({
@@ -313,6 +320,7 @@ const UpdateBook = ({ id, book, series }: UpdateBookProps) => {
                             name="volume"
                             className="w-full"
                             disabled={singleBook}
+                            defaultValue={book[0]?.volume ?? ""}
                           />
                         </>
                       )}
