@@ -173,7 +173,7 @@ export default async function ReadSerie() {
                                   Volume atual:
                                 </span>
                                 <span className="text-[13px] text-[#A05C41] font-normal font-serif">
-                                  {serie.current_book_id ?? "-"}
+                                  {serie.book?.title ?? "-"}
                                 </span>
                               </div>
                             </div>
