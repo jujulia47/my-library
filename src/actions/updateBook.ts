@@ -4,7 +4,7 @@ export default async function updateBook(formData: FormData) {
   const id = formData.get("id");
   const title = formData.get("title") as string;
   const author = formData.get("author") as string;
-  const cover = formData.get("cover") as string;
+  const cover = formData.get("cover") as File;
   const single_book_value = formData.get("single_book");
   const single_book = single_book_value === "true" ? true : false;
   const serie_id = formData.get("serie_id");
@@ -25,13 +25,33 @@ export default async function updateBook(formData: FormData) {
   const ebook = formData.get("ebook") as string;
   const comments = formData.get("comments") as string;
 
+  let coverPath: string | null = null;
+
+  if (cover) {
+    const { data: coverData, error } = await supabase
+      .storage
+      .from("images")
+      .upload(cover.name, cover, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (error) {
+      console.log(error);
+    }
+    if (coverData) {
+      console.log(coverData);
+      coverPath = coverData.path;
+    }
+  }
+
   const { data, error } = await supabase
     .from("book")
     .update([
       {
         title,
         author,
-        cover,
+        cover: coverPath,
         is_single_book: single_book,
         serie_id,
         volume,
