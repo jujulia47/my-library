@@ -1,6 +1,7 @@
 import UpdateBook from "@/components/Update/Book";
 import { bookById } from "@/services/book";
 import { serieList } from "@/services/serie"
+import { imagesUrl } from "@/services/images";
 
 export default async function Page({
   params,
@@ -10,6 +11,7 @@ export default async function Page({
   const { id } = await params;
   const book = await bookById(id);
   const series = await serieList();
+  const imageUrl = await imagesUrl(book?.[0]?.cover ?? "");
 
   if (!book) {
     return <div>Sem livros disponíveis.</div>;
@@ -18,7 +20,7 @@ export default async function Page({
   return (
     <>
       <main>
-        <UpdateBook id={id} book={book} series={series}/>
+        <UpdateBook id={id} book={book} series={series} imageUrl={imageUrl}/>
       </main>
     </>
   );

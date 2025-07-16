@@ -10,7 +10,7 @@ export default async function createBook(formData: FormData) {
   const title = formData.get("title") as string;
   const slug = formData.get("slug") as string;
   const author = formData.get("author") as string;
-  const cover = formData.get("cover") as string;
+  const cover = formData.get("cover") as File;
   const single_book_value = formData.get("single_book");
   const single_book = single_book_value === "true" ? true : false;
   const serie_id = formData.get("serie_id");
@@ -36,6 +36,7 @@ export default async function createBook(formData: FormData) {
   const quote_page = Number(formData.get("quote_page") || null)
 
   let serieId: number | null | FormDataEntryValue  = serie_id;
+  let coverPath: string | null = null;
 
   //Se o campo do input tem algum valor
   if (serie_name) {
@@ -75,6 +76,23 @@ export default async function createBook(formData: FormData) {
     }
   }
 
+  if(cover){
+    const { data: coverData, error } = await supabase
+    .storage
+    .from("images")
+    .upload(cover.name, cover, {
+      cacheControl: "3600",
+      upsert: true,
+    });
+
+    if(error){
+      console.log(error);
+    }
+    if(coverData){
+      console.log(coverData);
+      coverPath = coverData.path;
+    }
+  }
   // salvar no Supabase...
   const { data, error } = await supabase
     .from("book")
@@ -83,7 +101,7 @@ export default async function createBook(formData: FormData) {
         title,
         slug,
         author,
-        cover,
+        cover: coverPath,
         is_single_book: single_book,
         serie_id: serieId,
         volume,
