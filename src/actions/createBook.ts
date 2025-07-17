@@ -16,9 +16,9 @@ export default async function createBook(formData: FormData) {
   const serie_id = formData.get("serie_id");
   //pegar o valor do input no formulário
   const serie_name = formData.get("serie_name");
-  const volume = Number(formData.get("volume") || 0);
+  const volume = Number(formData.get("volume") || null);
   const category = formData.get("category") as string;
-  const pages = Number(formData.get("pages") || 0);
+  const pages = Number(formData.get("pages") || null);
   const language = formData.get("language") as string;
   const library_value = formData.get("library");
   const library = library_value === "true" ? true : false;
@@ -26,8 +26,8 @@ export default async function createBook(formData: FormData) {
   const status = formData.get("status") as string;
   const init_date = (formData.get("init_date") as string) || null;
   const finish_date = (formData.get("finish_date") as string) || null;
-  const current_page = Number(formData.get("current_page") || 0);
-  const rating = Number(formData.get("rating") || 0);
+  const current_page = Number(formData.get("current_page") || null);
+  const rating = Number(formData.get("rating") || null);
   const physical = formData.get("physical") as string;
   const audiobook = formData.get("audiobook") as string;
   const ebook = formData.get("ebook") as string;

@@ -6,10 +6,12 @@ import { Database } from "@/utils/typings/supabase";
 type BookUpdate = Database["public"]["Tables"]["book"]["Update"];
 type BookRead = Database["public"]["Tables"]["book"]["Row"];
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
+type Quote = Database["public"]["Tables"]["quote"]["Row"];
 
 // tipo para book com o relacionamento serie carregado
 type BookWithSerie = BookRead & {
   serie: Serie | null;
+  quote: Quote[];
 };
 
 export async function bookById(id: number) {
@@ -32,7 +34,7 @@ export async function bookById(id: number) {
 export async function bookSlug(slug: string) {
   const { data, error } = await supabase
     .from("book")
-    .select(`*, serie!book_serie_id_fkey(*)`)
+    .select(`*, serie!book_serie_id_fkey(*), quote(*)`)
     .eq("slug", slug)
     .overrideTypes<BookWithSerie[]>();
 

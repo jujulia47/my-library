@@ -227,6 +227,7 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
                                 src={coverUrl}
                                 alt="Pré-visualização da capa"
                                 fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                 className="object-cover"
                               />
                               <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">

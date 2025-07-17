@@ -151,7 +151,7 @@ export default async function ReadBook() {
                             <span
                               className={clsx(
                                 "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif transition-transform duration-150 text-[#F3E2C7] cursor-pointer hover:scale-105",
-                                "bg-[#2B4A73]"
+                                "bg-[#2B4A73] capitalize"
                               )}
                             >
                               {book.status}
@@ -183,7 +183,7 @@ export default async function ReadBook() {
                         ) : (
                           <span
                             className={clsx(
-                              "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#F3E2C7]",
+                              "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#F3E2C7] capitalize",
                               {
                                 "bg-[#D35230]": book.status === "finish",
                                 "bg-[#B28B2B]": book.status === "tbr",

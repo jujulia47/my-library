@@ -1,5 +1,6 @@
 import { bookSlug } from "@/services/book";
 import DetailsBookPage from "@/components/DetailsPage/Book";
+import { imagesUrl } from "@/services/images";
 
 export default async function Page({
   params,
@@ -9,6 +10,7 @@ export default async function Page({
   const { slug } = await params;
 
   const book = await bookSlug(slug);
+  const imageUrl = await imagesUrl(book?.[0]?.cover ?? "");
 
   if (!book) {
     return <div>Livro não encontrado.</div>;
@@ -16,7 +18,7 @@ export default async function Page({
 
   return (
     <main>
-      <DetailsBookPage book={book}/>
+      <DetailsBookPage book={book} imageUrl={imageUrl}/>
     </main>
   );
 }
