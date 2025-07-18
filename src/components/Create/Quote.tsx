@@ -53,6 +53,13 @@ export default function CreateQuote({ books }: QuoteProps) {
             </fieldset>
 
             <InputField label="Page" name="page" type="number" required />
+
+            <InputField
+              label="Slug"
+              type="text"
+              name="slug"
+              className="w-full mb-4"
+            />
           </div>
 
           <button

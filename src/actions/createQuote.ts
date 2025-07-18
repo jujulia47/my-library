@@ -5,6 +5,7 @@ import supabase from "@/utils/supabaseClient";
   export default async function createQuote(formData: FormData) {
 
     const quote = formData.get("quote") as string;
+    const slug = formData.get("slug") as string;
     const page = formData.get("page") as string;
     const book_id = formData.get("book_id") as string;
 
@@ -14,6 +15,7 @@ import supabase from "@/utils/supabaseClient";
       .insert([
         {
           quote,
+          slug,
           page,
           book_id,
         },

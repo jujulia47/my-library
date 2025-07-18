@@ -6,6 +6,7 @@ export default async function updateQuote(formData: FormData) {
 
   const id = formData.get("id");
   const quote = formData.get("quote") as string;
+  const slug = formData.get("slug") as string;
   const page = formData.get("page") as string;
   const book_id = formData.get("book_id") as string;
 
@@ -14,6 +15,7 @@ export default async function updateQuote(formData: FormData) {
     .update([
       {
         quote,
+        slug,
         page,
         book_id,
       },

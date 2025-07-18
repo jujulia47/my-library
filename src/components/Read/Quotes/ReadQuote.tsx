@@ -104,12 +104,6 @@ export default async function ReadQuote() {
                       Página
                     </th>
                     <th
-                      className="px-4 py-3 text-center font-bold uppercase tracking-wider text-[#F3E2C7] bg-[#7F4B30]"
-                      style={{ fontSize: "13px" }}
-                    >
-                      Avaliação
-                    </th>
-                    <th
                       className="px-4 py-3 text-center font-bold uppercase tracking-wider text-[#F3E2C7] bg-[#7F4B30] rounded-tr-xl"
                       style={{ fontSize: "13px" }}
                     >
@@ -150,46 +144,11 @@ export default async function ReadQuote() {
                           <span className="text-[#B27D57]">-</span>
                         )}
                       </td>
-                      {/* Avaliação (igual a books, mas pode ser omitido se não existir) */}
-                      <td
-                        className="px-4 py-3 text-center whitespace-nowrap"
-                        style={{ fontSize: "15px" }}
-                      >
-                        {quote.rating ? (
-                          <span
-                            className="flex items-center justify-center gap-0.5"
-                            aria-label={`Avaliação: ${quote.rating} de 5`}
-                          >
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <svg
-                                key={i}
-                                width="14"
-                                height="14"
-                                viewBox="0 0 20 20"
-                                fill={
-                                  i < Number(quote.rating) ? "#B28B2B" : "none"
-                                }
-                                stroke="#B28B2B"
-                                strokeWidth="1.2"
-                                aria-hidden="true"
-                                style={{
-                                  display: "inline",
-                                  verticalAlign: "middle",
-                                }}
-                              >
-                                <polygon points="10,2 12.5,7.5 18.5,8 14,12 15.5,18 10,15 4.5,18 6,12 1.5,8 7.5,7.5" />
-                              </svg>
-                            ))}
-                          </span>
-                        ) : (
-                          <span className="text-[#B27D57]">-</span>
-                        )}
-                      </td>
                       {/* ações */}
                       <td className="px-4 py-3 whitespace-nowrap flex gap-3 items-center justify-center">
                         {/* Editar */}
                         <Link
-                          href={`/quote/${quote.id}`}
+                          href={`/quote/edit/${quote.id}`}
                           className="p-1.5 rounded transition hover:bg-[#B27D57]/10"
                           aria-label="Editar"
                           title="Editar"
@@ -212,7 +171,7 @@ export default async function ReadQuote() {
                         </Link>
                         {/* Visualizar */}
                         <Link
-                          href={`/quote/view/${quote.id}`}
+                          href={`/quote/${quote.slug}`}
                           className="p-1.5 rounded transition hover:bg-[#7F4B30]/10"
                           aria-label="Visualizar"
                           title="Visualizar"
