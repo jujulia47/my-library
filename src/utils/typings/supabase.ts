@@ -20,7 +20,7 @@ export type Database = {
           author: string
           category: string | null
           comments: string | null
-          cover: string
+          cover: string | null
           created_at: string
           current_page: number | null
           finish_date: string | null
@@ -43,7 +43,7 @@ export type Database = {
           author: string
           category?: string | null
           comments?: string | null
-          cover: string
+          cover?: string | null
           created_at?: string
           current_page?: number | null
           finish_date?: string | null
@@ -66,7 +66,7 @@ export type Database = {
           author?: string
           category?: string | null
           comments?: string | null
-          cover?: string
+          cover?: string | null
           created_at?: string
           current_page?: number | null
           finish_date?: string | null
@@ -325,6 +325,7 @@ export type Database = {
           id: number
           is_single_book: boolean | null
           serie_id: number | null
+          slug: string | null
           volume: number | null
         }
         Insert: {
@@ -334,6 +335,7 @@ export type Database = {
           id?: number
           is_single_book?: boolean | null
           serie_id?: number | null
+          slug?: string | null
           volume?: number | null
         }
         Update: {
@@ -343,6 +345,7 @@ export type Database = {
           id?: number
           is_single_book?: boolean | null
           serie_id?: number | null
+          slug?: string | null
           volume?: number | null
         }
         Relationships: [

@@ -20,3 +20,24 @@
   border-radius: 50%;
   background: rgba(245, 158, 11, 0.3);
 }
+
+
+/* global.css ou module.css */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  /* background: linear-gradient(to right, #fbbf24, #f59e0b); */
+}
+
+/* Para Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #fbbf24 transparent;
+}

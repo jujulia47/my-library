@@ -6,6 +6,7 @@ import supabase from "@/utils/supabaseClient";
 
     const id = formData.get("id");
     const serie_name = formData.get("serie_name") as string;
+    const slug = formData.get("slug") as string;
     const qty_volumes = formData.get("qty_volumes") as string;
     const collection_complete = formData.get("collection_complete") as string;
     const status = formData.get("status") as string;
@@ -19,6 +20,7 @@ import supabase from "@/utils/supabaseClient";
       .update([
         {
           serie_name,
+          slug,
           qty_volumes,
           collection_complete,
           status,

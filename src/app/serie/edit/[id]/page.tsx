@@ -10,11 +10,9 @@ export default async function Page({
   const { id } = await params;
   const serie = await serieById(id);
   const books = await bookList();
-
   if (!serie) {
-    return <div>Sem Série disponíveis.</div>;
+    return <div>Série não encontrada.</div>;
   }
-
   return (
     <>
       <main>

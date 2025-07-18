@@ -34,11 +34,11 @@ export default function UpdateSerie({ id, books, serie }: UpdateSerieProps) {
     const finishDate = e.target.value;
     initDate && finishDate < initDate
       ? setDateError(
-          "A data de término não pode ser anterior à data de início."
-        )
+        "A data de término não pode ser anterior à data de início."
+      )
       : setDateError(null);
   };
-  
+
   return serie?.length > 0 ? (
     <section className="min-h-screen bg-[#E1D9C9] py-12 px-4 sm:px-6 lg:px-8 font-serif">
       <div className="max-w-4xl mx-auto">
@@ -76,6 +76,16 @@ export default function UpdateSerie({ id, books, serie }: UpdateSerieProps) {
                 type="number"
                 defaultValue={serie[0].qty_volumes ?? 0}
                 required
+              />
+
+              <InputField
+                label="Slug"
+                name="slug"
+                id="slug"
+                className="border"
+                type="text"
+                required
+                defaultValue={serie[0].slug ?? ""}
               />
 
               <ToggleSwitch

@@ -149,7 +149,7 @@ export default async function ReadSerie() {
                             <span
                               className={clsx(
                                 "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif transition-transform duration-150 text-[#F3E2C7] cursor-pointer hover:scale-105",
-                                "bg-[#2B4A73]"
+                                "bg-[#2B4A73] capitalize"
                               )}
                             >
                               {serie.status}
@@ -181,7 +181,7 @@ export default async function ReadSerie() {
                         ) : (
                           <span
                             className={clsx(
-                              "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#F3E2C7]",
+                              "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#F3E2C7] capitalize",
                               {
                                 "bg-[#D35230]": serie.status === "finish",
                                 "bg-[#B28B2B]": serie.status === "tbr",
@@ -232,7 +232,7 @@ export default async function ReadSerie() {
                       <td className="px-4 py-3 whitespace-nowrap flex gap-3 items-center justify-center">
                         {/* Editar */}
                         <Link
-                          href={`/serie/${serie.id}`}
+                          href={`/serie/edit/${serie.id}`}
                           className="p-1.5 rounded transition hover:bg-[#B27D57]/10"
                           aria-label="Editar"
                           title="Editar"
@@ -255,7 +255,7 @@ export default async function ReadSerie() {
                         </Link>
                         {/* Visualizar */}
                         <Link
-                          href={`/serie/view/${serie.id}`}
+                          href={`/serie/${serie.slug}`}
                           className="p-1.5 rounded transition hover:bg-[#7F4B30]/10"
                           aria-label="Visualizar"
                           title="Visualizar"

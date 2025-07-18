@@ -30,8 +30,8 @@ export default function CreateSerie({ books }: BookProps) {
     const finishDate = e.target.value;
     initDate && finishDate < initDate
       ? setDateError(
-          "A data de término não pode ser anterior à data de início."
-        )
+        "A data de término não pode ser anterior à data de início."
+      )
       : setDateError(null);
   };
   return (
@@ -79,6 +79,15 @@ export default function CreateSerie({ books }: BookProps) {
               ) : (
                 <></>
               )}
+
+              <InputField
+                label="Slug"
+                name="slug"
+                id="slug"
+                className="border"
+                type="texr"
+                required
+              />
 
               <ToggleSwitch
                 label="Coleção Completa"

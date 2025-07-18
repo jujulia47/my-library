@@ -1,6 +1,6 @@
 import supabase from "@/utils/supabaseClient";
 
-export async function imagesUrl(path: string) {
+export function imagesUrl(path: string) {
   const { data } = supabase
     .storage
     .from("images")
