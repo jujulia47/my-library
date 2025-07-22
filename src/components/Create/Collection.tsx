@@ -21,9 +21,9 @@ type CollectionProps = {
 
 const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
   const router = useRouter()
-  const [selectedBooks, setSelectedBooks] = useState<{value: string, label: string}[]>([]);
-  const [selectedSeries, setSelectedSeries] = useState<{value: string, label: string}[]>([]);
-  const [selectedWishlists, setSelectedWishlists] = useState<{value: string, label: string}[]>([]);
+  const [selectedBooks, setSelectedBooks] = useState<{ value: string, label: string }[]>([]);
+  const [selectedSeries, setSelectedSeries] = useState<{ value: string, label: string }[]>([]);
+  const [selectedWishlists, setSelectedWishlists] = useState<{ value: string, label: string }[]>([]);
 
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
@@ -71,6 +71,13 @@ const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
               type="text"
               name="description"
               required
+              className="w-full mb-4"
+            />
+
+            <InputField
+              label="Slug"
+              type="text"
+              name="slug"
               className="w-full mb-4"
             />
           </div>

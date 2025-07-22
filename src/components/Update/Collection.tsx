@@ -113,7 +113,15 @@ const UpdateCollection = ({
               name="description"
               required
               defaultValue={collection[0]?.description ?? ""}
-              className="w-full mb-4"
+              className="w-full"
+            />
+
+            <InputField
+              label="Slug"
+              type="text"
+              name="slug"
+             className="w-full mb-4"
+              defaultValue={collection[0]?.slug ?? ""}
             />
           </div>
 

@@ -158,7 +158,7 @@ export default async function ReadCollection() {
                       <td className="px-4 py-3 whitespace-nowrap flex gap-3 items-center justify-center">
                         {/* Editar */}
                         <Link
-                          href={`/collection/${collection.id}`}
+                          href={`/collection/edit/${collection.id}`}
                           className="p-1.5 rounded transition hover:bg-[#B27D57]/10"
                           aria-label="Editar"
                           title="Editar"
@@ -181,7 +181,7 @@ export default async function ReadCollection() {
                         </Link>
                         {/* Visualizar */}
                         <Link
-                          href={`/quote/view/${collection.id}`}
+                          href={`/collection/${collection.slug}`}
                           className="p-1.5 rounded transition hover:bg-[#7F4B30]/10"
                           aria-label="Visualizar"
                           title="Visualizar"

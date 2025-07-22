@@ -3,6 +3,7 @@ import supabase from "@/utils/supabaseClient";
 export default async function updateCollection(formData: FormData) {
 
   const id_collection = formData.get("id_collection");
+  const slug = formData.get("slug") as string;
   const collection_name = formData.get("collection_name") as string;
   const description = formData.get("description") as string;
   const init_date = formData.get("init_date") as string;
@@ -16,6 +17,7 @@ export default async function updateCollection(formData: FormData) {
     .from("collection")
     .update({
       collection_name,
+      slug,
       description,
       init_date,
       finish_date,
