@@ -26,9 +26,9 @@ export default function UpdateSerie({ id, books, serie }: UpdateSerieProps) {
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
   const [collection_complete, setCollectionComplete] = useState<boolean>(
-    serie[0].collection_complete ?? false
+    serie[0].collection_complete || false
   );
-  const [rating, setRating] = useState<number>(serie[0].rating ?? 0);
+  const [rating, setRating] = useState<number>(serie[0].rating || 0);
 
   const handleFinishDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const finishDate = e.target.value;
@@ -93,7 +93,7 @@ export default function UpdateSerie({ id, books, serie }: UpdateSerieProps) {
                 name="collection_complete"
                 id="collection_complete"
                 checked={collection_complete}
-                value={collection_complete.toString()}
+                value={collection_complete?.toString()}
                 onChange={(e) => setCollectionComplete(e.target.checked)}
                 className="mb-4"
               />
