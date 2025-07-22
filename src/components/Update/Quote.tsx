@@ -59,6 +59,14 @@ export default function UpdateQuote({ id, books, quote }: UpdateQuoteProps) {
             </fieldset>
 
             <InputField label="Page" name="page" type="number" required defaultValue={quote[0].page ?? ""}/>
+
+            <InputField
+              label="Slug"
+              type="text"
+              name="slug"
+              className="w-full"
+              defaultValue={quote[0].slug ?? ""}
+            />
           </div>
 
           <button
