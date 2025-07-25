@@ -16,6 +16,7 @@ import Image from "next/image";
 
 type Book = Database["public"]["Tables"]["book"]["Update"];
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
+type Wishlist = Database["public"]["Tables"]["wishlist"]["Row"];
 
 interface UpdateBookProps {
   id: number;
@@ -35,6 +36,7 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
   const [rating, setRating] = useState<number>(book[0]?.rating ?? 0);
   const [openInput, setOpenInput] = useState<boolean>(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(imageUrl);
+  const [rereaded, setRereaded] = useState<boolean>(book[0]?.rereaded && book[0]?.rereaded > 0 ? true : false);
   const [isDragging, setIsDragging] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -56,7 +58,7 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
     setIsDragging(false);
 
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result;
@@ -216,7 +218,10 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
                         <label
                           htmlFor="cover-upload"
                           className={`flex flex-col items-center justify-center w-64 h-96 border-2 border-dashed rounded-lg cursor-pointer transition-colors mx-auto
-                            ${isDragging ? 'border-[#7F4B30] bg-white/70' : 'border-[#E1D9C9] bg-white/50 hover:bg-white/70'}`}
+                            ${isDragging
+                              ? "border-[#7F4B30] bg-white/70"
+                              : "border-[#E1D9C9] bg-white/50 hover:bg-white/70"
+                            }`}
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
@@ -232,7 +237,9 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
                               />
                               <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                 <span className="bg-white/90 text-[#7F4B30] px-4 py-2 rounded-md text-sm font-medium">
-                                  {isDragging ? 'Solte para alterar' : 'Alterar imagem'}
+                                  {isDragging
+                                    ? "Solte para alterar"
+                                    : "Alterar imagem"}
                                 </span>
                               </div>
                             </div>
@@ -309,7 +316,6 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
                         </button>
                       )}
 
-
                       <InputField
                         label="Book Title"
                         type="text"
@@ -340,14 +346,14 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
 
                   <div className="space-y-6 bg-[#F5F1E9]/50 p-8 rounded-xl shadow-inner border border-[#E1D9C9]">
                     <div className="space-y-4">
-                    <InputField
+                      <InputField
                         label="Quantidade de Páginas"
                         type="number"
                         name="pages"
                         defaultValue={book[0]?.pages ?? ""}
                         className="w-full"
                       />
-                    <InputField
+                      <InputField
                         label="Categoria"
                         type="text"
                         name="category"
@@ -466,7 +472,7 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
               </div>
 
               <div className={clsx(currentStep === 2 ? "block" : "hidden")}>
-                <div className="space-y-8">
+                <div className={clsx("space-y-8")}>
                   <div className="space-y-4">
                     <ToggleSwitch
                       label="Na biblioteca?"
@@ -478,7 +484,6 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
                       className="mb-4"
                     />
                   </div>
-
                   {library && (
                     <InputField
                       label="Data que entrou pra coleção"
@@ -561,6 +566,14 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
                           onChange={handleFinishDateChange}
                           className="w-full"
                         />
+                      )}
+                      {rereaded && (
+                        <><InputField
+                          label="Relido"
+                          name="rereaded"
+                          type="number"
+                          className="w-full"
+                          defaultValue={book[0]?.rereaded ?? ""} /><span>vezes</span></>
                       )}
                     </div>
                     {dateError && (

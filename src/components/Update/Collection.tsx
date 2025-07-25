@@ -8,11 +8,15 @@ import { useState } from "react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import ReturnBtn from "../ReturnBtn";
+import SelectField from "../FormFields/SelectField";
 
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
+type Collection = Database["public"]["Tables"]["collection"]["Update"];
 type Book = Database["public"]["Tables"]["book"]["Row"];
 type Wishlist = Database["public"]["Tables"]["wishlist"]["Row"];
-type Collection = Database["public"]["Tables"]["collection"]["Update"];
+type WishlistWithRelations = Wishlist & {
+  book: Book;
+}
 
 type RelationOption = {
   value: string;
@@ -32,7 +36,7 @@ type UpdateCollectionProps = {
   collection: Collection[];
   series: Serie[] | null;
   books: Book[] | null;
-  wishlist: Wishlist[] | null;
+  wishlist: WishlistWithRelations[] | null;
   collectionRelations: CollectionRelations;
 };
 
@@ -51,14 +55,14 @@ const UpdateCollection = ({
       label: book.label,
     }))
   );
-  
+
   const [selectedSeries, setSelectedSeries] = useState(
     collectionRelations?.series.map((serie) => ({
       value: serie.value,
       label: serie.label,
     }))
   );
-  
+
   const [selectedWishlists, setSelectedWishlists] = useState(
     collectionRelations?.wishlist.map((wishBook) => ({
       value: wishBook.value,
@@ -68,6 +72,7 @@ const UpdateCollection = ({
 
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
+  const [typeCollection, setTypeCollection] = useState<string>("");
 
   const router = useRouter();
 
@@ -120,7 +125,7 @@ const UpdateCollection = ({
               label="Slug"
               type="text"
               name="slug"
-             className="w-full mb-4"
+              className="w-full mb-4"
               defaultValue={collection[0]?.slug ?? ""}
             />
           </div>
@@ -168,7 +173,7 @@ const UpdateCollection = ({
             options={
               wishlist?.map((wishBook) => ({
                 value: wishBook.id?.toString() ?? "",
-                label: `${wishBook.book_name ?? ""}`,
+                label: `${wishBook.book?.title ?? ""}`,
               })) || []
             }
             selected={selectedWishlists}
@@ -203,6 +208,33 @@ const UpdateCollection = ({
               onChange={handleFinishDateChange}
               className="w-full"
             />
+
+            <SelectField
+              label="Tipo de coleção"
+              name="type_collection"
+              options={[
+                { value: "wishlist", label: "Wishlist" },
+                { value: "challenge", label: "Desafio" },
+              ]}
+              defaultValue={collection[0]?.type_collection ?? ""}
+              onChange={(e) => {
+                setTypeCollection(e.target.value);
+              }}
+              className="w-full"
+            />
+            {typeCollection === "challenge" && (
+              <SelectField
+                label="Status"
+                name="status"
+                options={[
+                  { value: "ongoing", label: "Em andamento" },
+                  { value: "concluded", label: "Concluído" },
+                  { value: "not-concluded", label: "Não concluído" },
+                ]}
+                defaultValue={collection[0]?.status ?? ""}
+                className="w-full"
+              />
+            )}
           </div>
           {dateError && (
             <p className="text-red-600 text-sm mt-4">{dateError}</p>

@@ -1,7 +1,6 @@
 "use server";
 
 import supabase from "@/utils/supabaseClient";
-// import { Book } from "@/utils/typings";
 import { Database } from "@/utils/typings/supabase";
 
 type Book = Database["public"]["Tables"]["book"]["Row"];
@@ -34,6 +33,8 @@ export default async function createBook(formData: FormData) {
   const comments = formData.get("comments") as string;
   const quote = formData.get("quote") as string
   const quote_page = Number(formData.get("quote_page") || null)
+  const wishlist = formData.get("wishlist") as string
+  const rereaded = formData.get("rereaded") as string
 
   let serieId: number | null | FormDataEntryValue  = serie_id;
   let coverPath: string | null = null;
@@ -117,11 +118,11 @@ export default async function createBook(formData: FormData) {
         rating,
         version: [physical, audiobook, ebook],
         comments,
+        rereaded
       },
     ])
     .select()
-    .single<Book>()
-    // .overrideTypes<Book[]>();
+    .single<Book>();
 
   if (error) {
     console.log(error, "erro");
@@ -141,6 +142,20 @@ export default async function createBook(formData: FormData) {
     }
     if(quotes) {
       console.log(quotes);
+    }
+  }
+
+  if(wishlist){
+    // Agora cadastra as citações associadas a esse livro
+    const { data: wishlistData, error: wishlistError } = await supabase
+      .from("wishlist")
+      .insert([{book_id: data?.id}]);
+  
+    if (wishlistError) {
+      console.log(wishlistError);
+    }
+    if(wishlistData) {
+      console.log(wishlistData);
     }
   }
 }

@@ -1,10 +1,22 @@
-import { wishlistList } from "@/services/wishlist";
 import Link from "next/link";
 import DeleteWishlistBtn from "./DeleteWishlist";
 import EmptyTable from "@/components/EmptyTable";
+import {formatDate} from "@/utils/formatDate";
+import { Database } from "@/utils/typings/supabase";
+type collection = Database["public"]["Tables"]["collection"]["Row"];
+type book = Database["public"]["Tables"]["book"]["Row"];
+type collectionWishlist = Database["public"]["Tables"]["collection_wishlist"]["Row"];
 
-export default async function ReadWishlist() {
-  const wishlist = await wishlistList();
+type collectionWithRelations = collectionWishlist & {
+  collection: collection;
+  wishlist: {
+    id: number;
+    book_id: number;
+    book: book;
+  };
+};
+
+export default async function ReadWishlist({ wishlist }: { wishlist: collectionWithRelations[] }) {
 
   if (!wishlist) {
     return;
@@ -27,9 +39,9 @@ export default async function ReadWishlist() {
       {wishlist.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <EmptyTable
-            message="Nenhum livro na wishlist ainda."
+            message="Nenhum item na wishlist ainda."
             href="/wishlist/new"
-            btnText="Adicionar primeiro livro"
+            btnText="Adicionar primeiro item"
             svg={
               <svg
                 width="120"
@@ -102,13 +114,13 @@ export default async function ReadWishlist() {
                       className="px-4 py-3 text-center font-bold uppercase tracking-wider text-[#F3E2C7] bg-[#7F4B30]"
                       style={{ fontSize: "13px" }}
                     >
-                      Série
+                      Coleção
                     </th>
                     <th
                       className="px-4 py-3 text-center font-bold uppercase tracking-wider text-[#F3E2C7] bg-[#7F4B30]"
                       style={{ fontSize: "13px" }}
                     >
-                      Volume
+                      Data
                     </th>
                     <th
                       className="px-4 py-3 text-center font-bold uppercase tracking-wider text-[#F3E2C7] bg-[#7F4B30] rounded-tr-xl"
@@ -133,40 +145,30 @@ export default async function ReadWishlist() {
                         className="px-4 py-3 text-[#173125] whitespace-nowrap font-medium max-w-3xs overflow-hidden text-ellipsis line-clamp-<1>"
                         style={{ fontSize: "15px" }}
                       >
-                        {wishlist.book_name}
+                        {wishlist.wishlist.book.title}
                       </td>
                       {/* autor */}
                       <td
                         className="px-4 py-3 text-[#A05C41] whitespace-nowrap"
                         style={{ fontSize: "15px" }}
                       >
-                        {wishlist.author}
+                        {wishlist.wishlist.book.author}
                       </td>
                       <td
                         className="px-4 py-3 text-center whitespace-nowrap"
                         style={{ fontSize: "15px" }}
                       >
-                        {wishlist.serie_id ? (
-                          <span
-                            className="flex items-center justify-center gap-0.5"
-                            aria-label={`Avaliação: ${wishlist.rating} de 5`}
-                          >
-                            {wishlist.serie?.serie_name}
-                          </span>
-                        ) : (
-                          <span className="text-[#B27D57]">-</span>
-                        )}
+                        {wishlist.collection.collection_name}
                       </td>
                       <td
                         className="px-4 py-3 text-center whitespace-nowrap"
                         style={{ fontSize: "15px" }}
                       >
-                        {wishlist.volume ? (
+                        {wishlist.created_at ? (
                           <span
                             className="flex items-center justify-center gap-0.5"
-                            aria-label={`Avaliação: ${wishlist.rating} de 5`}
                           >
-                            {wishlist.volume}
+                            {formatDate(wishlist.created_at)}
                           </span>
                         ) : (
                           <span className="text-[#B27D57]">-</span>
@@ -176,7 +178,7 @@ export default async function ReadWishlist() {
                       <td className="px-4 py-3 whitespace-nowrap flex gap-3 items-center justify-center">
                         {/* Editar */}
                         <Link
-                          href={`/wishlist/${wishlist.id}`}
+                          href={`/wishlist/edit/${wishlist.id}`}
                           className="p-1.5 rounded transition hover:bg-[#B27D57]/10"
                           aria-label="Editar"
                           title="Editar"
@@ -199,7 +201,7 @@ export default async function ReadWishlist() {
                         </Link>
                         {/* Visualizar */}
                         <Link
-                          href={`/wishlist/view/${wishlist.id}`}
+                          href={`/book/${wishlist.wishlist.book.slug}`}
                           className="p-1.5 rounded transition hover:bg-[#7F4B30]/10"
                           aria-label="Visualizar"
                           title="Visualizar"
@@ -217,7 +219,7 @@ export default async function ReadWishlist() {
                           </svg>
                         </Link>
                         {/* Excluir */}
-                        <DeleteWishlistBtn id={wishlist.id} />
+                        <DeleteWishlistBtn id={wishlist.wishlist.id} />
                       </td>
                     </tr>
                   ))}

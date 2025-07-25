@@ -7,11 +7,6 @@ type Book = Database["public"]["Tables"]["book"]["Row"];
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
 type Wishlist = Database["public"]["Tables"]["wishlist"]["Row"];
 
-type CollectionBook = Database["public"]["Tables"]["collection_book"]["Row"];
-type CollectionSerie = Database["public"]["Tables"]["collection_serie"]["Row"];
-type CollectionWishlist = Database["public"]["Tables"]["collection_wishlist"]["Row"];
-
-
 type CollectionBookWithBook = {
   id: number;
   book_id: number;
@@ -27,7 +22,12 @@ type CollectionSerieWithSerie = {
 type CollectionWishlistWithWishlist = {
   id: number;
   wishlist_id: number;
-  wishlist: Wishlist | null;
+  wishlist: {
+    id: number;
+    created_at: string;
+    book_id: number;
+    book: Book | null;
+  } | null;
 };
 
 type CollectionWithRelations = CollectionRead & {
@@ -85,42 +85,47 @@ export async function getCollectionWithRelations(id: number) {
         serie_id,
         serie:serie_id(id, serie_name)
       ),
-      collection_wishlist(
+    collection_wishlist(
+      id,
+      wishlist_id,
+      wishlist(
         id,
-        wishlist_id,
-        wishlist:wishlist_id(id, book_name)
+        book_id,
+        book:book_id(id, title)
       )
+    )
     `)
     .eq("id", id)
-    .single(); // retorna um único objeto ao invés de array
+    .overrideTypes<CollectionWithRelations[]>()
 
   if (error) {
     console.log(error);
     return null;
   }
 
-  // Desestruturação dos relacionamentos
-  const { collection_book = [], collection_serie = [], collection_wishlist = [], ...rest } = data;
-
+  const books = data?.[0]?.collection_book.map((item) => item.book) ?? [];
+  const series = data?.[0]?.collection_serie.map((item) => item.serie) ?? [];
+  const wishlist = data?.[0]?.collection_wishlist.map((item) => item.wishlist) ?? [];
+  const wishlistBooks = wishlist.map((item) => item?.book).filter(Boolean) ?? [];
+  
   return {
-    ...rest,
-    books: collection_book.map((b: any) => ({
-      value: b.book?.id?.toString() ?? "",
-      label: b.book?.title ?? "",
-      id: b.book_id,
-      relationId: b.id,
+    books: books.map((book) => ({
+      id: book?.id ?? 0,
+      label: book?.title ?? "",
+      value: book?.id?.toString() ?? "",
+      relationId: book?.id ?? 0, // ou usar o id do relacionamento se quiser
     })),
-    series: collection_serie.map((s: any) => ({
-      value: s.serie?.id?.toString() ?? "",
-      label: s.serie?.serie_name ?? "",
-      id: s.serie_id,
-      relationId: s.id,
+    series: series.map((serie) => ({
+      id: serie?.id ?? 0,
+      label: serie?.serie_name ?? "",
+      value: serie?.id?.toString() ?? "",
+      relationId: serie?.id ?? 0,
     })),
-    wishlist: collection_wishlist.map((w: any) => ({
-      value: w.wishlist?.id?.toString() ?? "",
-      label: w.wishlist?.book_name ?? "",
-      id: w.wishlist_id,
-      relationId: w.id,
+    wishlist: wishlist.map((wishlistBook) => ({
+      id: wishlistBook?.id ?? 0,
+      label: wishlistBook?.book?.title ?? "",
+      value: wishlistBook?.id?.toString() ?? "",
+      relationId: wishlistBook?.book?.id ?? 0,
     })),
   };
 }
@@ -140,11 +145,15 @@ export async function getCollectionWithRelationsSlug(slug: string) {
         serie_id,
         serie:serie_id(id, serie_name, qty_volumes, status, rating)
       ),
-      collection_wishlist(
+    collection_wishlist(
+      id,
+      wishlist_id,
+      wishlist(
         id,
-        wishlist_id,
-        wishlist:wishlist_id(id, book_name, author)
+        book_id,
+        book:book_id(*)
       )
+    )
     `)
     .eq("slug", slug)
     .overrideTypes<CollectionWithRelations[]>()

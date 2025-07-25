@@ -22,6 +22,10 @@ export default async function Page({
     return <div>Sem coleções disponíveis.</div>;
   }
 
+  if (!collectionRelations) {
+    return <div>Sem Relations disponíveis.</div>;
+  }
+
   return (
     <>
       <main>

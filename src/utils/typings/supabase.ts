@@ -31,6 +31,7 @@ export type Database = {
           library: boolean
           pages: number | null
           rating: number | null
+          rereaded: number | null
           serie_id: number | null
           slug: string | null
           status: string
@@ -50,13 +51,14 @@ export type Database = {
           id?: number
           init_date?: string | null
           is_single_book: boolean
-          language: string
+          language?: string
           library: boolean
           pages?: number | null
           rating?: number | null
+          rereaded?: number | null
           serie_id?: number | null
           slug?: string | null
-          status: string
+          status?: string
           title: string
           version?: Database["public"]["Enums"]["versions"][] | null
           volume?: number | null
@@ -77,6 +79,7 @@ export type Database = {
           library?: boolean
           pages?: number | null
           rating?: number | null
+          rereaded?: number | null
           serie_id?: number | null
           slug?: string | null
           status?: string
@@ -103,6 +106,8 @@ export type Database = {
           id: number
           init_date: string | null
           slug: string | null
+          status: string | null
+          type_collection: string | null
         }
         Insert: {
           collection_name?: string | null
@@ -112,6 +117,8 @@ export type Database = {
           id?: number
           init_date?: string | null
           slug?: string | null
+          status?: string | null
+          type_collection?: string | null
         }
         Update: {
           collection_name?: string | null
@@ -121,6 +128,8 @@ export type Database = {
           id?: number
           init_date?: string | null
           slug?: string | null
+          status?: string | null
+          type_collection?: string | null
         }
         Relationships: []
       }
@@ -319,41 +328,26 @@ export type Database = {
       }
       wishlist: {
         Row: {
-          author: string | null
-          book_name: string | null
+          book_id: number | null
           created_at: string
           id: number
-          is_single_book: boolean | null
-          serie_id: number | null
-          slug: string | null
-          volume: number | null
         }
         Insert: {
-          author?: string | null
-          book_name?: string | null
+          book_id?: number | null
           created_at?: string
           id?: number
-          is_single_book?: boolean | null
-          serie_id?: number | null
-          slug?: string | null
-          volume?: number | null
         }
         Update: {
-          author?: string | null
-          book_name?: string | null
+          book_id?: number | null
           created_at?: string
           id?: number
-          is_single_book?: boolean | null
-          serie_id?: number | null
-          slug?: string | null
-          volume?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "wishlist_serie_id_fkey"
-            columns: ["serie_id"]
-            isOneToOne: false
-            referencedRelation: "serie"
+            foreignKeyName: "wishlist_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: true
+            referencedRelation: "book"
             referencedColumns: ["id"]
           },
         ]

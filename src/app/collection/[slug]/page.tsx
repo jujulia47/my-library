@@ -25,6 +25,7 @@ export default async function Page({
   const books = collection?.[0]?.collection_book.map((book) => book.book) ?? [];
   const series = collection?.[0]?.collection_serie.map((serie) => serie.serie) ?? [];
   const wishlist = collection?.[0]?.collection_wishlist.map((wishlist) => wishlist.wishlist) ?? [];
+  const wishlistBook = wishlist?.map((wishlist) => wishlist?.book) ?? [];
   
   const booksInfos = books.map((book) => ({
     id: book?.id ?? 0,
@@ -44,10 +45,14 @@ export default async function Page({
     rating: serie?.rating ?? null,
   })); 
 
-  const wishlistInfos = wishlist.map((wishlist) => ({
-    id: wishlist?.id ?? 0,
-    book_name: wishlist?.book_name ?? "",
-    author: wishlist?.author ?? "",
+  const wishlistInfos = wishlistBook.map((WishBook) => ({
+    id: WishBook?.id ?? 0,
+    title: WishBook?.title ?? "",
+    volume: WishBook?.volume ?? null,
+    rating: WishBook?.rating ?? null,
+    status: WishBook?.status ?? "",
+    author: WishBook?.author ?? "",
+    cover: imagesUrl(WishBook?.cover ?? "")
   }));
 
   if (!collection) {

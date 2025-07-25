@@ -1,4 +1,6 @@
 import supabase from "@/utils/supabaseClient";
+import { Database } from "@/utils/typings/supabase";
+type Book = Database["public"]["Tables"]["book"]["Row"];
 
 export default async function updateBook(formData: FormData) {
   const id = formData.get("id");
@@ -25,6 +27,7 @@ export default async function updateBook(formData: FormData) {
   const audiobook = formData.get("audiobook") as string;
   const ebook = formData.get("ebook") as string;
   const comments = formData.get("comments") as string;
+  const rereaded = formData.get("rereaded") as string;
 
   let coverPath: string | null = null;
 
@@ -69,10 +72,12 @@ export default async function updateBook(formData: FormData) {
         rating,
         version: [physical, audiobook, ebook],
         comments,
+        rereaded
       },
     ])
     .eq("id", id)
-    .select();
+    .select()
+    .single<Book>();
 
   if (error) {
     console.log(error);

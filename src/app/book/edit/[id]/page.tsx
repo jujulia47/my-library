@@ -11,7 +11,7 @@ export default async function Page({
   const { id } = await params;
   const book = await bookById(id);
   const series = await serieList();
-  const imageUrl = await imagesUrl(book?.[0]?.cover ?? "");
+  const imageUrl = imagesUrl(book?.[0]?.cover ?? "");
 
   if (!book) {
     return <div>Sem livros disponíveis.</div>;

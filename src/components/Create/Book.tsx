@@ -27,6 +27,7 @@ const CreateBook = ({ series }: SerieProps) => {
 
   const [singleBook, setSingleBook] = useState<boolean>(false);
   const [library, setLibrary] = useState<boolean>(false);
+  const [wishlist, setWishlist] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ const CreateBook = ({ series }: SerieProps) => {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [rereading, setRereading] = useState<boolean>(false);
 
   const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -52,9 +54,9 @@ const CreateBook = ({ series }: SerieProps) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result;
@@ -98,8 +100,8 @@ const CreateBook = ({ series }: SerieProps) => {
     const finishDate = e.target.value;
     initDate && finishDate < initDate
       ? setDateError(
-        "A data de término não pode ser anterior à data de início."
-      )
+          "A data de término não pode ser anterior à data de início."
+        )
       : setDateError(null);
   };
 
@@ -128,8 +130,9 @@ const CreateBook = ({ series }: SerieProps) => {
                     <div
                       className="h-full bg-gradient-to-r from-[#B27D57] to-[#7F4B30] transition-all duration-500 ease-out"
                       style={{
-                        width: `${(currentStep - 1) * (100 / (steps.length - 1))
-                          }%`,
+                        width: `${
+                          (currentStep - 1) * (100 / (steps.length - 1))
+                        }%`,
                         height: "100%",
                         maxWidth: "100%",
                         borderRadius: "4px",
@@ -152,13 +155,13 @@ const CreateBook = ({ series }: SerieProps) => {
                       className={[
                         "flex items-center justify-center w-12 h-12 rounded-full text-sm font-medium transition-all duration-300",
                         isActive &&
-                        "bg-gradient-to-br from-[#B27D57] to-[#8E5D3D] text-[#E1D9C9] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)] border border-[#AE9372]/30 scale-110",
+                          "bg-gradient-to-br from-[#B27D57] to-[#8E5D3D] text-[#E1D9C9] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)] border border-[#AE9372]/30 scale-110",
                         isCompleted &&
+                          !isActive &&
+                          "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
                         !isActive &&
-                        "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
-                        !isActive &&
-                        !isCompleted &&
-                        "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
+                          !isCompleted &&
+                          "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -187,10 +190,10 @@ const CreateBook = ({ series }: SerieProps) => {
                         "mt-2 text-xs font-medium transition-colors",
                         isActive && "text-[#7F4B30] font-semibold",
                         isCompleted &&
-                        "text-[#424C21] group-hover:text-[#173125]",
+                          "text-[#424C21] group-hover:text-[#173125]",
                         !isActive &&
-                        !isCompleted &&
-                        "text-[#7F4B30] group-hover:text-[#7F4B30]",
+                          !isCompleted &&
+                          "text-[#7F4B30] group-hover:text-[#7F4B30]",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -213,7 +216,11 @@ const CreateBook = ({ series }: SerieProps) => {
                           <label
                             htmlFor="cover-upload"
                             className={`flex flex-col items-center justify-center w-64 h-96 border-2 border-dashed rounded-lg cursor-pointer transition-colors mx-auto
-                              ${isDragging ? 'border-[#7F4B30] bg-white/70' : 'border-[#E1D9C9] bg-white/50 hover:bg-white/70'}`}
+                              ${
+                                isDragging
+                                  ? "border-[#7F4B30] bg-white/70"
+                                  : "border-[#E1D9C9] bg-white/50 hover:bg-white/70"
+                              }`}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
@@ -228,7 +235,9 @@ const CreateBook = ({ series }: SerieProps) => {
                                 />
                                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                   <span className="bg-white/90 text-[#7F4B30] px-4 py-2 rounded-md text-sm font-medium">
-                                    {isDragging ? 'Solte para alterar' : 'Alterar imagem'}
+                                    {isDragging
+                                      ? "Solte para alterar"
+                                      : "Alterar imagem"}
                                   </span>
                                 </div>
                               </div>
@@ -327,15 +336,12 @@ const CreateBook = ({ series }: SerieProps) => {
                           />
                         </div>
 
-
-
                         <InputField
                           label="Slug"
                           type="text"
                           name="slug"
                           className="w-full"
                         />
-
                       </div>
                     </div>
                   </div>
@@ -480,28 +486,53 @@ const CreateBook = ({ series }: SerieProps) => {
               {/* Step 2: Biblioteca */}
               {/* {currentStep === 2 && ( */}
               <div className={clsx(currentStep === 2 ? "block" : "hidden")}>
-                <div className="space-y-8">
-                  <div className="space-y-4">
+                <div className="flex justify-between">
+                  <div
+                    className={clsx(
+                      "space-y-8",
+                      wishlist ? "cursor-not-allowed" : ""
+                    )}
+                  >
+                    <div className="space-y-4">
+                      <ToggleSwitch
+                        label="Na biblioteca?"
+                        name="library"
+                        id="library"
+                        disabled={wishlist}
+                        checked={library}
+                        value={library.toString()}
+                        onChange={(e) => setLibrary(e.target.checked)}
+                        className="mb-4"
+                      />
+                    </div>
+                    {library && (
+                      <InputField
+                        label="Data que entrou pra coleção"
+                        type="date"
+                        name="acquisition_date"
+                        className="w-full"
+                      />
+                    )}
+                  </div>
+                  <div
+                    className={clsx(
+                      "space-y-2",
+                      library ? "cursor-not-allowed" : ""
+                    )}
+                  >
                     <ToggleSwitch
-                      label="Na biblioteca?"
-                      name="library"
-                      id="library"
-                      checked={library}
-                      value={library.toString()}
-                      onChange={(e) => setLibrary(e.target.checked)}
+                      label="Adicionar na Wishlist?"
+                      name="wishlist"
+                      id="wishlist"
+                      disabled={library}
+                      checked={wishlist}
+                      value={wishlist.toString()}
+                      onChange={(e) => setWishlist(e.target.checked)}
                       className="mb-4"
                     />
                   </div>
-
-                  {library && (
-                    <InputField
-                      label="Data que entrou pra coleção"
-                      type="date"
-                      name="acquisition_date"
-                      className="w-full"
-                    />
-                  )}
                 </div>
+
                 <div className="flex justify-between mt-8">
                   <button
                     type="button"
@@ -566,12 +597,32 @@ const CreateBook = ({ series }: SerieProps) => {
                     )}
 
                     {status === "reading" && (
-                      <InputField
-                        label="Página atual"
-                        name="current_page"
-                        type="number"
-                        className="w-full"
-                      />
+                      <>
+                        <InputField
+                          label="Página atual"
+                          name="current_page"
+                          type="number"
+                          className="w-full"
+                        />
+                        <ToggleSwitch
+                          label="Releitura"
+                          name="rereading"
+                          id="rereading"
+                          checked={rereading}
+                          value={rereading.toString()}
+                          onChange={(e) => setRereading(e.target.checked)}
+                          className="mb-4"
+                        />
+
+                        {rereading && (
+                          <InputField
+                            label="Releitura nº"
+                            name="rereaded"
+                            type="number"
+                            className="w-full"
+                          />
+                        )}
+                      </>
                     )}
 
                     {status === "finish" && (

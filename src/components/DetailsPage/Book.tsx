@@ -1,12 +1,13 @@
 "use client";
 
-
 import ReturnBtn from "../ReturnBtn";
 import Image from "next/image";
 import clsx from "clsx";
 import { Database } from "@/utils/typings/supabase";
 import { formatDate } from "@/utils/formatDate";
 import { renderRating } from "@/utils/renderRating";
+import { useRouter } from "next/navigation";
+import { ArrowLeftIcon } from "@heroicons/react/16/solid";
 
 type Book = Database["public"]["Tables"]["book"]["Row"];
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
@@ -23,6 +24,7 @@ interface DetailsBookProps {
 }
 
 const BookDetails = ({ book, imageUrl }: DetailsBookProps) => {
+  const router = useRouter();
 
   if (!book?.[0]) {
     return (
@@ -36,7 +38,17 @@ const BookDetails = ({ book, imageUrl }: DetailsBookProps) => {
             O livro que você procura não está disponível na biblioteca.
           </p>
           <div className="mt-4">
-            <ReturnBtn href="/book" btnText="Voltar para a lista" />
+            {/* <ReturnBtn href="/book" btnText="Voltar para a lista" /> */}
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className={clsx(
+                "inline-flex items-center gap-2 text-[#7F4B30] hover:text-[#F3E2C7]"
+              )}
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              Voltar para a lista
+            </button>
           </div>
         </div>
       </div>
@@ -47,7 +59,17 @@ const BookDetails = ({ book, imageUrl }: DetailsBookProps) => {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100 py-12 px-4 sm:px-6 lg:px-8 font-serif relative overflow-hidden transition-colors duration-300">
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="mb-6">
-          <ReturnBtn href="/book" btnText="Voltar para a lista" />
+          {/* <ReturnBtn href="/book" btnText="Voltar para a lista" /> */}
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className={clsx(
+              "inline-flex items-center gap-2 text-[#7F4B30] hover:text-[#F3E2C7]"
+            )}
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Voltar para a lista
+          </button>
         </div>
 
         <div className="fantasy-block fantasy-frame no-hover bg-white/95 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
@@ -95,15 +117,16 @@ const BookDetails = ({ book, imageUrl }: DetailsBookProps) => {
                         <div className="flex items-start justify-between rounded-lg">
                           <div>
                             <span
-                            className={clsx(
-                              "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#F3E2C7] capitalize",
-                              {
-                                "bg-[#D35230]": book[0].status === "finish",
-                                "bg-[#2B4A73]": book[0].status === "reading",
-                                "bg-[#B28B2B]": book[0].status === "tbr",
-                                "bg-[#8B3737]": book[0].status === "abandoned",
-                              }
-                            )}
+                              className={clsx(
+                                "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#F3E2C7] capitalize",
+                                {
+                                  "bg-[#D35230]": book[0].status === "finish",
+                                  "bg-[#2B4A73]": book[0].status === "reading",
+                                  "bg-[#B28B2B]": book[0].status === "tbr",
+                                  "bg-[#8B3737]":
+                                    book[0].status === "abandoned",
+                                }
+                              )}
                             >
                               {book[0].status}
                             </span>
@@ -265,16 +288,22 @@ const BookDetails = ({ book, imageUrl }: DetailsBookProps) => {
                           <div>
                             <p className="text-sm text-gray-600">Idioma</p>
                             <p className="font-medium capitalize">
-                              {book[0].language === "pt" ? "Português"
-                              : book[0].language === "en" ? "Inglês"
-                              : book[0].language === "es" ? "Espanhol" : "Desconhecido"}
+                              {book[0].language === "pt"
+                                ? "Português"
+                                : book[0].language === "en"
+                                ? "Inglês"
+                                : book[0].language === "es"
+                                ? "Espanhol"
+                                : "Desconhecido"}
                             </p>
                           </div>
                         )}
                         {book[0].version && (
                           <div>
                             <p className="text-sm text-gray-600">Edição</p>
-                            <p className="font-medium capitalize">{book[0].version}</p>
+                            <p className="font-medium capitalize">
+                              {book[0].version}
+                            </p>
                           </div>
                         )}
                         {book[0].category && (
@@ -286,7 +315,11 @@ const BookDetails = ({ book, imageUrl }: DetailsBookProps) => {
                       </div>
                     </div>
                   </div>
-                ): <><p>Sem informações adicionais</p></>}
+                ) : (
+                  <>
+                    <p>Sem informações adicionais</p>
+                  </>
+                )}
 
                 {/* Minhas Anotações */}
                 <div className="border-t border-amber-100 pt-8 mt-8">
