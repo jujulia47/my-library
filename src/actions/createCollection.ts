@@ -9,6 +9,8 @@ export default async function createCollection(formData: FormData) {
   const book_ids = formData.getAll("book_id") as string[];
   const serie_ids = formData.getAll("serie_id") as string[];
   const wishlist_ids = formData.getAll("wishlist_id") as string[];
+  const status = formData.get("status") as string;
+  const type_collection = formData.get("type_collection") as string;
 
   // 1. Cria a coleção
   const { data, error } = await supabase
@@ -19,6 +21,8 @@ export default async function createCollection(formData: FormData) {
       description,
       init_date,
       finish_date,
+      status,
+      type_collection,
     })
     .select()
     .single();
@@ -76,7 +80,6 @@ export default async function createCollection(formData: FormData) {
       collection_id: data.id,
       wishlist_id: Number(wishlist_id),
     }));
-    
     const { data: data_wishlist_id, error } = await supabase
       .from("collection_wishlist")
       .insert(relations)

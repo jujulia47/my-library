@@ -8,15 +8,20 @@ import { useState } from "react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import ReturnBtn from "../ReturnBtn";
+import SelectField from "../FormFields/SelectField";
 
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
 type Book = Database["public"]["Tables"]["book"]["Row"];
 type Wishlist = Database["public"]["Tables"]["wishlist"]["Row"];
+type WishlistWithRelations = Wishlist & {
+  book: Book;
+}
+
 
 type CollectionProps = {
   series: Serie[] | null;
   books: Book[] | null;
-  wishlists: Wishlist[] | null;
+  wishlists: WishlistWithRelations[] | null;
 };
 
 const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
@@ -24,7 +29,7 @@ const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
   const [selectedBooks, setSelectedBooks] = useState<{ value: string, label: string }[]>([]);
   const [selectedSeries, setSelectedSeries] = useState<{ value: string, label: string }[]>([]);
   const [selectedWishlists, setSelectedWishlists] = useState<{ value: string, label: string }[]>([]);
-
+  const [typeCollection, setTypeCollection] = useState<string>("");
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
 
@@ -102,7 +107,7 @@ const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
 
           <MultiSelectWithTags
             label="Wishlist"
-            options={wishlists?.map((wishlist) => ({ value: wishlist.id?.toString() ?? "", label: wishlist.book_name ?? "" })) || []}
+            options={wishlists?.map((wishlist) => ({ value: wishlist.id?.toString() ?? "", label: wishlist.book.title ?? "" })) || []}
             selected={selectedWishlists}
             onSelect={(option) => setSelectedWishlists((prev) => [...prev, option])}
             onRemove={(option) => setSelectedWishlists((prev) => prev.filter((b) => b.value !== option.value))}
@@ -125,6 +130,32 @@ const CreateCollection = ({ series, books, wishlists }: CollectionProps) => {
               onChange={handleFinishDateChange}
               className="w-full"
             />
+
+            <SelectField
+              label="Tipo de coleção"
+              name="type_collection"
+              options={[
+                { value: "wishlist", label: "Wishlist" },
+                { value: "challenge", label: "Desafio" },
+              ]}
+              className="w-full"
+              onChange={(e) => {
+                setTypeCollection(e.target.value);
+              }}
+            />
+            {typeCollection === "challenge" && (
+              <SelectField
+                label="Status"
+                name="status"
+                options={[
+                  { value: "ongoing", label: "Em andamento" },
+                  { value: "concluded", label: "Concluído" },
+                  { value: "not-concluded", label: "Não concluído" },
+                ]}
+
+                className="w-full"
+              />
+            )}
           </div>
           {dateError && (
             <p className="text-red-600 text-sm mt-4">{dateError}</p>
