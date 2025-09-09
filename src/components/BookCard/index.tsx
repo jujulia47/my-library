@@ -28,7 +28,7 @@ const BookCard = ({ book }: { book: Book }) => {
         </div>
 
         {/* Book Info */}
-        <div className="p-2 flex-1 flex flex-col min-w-0 justify-around">
+        <div className="p-4 flex-1 flex flex-col min-w-0 justify-around">
           <div>
             <h3 className="font-medium text-ochre text-sm line-clamp-2 group-hover:text-coffee transition-colors leading-tight">
               {book.title}

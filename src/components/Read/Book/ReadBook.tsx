@@ -13,7 +13,7 @@ export default async function ReadBook() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#F3E2C7]">
+    <main className="min-h-screen flex flex-col bg-[#F3E2C7] p-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 mt-8 px-4 max-w-4xl w-full mx-auto">
         <h3 className="text-3xl font-bold text-[#7F4B30] font-serif text-center sm:text-left">
           Livros cadastrados
@@ -139,7 +139,7 @@ export default async function ReadBook() {
                       </td>
                       {/* autor */}
                       <td
-                        className="px-4 py-3 text-[#A05C41] whitespace-nowrap"
+                        className="px-4 py-3 text-[#A05C41] whitespace-nowrap max-w-[180px] line-clamp-1 text-ellipsis"
                         style={{ fontSize: "15px" }}
                       >
                         {book.author}

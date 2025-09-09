@@ -13,7 +13,7 @@ const SideMenu = () => {
   return (
     <aside className="fixed top-0 left-0 w-64 h-screen bg-[#7F4B30] shadow-2xl flex flex-col items-center py-8 transition-all duration-300 z-40">
       <h1 className="text-3xl font-extrabold text-[#F3E2C7] mb-10 tracking-wide text-center drop-shadow-lg select-none">
-        Menu
+        <Link href="/">Menu</Link>
       </h1>
       <nav className="flex flex-col gap-4 w-full px-6">
 

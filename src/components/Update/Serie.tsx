@@ -118,7 +118,7 @@ export default function UpdateSerie({ id, books, serie }: UpdateSerieProps) {
                     label="Data de Início da Leitura"
                     name="init_date"
                     type="date"
-                    required
+                    // required
                     className="w-full"
                     onChange={(e) => {
                       setInitDate(e.target.value);

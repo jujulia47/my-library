@@ -75,8 +75,6 @@ const DetailsCollectionPage = ({
   seriesInfos,
   wishlistInfos,
 }: DetailsCollectionProps) => {
-  console.log(collection, "collection");
-
   if (!collection) {
     return (
       <div className="min-h-screen bg-[#F5F0E4] flex items-center justify-center relative overflow-hidden">

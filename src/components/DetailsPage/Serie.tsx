@@ -31,8 +31,6 @@ type DetailsSerieProps = {
 };
 
 const DetailsSeriePage = ({ serie, booksInfos }: DetailsSerieProps) => {
-  console.log(booksInfos, "booksInfos");
-
   if (!serie?.[0]) {
     return (
       <div className="min-h-screen bg-[#F5F0E4] flex items-center justify-center relative overflow-hidden">
