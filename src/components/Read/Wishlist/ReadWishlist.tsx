@@ -3,27 +3,24 @@ import DeleteWishlistBtn from "./DeleteWishlist";
 import EmptyTable from "@/components/EmptyTable";
 import {formatDate} from "@/utils/formatDate";
 import { Database } from "@/utils/typings/supabase";
-type collection = Database["public"]["Tables"]["collection"]["Row"];
-type book = Database["public"]["Tables"]["book"]["Row"];
-type collectionWishlist = Database["public"]["Tables"]["collection_wishlist"]["Row"];
 
-type collectionWithRelations = collectionWishlist & {
-  collection: collection;
-  wishlist: {
-    id: number;
-    book_id: number;
-    book: book;
-  };
+type book = Database["public"]["Tables"]["book"]["Row"];
+type wishlistRead = Database["public"]["Tables"]["wishlist"]["Row"];
+
+
+type collectionWithRelations = wishlistRead & {
+  book: book;
 };
 
 export default async function ReadWishlist({ wishlist }: { wishlist: collectionWithRelations[] }) {
+console.log(wishlist, "wishlistPage");
 
   if (!wishlist) {
     return;
   }
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#F3E2C7]">
+    <main className="min-h-screen flex flex-col bg-[#F3E2C7] p-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 mt-8 px-4 max-w-4xl w-full mx-auto">
         <h3 className="text-3xl font-bold text-[#7F4B30] font-serif text-center sm:text-left">
           Wishlist cadastrada
@@ -145,20 +142,20 @@ export default async function ReadWishlist({ wishlist }: { wishlist: collectionW
                         className="px-4 py-3 text-[#173125] whitespace-nowrap font-medium max-w-3xs overflow-hidden text-ellipsis line-clamp-<1>"
                         style={{ fontSize: "15px" }}
                       >
-                        {wishlist.wishlist.book.title}
+                        {wishlist.book?.title}
                       </td>
                       {/* autor */}
                       <td
                         className="px-4 py-3 text-[#A05C41] whitespace-nowrap"
                         style={{ fontSize: "15px" }}
                       >
-                        {wishlist.wishlist.book.author}
+                        {wishlist.book?.author}
                       </td>
                       <td
                         className="px-4 py-3 text-center whitespace-nowrap"
                         style={{ fontSize: "15px" }}
                       >
-                        {wishlist.collection.collection_name}
+                        {/* {wishlist.books.} */}
                       </td>
                       <td
                         className="px-4 py-3 text-center whitespace-nowrap"
@@ -201,7 +198,7 @@ export default async function ReadWishlist({ wishlist }: { wishlist: collectionW
                         </Link>
                         {/* Visualizar */}
                         <Link
-                          href={`/book/${wishlist.wishlist.book.slug}`}
+                          href={`/book/${wishlist.book.slug}`}
                           className="p-1.5 rounded transition hover:bg-[#7F4B30]/10"
                           aria-label="Visualizar"
                           title="Visualizar"
@@ -219,7 +216,7 @@ export default async function ReadWishlist({ wishlist }: { wishlist: collectionW
                           </svg>
                         </Link>
                         {/* Excluir */}
-                        <DeleteWishlistBtn id={wishlist.wishlist.id} />
+                        <DeleteWishlistBtn id={wishlist.id} />
                       </td>
                     </tr>
                   ))}

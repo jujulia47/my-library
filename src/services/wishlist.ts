@@ -75,3 +75,18 @@ export async function wishlistWithRelations() {
 
   return data
 }
+
+export async function wishlistByBookId(bookId: number) {
+  const { data, error } = await supabase
+    .from("wishlist")
+    .select(`*, book(id, title)`)
+    .eq("book_id", bookId)
+    .overrideTypes<WishlistRead[]>();
+
+  if (error) {
+    console.error("Erro ao buscar Wishlist por ID do livro:", error);
+    return [];
+  }
+
+  return data ?? [];
+}
