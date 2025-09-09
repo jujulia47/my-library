@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -31,7 +31,6 @@ export type Database = {
           library: boolean
           pages: number | null
           rating: number | null
-          rereaded: number | null
           serie_id: number | null
           slug: string | null
           status: string
@@ -55,7 +54,6 @@ export type Database = {
           library: boolean
           pages?: number | null
           rating?: number | null
-          rereaded?: number | null
           serie_id?: number | null
           slug?: string | null
           status?: string
@@ -79,7 +77,6 @@ export type Database = {
           library?: boolean
           pages?: number | null
           rating?: number | null
-          rereaded?: number | null
           serie_id?: number | null
           slug?: string | null
           status?: string
@@ -269,6 +266,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "quote_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "book"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rereading: {
+        Row: {
+          book_id: number
+          created_at: string
+          date_finished: string | null
+          date_started: string | null
+          id: number
+          status: string | null
+        }
+        Insert: {
+          book_id: number
+          created_at?: string
+          date_finished?: string | null
+          date_started?: string | null
+          id?: number
+          status?: string | null
+        }
+        Update: {
+          book_id?: number
+          created_at?: string
+          date_finished?: string | null
+          date_started?: string | null
+          id?: number
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rereading_book_id_fkey"
             columns: ["book_id"]
             isOneToOne: false
             referencedRelation: "book"
