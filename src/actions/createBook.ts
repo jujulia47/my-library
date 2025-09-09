@@ -34,7 +34,11 @@ export default async function createBook(formData: FormData) {
   const quote = formData.get("quote") as string
   const quote_page = Number(formData.get("quote_page") || null)
   const wishlist = formData.get("wishlist") as string
-  const rereaded = formData.get("rereaded") as string
+  const rereading = formData.get("rereading") as string
+  const rereading_init_date = formData.get("rereading_init_date") as string
+  const rereading_finish_date = formData.get("rereading_finish_date") as string
+  const rereadStatus = formData.get("rereadStatus") as string
+
 
   let serieId: number | null | FormDataEntryValue  = serie_id;
   let coverPath: string | null = null;
@@ -118,7 +122,6 @@ export default async function createBook(formData: FormData) {
         rating,
         version: [physical, audiobook, ebook],
         comments,
-        rereaded
       },
     ])
     .select()
@@ -156,6 +159,19 @@ export default async function createBook(formData: FormData) {
     }
     if(wishlistData) {
       console.log(wishlistData);
+    }
+  }
+
+  if(rereading) {
+    const { data: rereadingData, error: rereadingError } = await supabase
+      .from("rereading")
+      .insert([{date_started: rereading_init_date, date_finished: rereading_finish_date, status: rereadStatus, book_id: data?.id}]);
+  
+    if (rereadingError) {
+      console.log(rereadingError);
+    }
+    if(rereadingData) {
+      console.log(rereadingData);
     }
   }
 }

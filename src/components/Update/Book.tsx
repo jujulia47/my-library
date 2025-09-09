@@ -13,9 +13,11 @@ import { useRouter } from "next/navigation";
 import ReturnBtn from "../ReturnBtn";
 import StarRating from "../FormFields/StarRating";
 import Image from "next/image";
+import { formatDate } from "@/utils/formatDate";
 
 type Book = Database["public"]["Tables"]["book"]["Update"];
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
+type Rereading = Database["public"]["Tables"]["rereading"]["Row"];
 type Wishlist = Database["public"]["Tables"]["wishlist"]["Row"];
 
 interface UpdateBookProps {
@@ -23,9 +25,12 @@ interface UpdateBookProps {
   book: Book[];
   series: Serie[] | null;
   imageUrl: string;
+  rereads: Rereading[] | null;
+  wishlist: Wishlist[] | null;
 }
 
-const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
+const UpdateBook = ({ id, book, series, imageUrl, rereads, wishlist }: UpdateBookProps) => {
+
   const [singleBook, setSingleBook] = useState<boolean>(
     book[0]?.is_single_book || false
   );
@@ -36,9 +41,11 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
   const [rating, setRating] = useState<number>(book[0]?.rating ?? 0);
   const [openInput, setOpenInput] = useState<boolean>(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(imageUrl);
-  const [rereaded, setRereaded] = useState<boolean>(book[0]?.rereaded && book[0]?.rereaded > 0 ? true : false);
   const [isDragging, setIsDragging] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isWishlist, setIsWishlist] = useState<boolean>(wishlist && wishlist?.length > 0 || false);
+  const [rereading, setRereading] = useState<boolean>(false);
+  const [rereadStatus, setRereadStatus] = useState<string>("");
 
   const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -292,7 +299,7 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
                                 </>
                               )}
                               <p className="text-xs text-[#7F4B30]/70 mt-1">
-                                PNG, JPG (Máx. 5MB)
+                                PNG, JPG (Máx. 1MB)
                               </p>
                             </div>
                           )}
@@ -472,27 +479,46 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
               </div>
 
               <div className={clsx(currentStep === 2 ? "block" : "hidden")}>
-                <div className={clsx("space-y-8")}>
-                  <div className="space-y-4">
+                <div className="flex justify-between">
+                  <div className={clsx("space-y-8")}>
+                    <div className="space-y-4">
+                      <ToggleSwitch
+                        label="Na biblioteca?"
+                        name="library"
+                        id="library"
+                        checked={library}
+                        value={library.toString()}
+                        onChange={(e) => setLibrary(e.target.checked)}
+                        className="mb-4"
+                      />
+                    </div>
+                    {library && (
+                      <InputField
+                        label="Data que entrou pra coleção"
+                        type="date"
+                        name="acquisition_date"
+                        defaultValue={book[0]?.acquisition_date ?? ""}
+                        className="w-full"
+                      />
+                    )}
+                  </div>
+                  <div
+                    className={clsx(
+                      "space-y-2",
+                      library ? "cursor-not-allowed" : ""
+                    )}
+                  >
                     <ToggleSwitch
-                      label="Na biblioteca?"
-                      name="library"
-                      id="library"
-                      checked={library}
-                      value={library.toString()}
-                      onChange={(e) => setLibrary(e.target.checked)}
+                      label="Adicionar na Wishlist?"
+                      name="wishlist"
+                      id="wishlist"
+                      disabled={library}
+                      checked={isWishlist}
+                      value={isWishlist.toString()}
+                      onChange={(e) => setIsWishlist(e.target.checked)}
                       className="mb-4"
                     />
                   </div>
-                  {library && (
-                    <InputField
-                      label="Data que entrou pra coleção"
-                      type="date"
-                      name="acquisition_date"
-                      defaultValue={book[0]?.acquisition_date ?? ""}
-                      className="w-full"
-                    />
-                  )}
                 </div>
               </div>
 
@@ -567,18 +593,68 @@ const UpdateBook = ({ id, book, series, imageUrl }: UpdateBookProps) => {
                           className="w-full"
                         />
                       )}
-                      {rereaded && (
-                        <><InputField
-                          label="Relido"
-                          name="rereaded"
-                          type="number"
-                          className="w-full"
-                          defaultValue={book[0]?.rereaded ?? ""} /><span>vezes</span></>
-                      )}
                     </div>
+
                     {dateError && (
                       <p className="text-red-600 text-sm mt-1">{dateError}</p>
                     )}
+                  </div>
+                  {rereads && rereads.length > 0 && (
+                    <div className="space-y-4">
+                      <p><strong>Releituras</strong>:</p>
+                      <ol style={{ listStyleType: "decimal", listStylePosition: "inside" }}>
+                        {rereads.map((reread) => (
+                          <li key={reread.id}>{formatDate(reread.date_finished)}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  <div>
+                    <ToggleSwitch
+                      label="Releitura"
+                      name="rereaded"
+                      id="rereaded"
+                      onChange={(e) => setRereading(e.target.checked)}
+                      checked={rereading}
+                      value={rereading.toString()}
+                      className="mb-4"
+                    />
+                    <SelectField
+                      disabled={!rereading}
+                      label="Status da Releitura"
+                      name="rereadStatus"
+                      required
+                      options={[
+                        { value: "rereading", label: "Relendo" },
+                        { value: "finish", label: "Finalizado" },
+                      ]}
+                      onChange={(e) => setRereadStatus(e.target.value)}
+                      className="w-full"
+                    />
+
+                    <div className="space-y-4">
+                      {["rereading", "finish"].includes(rereadStatus) && (
+                        <InputField
+                          label="Data de Início da Releitura"
+                          name="rereading_init_date"
+                          type="date"
+                          className="w-full"
+                          onChange={(e) => {
+                            setInitDate(e.target.value);
+                          }}
+                        />
+                      )}
+                      {rereadStatus === "finish" && (
+                        <InputField
+                          name="rereading_finish_date"
+                          label="Data finalização da Releitura"
+                          type="date"
+                          onChange={handleFinishDateChange}
+                          className="w-full"
+                        />
+                      )}
+                    </div>
+
                   </div>
                 </div>
               </div>

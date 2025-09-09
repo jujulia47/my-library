@@ -27,7 +27,11 @@ export default async function updateBook(formData: FormData) {
   const audiobook = formData.get("audiobook") as string;
   const ebook = formData.get("ebook") as string;
   const comments = formData.get("comments") as string;
-  const rereaded = formData.get("rereaded") as string;
+  const rereaded = formData.get("rereaded") as string
+  const rereading_init_date = formData.get("rereading_init_date") as string
+  const rereading_finish_date = formData.get("rereading_finish_date") as string
+  const rereadStatus = formData.get("rereadStatus") as string
+  const wishlist = formData.get("wishlist") as string
 
   let coverPath: string | null = null;
 
@@ -71,8 +75,7 @@ export default async function updateBook(formData: FormData) {
         current_page,
         rating,
         version: [physical, audiobook, ebook],
-        comments,
-        rereaded
+        comments
       },
     ])
     .eq("id", id)
@@ -85,5 +88,34 @@ export default async function updateBook(formData: FormData) {
 
   if (data) {
     console.log(data);
+  }
+
+  if(wishlist){
+    const { data: wishlistData, error: wishlistError } = await supabase
+      .from("wishlist")
+      .upsert(
+        { book_id: data?.id },
+        { onConflict: "book_id", ignoreDuplicates: true }
+      );
+  
+    if (wishlistError) {
+      console.log(wishlistError);
+    }
+    if(wishlistData) {
+      console.log(wishlistData);
+    }
+  }
+  
+  if(rereaded) {
+    const { data: rereadingData, error: rereadingError } = await supabase
+      .from("rereading")
+      .insert([{date_started: rereading_init_date, date_finished: rereading_finish_date, status: rereadStatus, book_id: data?.id}]);
+  
+    if (rereadingError) {
+      console.log(rereadingError);
+    }
+    if(rereadingData) {
+      console.log(rereadingData);
+    }
   }
 }

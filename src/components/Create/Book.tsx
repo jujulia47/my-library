@@ -29,6 +29,7 @@ const CreateBook = ({ series }: SerieProps) => {
   const [library, setLibrary] = useState<boolean>(false);
   const [wishlist, setWishlist] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
+  const [rereadStatus, setRereadStatus] = useState<string>("");
   const [initDate, setInitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
   const [openInput, setOpenInput] = useState<boolean>(false);
@@ -100,8 +101,8 @@ const CreateBook = ({ series }: SerieProps) => {
     const finishDate = e.target.value;
     initDate && finishDate < initDate
       ? setDateError(
-          "A data de término não pode ser anterior à data de início."
-        )
+        "A data de término não pode ser anterior à data de início."
+      )
       : setDateError(null);
   };
 
@@ -130,9 +131,8 @@ const CreateBook = ({ series }: SerieProps) => {
                     <div
                       className="h-full bg-gradient-to-r from-[#B27D57] to-[#7F4B30] transition-all duration-500 ease-out"
                       style={{
-                        width: `${
-                          (currentStep - 1) * (100 / (steps.length - 1))
-                        }%`,
+                        width: `${(currentStep - 1) * (100 / (steps.length - 1))
+                          }%`,
                         height: "100%",
                         maxWidth: "100%",
                         borderRadius: "4px",
@@ -155,13 +155,13 @@ const CreateBook = ({ series }: SerieProps) => {
                       className={[
                         "flex items-center justify-center w-12 h-12 rounded-full text-sm font-medium transition-all duration-300",
                         isActive &&
-                          "bg-gradient-to-br from-[#B27D57] to-[#8E5D3D] text-[#E1D9C9] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)] border border-[#AE9372]/30 scale-110",
+                        "bg-gradient-to-br from-[#B27D57] to-[#8E5D3D] text-[#E1D9C9] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)] border border-[#AE9372]/30 scale-110",
                         isCompleted &&
-                          !isActive &&
-                          "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
                         !isActive &&
-                          !isCompleted &&
-                          "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
+                        "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
+                        !isActive &&
+                        !isCompleted &&
+                        "bg-[#E1D9C9] text-[#7F4B30] border border-[#AE9372]/30 shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.7)] hover:shadow-[6px_6px_12px_rgba(0,0,0,0.1),-6px_-6px_12px_rgba(255,255,255,0.8)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -190,10 +190,10 @@ const CreateBook = ({ series }: SerieProps) => {
                         "mt-2 text-xs font-medium transition-colors",
                         isActive && "text-[#7F4B30] font-semibold",
                         isCompleted &&
-                          "text-[#424C21] group-hover:text-[#173125]",
+                        "text-[#424C21] group-hover:text-[#173125]",
                         !isActive &&
-                          !isCompleted &&
-                          "text-[#7F4B30] group-hover:text-[#7F4B30]",
+                        !isCompleted &&
+                        "text-[#7F4B30] group-hover:text-[#7F4B30]",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -216,10 +216,9 @@ const CreateBook = ({ series }: SerieProps) => {
                           <label
                             htmlFor="cover-upload"
                             className={`flex flex-col items-center justify-center w-64 h-96 border-2 border-dashed rounded-lg cursor-pointer transition-colors mx-auto
-                              ${
-                                isDragging
-                                  ? "border-[#7F4B30] bg-white/70"
-                                  : "border-[#E1D9C9] bg-white/50 hover:bg-white/70"
+                              ${isDragging
+                                ? "border-[#7F4B30] bg-white/70"
+                                : "border-[#E1D9C9] bg-white/50 hover:bg-white/70"
                               }`}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
@@ -604,24 +603,6 @@ const CreateBook = ({ series }: SerieProps) => {
                           type="number"
                           className="w-full"
                         />
-                        <ToggleSwitch
-                          label="Releitura"
-                          name="rereading"
-                          id="rereading"
-                          checked={rereading}
-                          value={rereading.toString()}
-                          onChange={(e) => setRereading(e.target.checked)}
-                          className="mb-4"
-                        />
-
-                        {rereading && (
-                          <InputField
-                            label="Releitura nº"
-                            name="rereaded"
-                            type="number"
-                            className="w-full"
-                          />
-                        )}
                       </>
                     )}
 
@@ -656,6 +637,53 @@ const CreateBook = ({ series }: SerieProps) => {
                   {dateError && (
                     <p className="text-red-600 text-sm mt-1">{dateError}</p>
                   )}
+                </div>
+                <div>
+                  <ToggleSwitch
+                    label="Releitura"
+                    name="rereading"
+                    id="rereading"
+                    checked={rereading}
+                    value={rereading.toString()}
+                    onChange={(e) => setRereading(e.target.checked)}
+                    className="mb-4"
+                  />
+                  <SelectField
+                    disabled={!rereading}
+                    label="Status da Releitura"
+                    name="rereadStatus"
+                    required
+                    options={[
+                      { value: "rereading", label: "Relendo" },
+                      { value: "finish", label: "Finalizado" },
+                    ]}
+                    onChange={(e) => setRereadStatus(e.target.value)}
+                    className="w-full"
+                  />
+
+                  <div className="space-y-4">
+                    {["rereading", "finish"].includes(rereadStatus) && (
+                      <InputField
+                        label="Data de Início da Releitura"
+                        name="rereading_init_date"
+                        type="date"
+                        className="w-full"
+                        onChange={(e) => {
+                          setInitDate(e.target.value);
+                        }}
+                      />
+                    )}
+                    {rereadStatus === "finish" && (
+                      <InputField
+                        name="rereading_finish_date"
+                        label="Data finalização da Releitura"
+                        type="date"
+                        onChange={handleFinishDateChange}
+                        className="w-full"
+                      />
+                    )}
+                  </div>
+
                 </div>
                 <div className="flex justify-between mt-8">
                   <button
