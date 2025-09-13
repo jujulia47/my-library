@@ -73,10 +73,10 @@ const DetailsQuotePage = ({ quote }: QuoteProps) => {
             {/* Citação com destaque */}
             <div className="mb-12 relative">
               <div className="absolute -left-1 top-0 h-full w-1 bg-gradient-to-b from-amber-300 to-amber-400 rounded-full"></div>
-              <blockquote className="text-xl md:text-2xl text-amber-900 font-normal leading-tight italic pl-6 [&>p]:my-1 tex">
-                <span className="text-4xl text-amber-200 mr-2 -ml-2 -mt-2 inline-block h-0">"</span>
-                <span className="relative -top-1">{currentQuote.quote}</span>
-                <span className="text-4xl text-amber-200 ml-1 -mr-2 -mb-2 inline-block h-0">"</span>
+              <blockquote className="text-lg md:text-xl text-amber-900 font-light leading-relaxed italic pl-6 [&>p]:my-1 font-serif">
+                <span className="text-4xl text-amber-200/80 mr-2 -ml-2 -mt-2 inline-block h-0">"</span>
+                <span className="relative -top-1 tracking-wider">{currentQuote.quote}</span>
+                <span className="text-4xl text-amber-200/80 ml-1 -mr-2 -mb-2 inline-block h-0">"</span>
               </blockquote>
             </div>
 

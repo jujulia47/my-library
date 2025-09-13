@@ -1,9 +1,28 @@
 import ReadBook from "@/components/Read/Book/ReadBook"
 import SideMenu from "@/components/SideMenu"
+import Search from "@/components/Search/Search"
+import { searchBooks } from "@/services/book"
+import Link from "next/link"
 
 
-export default async function BookPage() {
+interface PageProps {
+  searchParams: {
+    [key: string]: string | string[] | undefined
+  }
+}
 
+export default async function BookPage(
+  { searchParams }: PageProps
+) {
+  console.log(searchParams, "searchParams");
+
+  const search =
+    typeof searchParams.search === "string" ? searchParams.search : "";
+
+  console.log(search, "search");
+
+  const searchedBooks = await searchBooks(search ? search : "", 1000);
+  console.log(searchedBooks, "searchedBooks");
 
   return (
     <div>
@@ -11,7 +30,13 @@ export default async function BookPage() {
         <SideMenu />
       </section>
       <section className="ml-64">
-        < ReadBook />
+        <Search
+          searchedBooks={searchedBooks}
+        />
+        <ReadBook
+          searchParams={searchParams}
+          searchedBooks={searchedBooks}
+        />
       </section>
     </div>
   );

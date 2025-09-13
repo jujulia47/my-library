@@ -11,6 +11,7 @@ export default async function Page({
 
   const book = await bookSlug(slug);
   const imageUrl = await imagesUrl(book?.[0]?.cover ?? "");
+  console.log(imageUrl, 'imageUrl');
 
   if (!book) {
     return <div>Livro não encontrado.</div>;

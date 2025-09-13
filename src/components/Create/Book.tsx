@@ -2,7 +2,7 @@
 
 import createBook from "@/actions/createBook";
 import { Database } from "@/utils/typings/supabase";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import InputField from "../FormFields/InputField";
 import SelectField from "../FormFields/SelectField";
 import TextareaField from "../FormFields/TextareaField";
@@ -13,6 +13,7 @@ import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import ReturnBtn from "@/components/ReturnBtn";
 import Image from "next/image";
+import { authorAutoComplete, categoryAutoComplete } from "@/services/book";
 
 type Serie = Database["public"]["Tables"]["serie"]["Row"];
 
@@ -38,6 +39,37 @@ const CreateBook = ({ series }: SerieProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [rereading, setRereading] = useState<boolean>(false);
+
+  const [authorValue, setAuthorValue] = useState<string>("");
+  const [categoryValue, setCategoryValue] = useState<string>("");
+  const [authorSuggestions, setAuthorSuggestions] = useState<string[]>([]);
+  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
+  const [showAuthorSuggestions, setShowAuthorSuggestions] = useState(false);
+  const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
+
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAuthorValue(e.target.value);
+    const authorResult = await authorAutoComplete(authorValue);
+    setAuthorSuggestions(authorResult);
+  };
+
+  const handleCategoryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCategoryValue(e.target.value);
+    const categoryResult = await categoryAutoComplete(categoryValue);
+    setCategorySuggestions(categoryResult);
+  };
+
+  const handleSelectAuthor = (author: string) => {
+    setAuthorValue(author);
+    setShowAuthorSuggestions(false);
+    // setAuthorSuggestions([]);
+  };
+
+  const handleSelectCategory = (category: string, e: React.MouseEvent) => {
+    setCategoryValue(category);
+    setShowCategorySuggestions(false);
+    // setCategorySuggestions([]);
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -322,17 +354,39 @@ const CreateBook = ({ series }: SerieProps) => {
                             name="title"
                             required
                             className="w-full"
+                            placeholder="book title"
                           />
                         </div>
 
-                        <div className="mt-4">
+                        <div className="mt-4 relative w-full">
                           <InputField
                             label="Autor(a)"
                             type="text"
                             name="author"
                             required
                             className="w-full"
+                            onChange={handleChange}
+                            placeholder="author"
+                            value={authorValue || ""}
+                            onFocus={() => setShowAuthorSuggestions(true)}
+                            onBlur={() => setShowAuthorSuggestions(false)}
                           />
+
+                          {showAuthorSuggestions && authorSuggestions.length > 0 && (
+                            <ul className="absolute left-0 right-0 mt-1 max-h-48 overflow-auto z-10 rounded-lg bg-[#F5F1E9] border border-[#AE9372]/50 shadow-[4px_4px_8px_rgba(0,0,0,0.1)] w-full">
+                              {authorSuggestions.map((s, i) => (
+                                <li
+                                  key={i}
+                                  //onMouseDown dispara antes do blur, então o item é selecionado com segurança.
+                                  //Evite usar onClick nos <li> se você mantém onBlur no input — o click pode não acontecer.
+                                  onMouseDown={() => handleSelectAuthor(s)}
+                                  className="px-4 py-2 text-[#5A3522] hover:bg-[#E8D9C5] cursor-pointer transition-colors duration-200"
+                                >
+                                  {s}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
 
                         <InputField
@@ -340,6 +394,7 @@ const CreateBook = ({ series }: SerieProps) => {
                           type="text"
                           name="slug"
                           className="w-full"
+                          placeholder="book url"
                         />
                       </div>
                     </div>
@@ -351,13 +406,37 @@ const CreateBook = ({ series }: SerieProps) => {
                         type="number"
                         name="pages"
                         className="w-full"
+                        placeholder="pages"
                       />
-                      <InputField
-                        label="Categoria"
-                        type="text"
-                        name="category"
-                        className="w-full"
-                      />
+                      <div className="relative w-full" 
+                      // ref={categoryRef}
+                      >
+                        <InputField
+                          label="Categoria"
+                          type="text"
+                          name="category"
+                          className="w-full"
+                          placeholder="category"
+                          onChange={handleCategoryChange}
+                          value={categoryValue || ""}
+                          onFocus={() => setShowCategorySuggestions(true)}
+                          onBlur={() => setShowCategorySuggestions(false)}
+                        />
+                        
+                        {showCategorySuggestions && categorySuggestions.length > 0 && (
+                          <ul className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-auto z-10 rounded-lg bg-[#F5F1E9] border border-[#AE9372]/50 shadow-[4px_4px_8px_rgba(0,0,0,0.1)]">
+                              {categorySuggestions.map((s, i) => (
+                                <li
+                                  key={i}
+                                  onMouseDown={(e) => handleSelectCategory(s, e)}
+                                  className="px-4 py-2 text-[#5A3522] hover:bg-[#E8D9C5] cursor-pointer transition-colors duration-200"
+                                >
+                                  {s}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                      </div>
                       <SelectField
                         label="Idioma"
                         name="language"
@@ -458,6 +537,7 @@ const CreateBook = ({ series }: SerieProps) => {
                             name="volume"
                             className="w-full"
                             disabled={singleBook}
+                            placeholder="volume"
                           />
                         </>
                       )}
@@ -638,7 +718,7 @@ const CreateBook = ({ series }: SerieProps) => {
                     <p className="text-red-600 text-sm mt-1">{dateError}</p>
                   )}
                 </div>
-                <div>
+                <div className="space-y-6 mt-8">
                   <ToggleSwitch
                     label="Releitura"
                     name="rereading"

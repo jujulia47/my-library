@@ -75,6 +75,8 @@ const DetailsCollectionPage = ({
   seriesInfos,
   wishlistInfos,
 }: DetailsCollectionProps) => {
+  console.log(booksInfos, "booksInfos");
+
   if (!collection) {
     return (
       <div className="min-h-screen bg-[#F5F0E4] flex items-center justify-center relative overflow-hidden">
@@ -241,7 +243,7 @@ const DetailsCollectionPage = ({
                                         (b) => b.book?.status === "finish"
                                       ).length /
                                         collection[0].collection_book.length) *
-                                        100
+                                      100
                                     )}
                                     %
                                   </span>
@@ -256,7 +258,7 @@ const DetailsCollectionPage = ({
                                           ).length /
                                             collection[0].collection_book
                                               .length) *
-                                            100
+                                          100
                                         )}%`,
                                       }}
                                       className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500 ease-out"
@@ -360,14 +362,14 @@ const DetailsCollectionPage = ({
                                     <span className="font-bold text-amber-700">
                                       {collection[0].collection_serie.length > 0
                                         ? Math.round(
-                                            (collection[0].collection_serie.filter(
-                                              (s) =>
-                                                s.serie?.status === "finish"
-                                            ).length /
-                                              collection[0].collection_serie
-                                                .length) *
-                                              100
-                                          )
+                                          (collection[0].collection_serie.filter(
+                                            (s) =>
+                                              s.serie?.status === "finish"
+                                          ).length /
+                                            collection[0].collection_serie
+                                              .length) *
+                                          100
+                                        )
                                         : 0}
                                       %
                                     </span>
@@ -376,22 +378,21 @@ const DetailsCollectionPage = ({
                                     <div className="overflow-hidden h-3 mb-2 text-xs flex rounded-full bg-amber-200/50">
                                       <div
                                         style={{
-                                          width: `${
-                                            collection[0].collection_serie
+                                          width: `${collection[0].collection_serie
                                               .length > 0
                                               ? Math.round(
-                                                  (collection[0].collection_serie.filter(
-                                                    (s) =>
-                                                      s.serie?.status ===
-                                                      "finish"
-                                                  ).length /
-                                                    collection[0]
-                                                      .collection_serie
-                                                      .length) *
-                                                    100
-                                                )
+                                                (collection[0].collection_serie.filter(
+                                                  (s) =>
+                                                    s.serie?.status ===
+                                                    "finish"
+                                                ).length /
+                                                  collection[0]
+                                                    .collection_serie
+                                                    .length) *
+                                                100
+                                              )
                                               : 0
-                                          }%`,
+                                            }%`,
                                         }}
                                         className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500 ease-out"
                                       ></div>
@@ -523,83 +524,94 @@ const DetailsCollectionPage = ({
                   {booksInfos.length !== 0 && (
                     <div className="w-full flex flex-col items-center">
                       <div className="w-full">
-                        {seriesInfos.length !== 0 && (
+                        {booksInfos.length !== 0 && (
                           <div className="p-6 bg-gradient-to-br from-white to-amber-50 rounded-xl shadow-md border-2 border-amber-100">
                             <h2 className="text-2xl font-bold text-amber-900 mb-6 font-serif border-b pb-2">
                               Livros
                             </h2>
                             <div className="flex gap-6 overflow-y-auto custom-scrollbar">
-                              {booksInfos.map((book) => (
-                                <div
-                                  key={book.id}
-                                  className="flex flex-col items-center group mb-6 w-[150px]"
-                                >
-                                  <div className="relative w-[126px] h-[190px] bg-amber-50 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform group-hover:-translate-y-1">
-                                    {book.cover ? (
-                                      <Image
-                                        src={book.cover}
-                                        alt={`Capa de ${book.title}`}
-                                        width={126}
-                                        height={190}
-                                        className="object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-amber-100">
-                                        <span className="text-amber-800 text-sm text-center p-2">
-                                          Sem capa
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="mt-3 text-center w-full px-2 w-[160px] h-[90px] flex flex-col justify-between">
-                                    <div>
-                                      <p className="text-sm text-base text-amber-900 line-clamp-1">
-                                        {book.title}
-                                      </p>
-                                      {book.volume && (
-                                        <p className="text-xs text-amber-700">
-                                          Vol. {book.volume}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <div>
-                                      {book.rating && book.rating != 0 ? (
-                                        <div className="mt-1 flex justify-center items-center">
-                                          <span className="text-amber-500 text-xs">
-                                            {renderRating(book.rating)}
-                                          </span>
-                                          <span className="ml-1 text-xs text-amber-700">
-                                            {book.rating.toFixed(1)}
-                                          </span>
-                                        </div>
+                              {booksInfos.map((book) => {
+                                console.log(book, "book");
+                                
+                                return (
+
+                                  <div
+                                    key={book.id}
+                                    className="flex flex-col items-center group mb-6 w-[150px]"
+                                  >
+                                    <div className="relative w-[126px] h-[190px] bg-amber-50 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform group-hover:-translate-y-1">
+                                      {book.cover ? (
+                                        <Image
+                                          src={book.cover}
+                                          alt={`Capa de ${book.title}`}
+                                          width={126}
+                                          height={190}
+                                          className="object-cover"
+                                        />
                                       ) : (
-                                        <></>
-                                      )}
-                                      {book.status && (
-                                        <div className="mt-1">
-                                          <span
-                                            className={clsx(
-                                              "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#F3E2C7] capitalize",
-                                              {
-                                                "bg-[#D35230]":
-                                                  book.status === "finish",
-                                                "bg-[#2B4A73]":
-                                                  book.status === "reading",
-                                                "bg-[#B28B2B]":
-                                                  book.status === "tbr",
-                                                "bg-[#8B3737]":
-                                                  book.status === "abandoned",
-                                              }
-                                            )}
-                                          >
-                                            {book.status}
+                                        <div className="w-full h-full flex items-center justify-center bg-amber-100">
+                                          <span className="text-amber-800 text-sm text-center p-2">
+                                            Sem capa
                                           </span>
                                         </div>
                                       )}
                                     </div>
+                                    <div className="mt-3 text-center w-full px-2 w-[160px] h-[90px] flex flex-col justify-between">
+                                      <div>
+                                        <p className="text-sm text-base text-amber-900 line-clamp-1">
+                                          {book.title}
+                                        </p>
+                                        {book.volume ? (
+                                          <p className="text-xs text-amber-700">
+                                            Vol. {book.volume}
+                                          </p>
+                                        ) : (
+                                          <></>
+                                        )}
+                                      </div>
+                                      <div>
+                                        {book.rating && book.rating != 0 ? (
+                                          <div className="mt-1 flex justify-center items-center">
+                                            <span className="text-amber-500 text-xs">
+                                              {renderRating(book.rating)}
+                                            </span>
+                                            <span className="ml-1 text-xs text-amber-700">
+                                              {book.rating.toFixed(1)}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <></>
+                                        )}
+                                        {book.status && (
+                                          <div className="mt-1">
+                                            <span
+                                              className={clsx(
+                                                "inline-block px-2 py-0.5 rounded text-xs font-semibold align-middle font-serif text-[#F3E2C7] capitalize",
+                                                {
+                                                  "bg-[#D35230]":
+                                                    book.status === "finish",
+                                                  "bg-[#2B4A73]":
+                                                    book.status === "reading",
+                                                  "bg-[#B28B2B]":
+                                                    book.status === "tbr",
+                                                  "bg-[#8B3737]":
+                                                    book.status === "abandoned",
+                                                }
+                                              )}
+                                            >
+                                              {book.status}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                )
+                              }
+
+                              )
+
+                              }
                             </div>
                           </div>
                         )}
