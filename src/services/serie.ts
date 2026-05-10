@@ -1,67 +1,55 @@
-"use server";
+import { createClient } from "@/utils/supabase/server";
+import type { Database } from "@/utils/typings/supabase";
+import type { SerieWithLegacyShape } from "@/utils/typings/app";
 
-import supabase from "@/utils/supabaseClient";
-import { Database } from "@/utils/typings/supabase";
+type SerieRow = Database["public"]["Tables"]["serie"]["Row"];
+type BookRow = Database["public"]["Tables"]["book"]["Row"];
 
-type SerieRead = Database["public"]["Tables"]["serie"]["Row"];
-type SerieUpdate = Database["public"]["Tables"]["serie"]["Update"];
+export type { SerieWithLegacyShape };
 
-type Book = Database["public"]["Tables"]["book"]["Row"];
-type Serie = Database["public"]["Tables"]["serie"]["Row"];
-
-type BookWithVolume = Book & { volume: number | null };
-
-type SerieWithBooks = Serie & {
-  book: BookWithVolume[];
-};
-
-export async function serieList() {
-  const { data, error } = await supabase
-    .from("serie")
-    .select(`*, book:book!serie_current_book_id_fkey(id, title)`)
-    .overrideTypes<SerieRead[]>();
-
-  if (error) {
-    console.log(error);
-  }
-  if (data) {
-    console.log(data);
-  }
-
-  return data
+function flattenSerie(
+  raw: SerieRow & { book?: { id: string; title: string } | null },
+): SerieWithLegacyShape {
+  return {
+    ...raw,
+    serie_name: raw.name,
+    init_date: raw.start_date,
+    book: raw.book ?? null,
+  };
 }
 
-export async function serieById(id: number) {
-  
-  const { data, error } = await supabase
-    .from("serie")
-    .select()
-    .eq("id", id)
-    .overrideTypes<SerieUpdate[]>();
+export async function serieList() {
+  // Service legado, ainda consumido por `/` e collection. O campo `book`
+  // (livro atual) virou derivação — ver `services/serieDerivedFields.ts`
+  // — e fica `null` aqui pra caller que não precisa dele. Caller que
+  // precisar deve migrar pro `serieListQuery` em serieList.ts.
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("serie").select("*");
+  if (error) return null;
+  return data?.map((row) => flattenSerie(row as SerieRow)) ?? null;
+}
 
-  if (error) {
-    console.log(error);
-  }
-  if (data) {
-    console.log(data);
-  }
-
-  return data
+export async function serieById(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("serie").select().eq("id", id);
+  if (error) return null;
+  return data?.map((row) => flattenSerie(row as SerieRow)) ?? null;
 }
 
 export async function serieSlug(slug: string) {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("serie")
-    .select(`*, book!book_serie_id_fkey(id, title, cover, rating, status, volume, author)`)
-    .eq("slug", slug)
-    .overrideTypes<SerieWithBooks[]>();
+    .select(
+      `*, book!book_serie_id_fkey(id, title, cover, volume, slug)`,
+    )
+    .eq("slug", slug);
+  if (error) return null;
 
-  if (error) {
-    console.log(error);
-  }
-  if (data) {
-    console.log(data);
-  }
-
-  return data
+  type SerieWithBooks = SerieRow & { book: BookRow[] };
+  const result = (data ?? []).map((row) => {
+    const flat = flattenSerie(row as SerieRow);
+    return { ...flat, book: (row as unknown as SerieWithBooks).book ?? [] };
+  });
+  return result;
 }

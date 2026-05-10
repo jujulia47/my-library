@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
+import "@fontsource/cormorant-garamond/400.css";
+import "@fontsource/cormorant-garamond/500.css";
+import "@fontsource/eb-garamond/400.css";
+import "@fontsource/eb-garamond/500.css";
+import "@fontsource/eb-garamond/400-italic.css";
+import "flag-icons/css/flag-icons.min.css";
 import "./globals.css";
-import "./fantasy.css";
 
 export const metadata: Metadata = {
-  title: "Library",
-  description: "Create by Júlia Borges",
+  title: "My Library",
+  description: "Sua biblioteca pessoal",
 };
 
 export default function RootLayout({
@@ -14,8 +19,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`fantasy-bg`}>
-          {children}
+      <body className="font-body bg-ivory text-ink-deep min-h-screen">
+        {children}
       </body>
     </html>
   );

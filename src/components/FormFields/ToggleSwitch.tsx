@@ -3,7 +3,11 @@
 import { ToggleFieldProps } from "@/utils/typings/formFields";
 import clsx from "clsx";
 
-export const ToggleSwitch = ({ label, className, ...props }: ToggleFieldProps) => {
+export const ToggleSwitch = ({
+  label,
+  className,
+  ...props
+}: ToggleFieldProps) => {
   const isChecked = Boolean(props.checked);
 
   return (
@@ -17,20 +21,22 @@ export const ToggleSwitch = ({ label, className, ...props }: ToggleFieldProps) =
       <label
         htmlFor={props.id}
         className={clsx(
-          "relative inline-flex items-center h-7 w-14 rounded-full transition-colors duration-200 cursor-pointer",
+          "relative inline-flex items-center h-6 w-11 rounded-full transition-colors duration-150 cursor-pointer border",
           isChecked
-            ? "bg-gradient-to-br from-[#7F4B30] to-[#B27D57] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)]"
-            : "bg-gradient-to-br from-gray-200 to-gray-300 shadow-[2px_2px_4px_rgba(0,0,0,0.1),-2px_-2px_4px_rgba(255,255,255,0.8)]"
+            ? "bg-ink-deep border-ink-deep"
+            : "bg-paper-soft border-border",
         )}
       >
         <span
           className={clsx(
-            "absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white transition-transform duration-200 shadow-md",
-            isChecked ? "translate-x-7 shadow-[1px_1px_3px_rgba(0,0,0,0.3)]" : "translate-x-1 shadow-[1px_1px_3px_rgba(0,0,0,0.2)]"
+            "absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-ivory-light shadow-sm transition-transform duration-150",
+            isChecked ? "translate-x-6" : "translate-x-1",
           )}
         />
       </label>
-      <span className="ml-3 text-sm font-medium text-gray-700">{label}</span>
+      {label && (
+        <span className="ml-3 text-sm font-body text-ink-deep">{label}</span>
+      )}
     </section>
   );
 };

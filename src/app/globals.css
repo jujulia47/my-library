@@ -1,43 +1,1738 @@
 @import "tailwindcss";
 
-/* Estilo para o card da biblioteca */
-.library-card {
-  position: relative;
-  background: linear-gradient(135deg, #fef9e6 0%, #f8f3e6 100%);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  border-radius: 0.5rem;
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+@theme {
+  /* Fontes — carregadas via @fontsource em layout.tsx */
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body: "EB Garamond", Georgia, serif;
+
+  /* Surfaces */
+  --color-ivory: #F5F0E6;
+  --color-ivory-light: #FAF6EC;
+  --color-paper: #EDE8DC;
+  --color-paper-soft: #E0D8C8;
+
+  /* Inks — ink-deep mais quente */
+  --color-ink-deep: #4A3826;
+  --color-ink-soft: #6B5D4F;
+  --color-ink-fade: #948977;
+
+  /* Cappuccino — tom warm intermediário (substitui pine) */
+  --color-cappuccino: #6B5240;
+  --color-cappuccino-soft: #8B6F50;
+
+  /* Gold — honey, mais vivo. gold-deep escurecido pra contraste AA do badge. */
+  --color-gold: #F0C040;
+  --color-gold-deep: #8C6E1C;
+
+  /* Burgundy — mais saturado */
+  --color-burgundy: #82393A;
+  --color-burgundy-soft: #A24749;
+
+  /* Moss — mais aberto */
+  --color-moss: #5C6E47;
+  --color-moss-soft: #6F8456;
+
+  /* Navy — mantém */
+  --color-navy: #1E3A5F;
+  --color-navy-soft: #2C5078;
+
+  /* Terracota — nova */
+  --color-terracota: #BC6E48;
+  --color-terracota-soft: #D08054;
+
+  /* Olive — mantém */
+  --color-olive: #85614B;
+
+  /* Border */
+  --color-border: #C9BFA8;
+
+  /* Library — paleta vintage escura usada em /library (sessão 16). Tons
+     marrons profundos pra estantes, papel envelhecido pra fichas dos livros.
+     `library-dark` é o gradient final aplicado via .bg-library-dark abaixo. */
+  --color-library-dark: #1A0F08;
+  --color-library-dark-grad: #2A1810;
+  --color-shelf-arch: #5A3A20;
+  --color-shelf-body: #3D2817;
+  --color-shelf-border: #5A3A20;
+  --color-shelf-plate: #2D1C0E;
+  --color-shelf-edge: #5A3A20;
+  --color-shelf-frame: #4A2E1A;
+  --color-paper-aged: #F5E8D0;
+  --color-paper-aged-bg: #F8F0DD;
+  --color-paper-aged-mid: #F0E5D0;
+
+  /* Sombras pré-definidas como shadow utilities */
+  --shadow-card: 0 1px 2px rgba(74, 56, 38, 0.05), 0 4px 12px rgba(74, 56, 38, 0.06);
 }
 
-.library-card .highlight {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: rgba(245, 158, 11, 0.3);
+@layer base {
+  /* Sessão 17.8: bump global de 16px → 17px (~+6%). Como Tailwind usa rem
+     pra tokens text-* e spacing, todo o app cresce proporcionalmente sem
+     ajustes pontuais. Se quebrar overflow em algum lugar, ajustar local. */
+  html {
+    font-size: 17px;
+  }
+  html,
+  body {
+    background-color: var(--color-ivory);
+    color: var(--color-ink-deep);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--color-ink-deep);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  ::selection {
+    background-color: rgba(240, 192, 64, 0.35);
+    color: var(--color-ink-deep);
+  }
 }
 
+/* Home dashboard — animação das estrelas no card de "Média" do StatsStrip.
+   No estado normal, estrelas inativas em paper-soft e ativas em ink-fade
+   discreto. No hover do card, estrelas ativas viram gold em sequência. */
+.stat-card .stat-card-star {
+  color: var(--color-paper);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+.stat-card .stat-card-star[data-active="true"] {
+  color: var(--color-ink-fade);
+}
+.stat-card:hover .stat-card-star[data-active="true"] {
+  color: var(--color-gold);
+}
 
-/* global.css ou module.css */
+/* Home dashboard — gráfico de livros por mês. Barras crescem do bottom
+   conforme a animação dispara (delay escalonado via inline style). */
+@keyframes barGrow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Home dashboard — heatmap de páginas por dia. Cada célula nasce com
+   opacidade 0 e escala 0.5; o "from" deixa o opacity-final do estilo inline
+   (pode ser 0.35 pra dias futuros) intacto, então não sobrescrevemos via
+   `to`. */
+@keyframes cellFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Pena saindo do tinteiro (QuillAndInk) — sway sutil; pena tem âncora rígida
+   na base, então oscila menos que a pena solta antiga. Usado em DailyQuote
+   (home) e AuthorQuoteCarousel (página do autor). */
+@keyframes quill-sway {
+  0%, 100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+
+/* Home dashboard — vela do rodapé. Duas chamas (interna/externa) animam em
+   contra-fase pra dar sensação de oscilação viva sem JS. As variações de
+   scaleX/scaleY são pequenas pra não "pular" o layout. */
+@keyframes flame-flicker {
+  0%, 100% {
+    transform: scaleY(1) scaleX(1);
+  }
+  25% {
+    transform: scaleY(1.08) scaleX(0.96);
+  }
+  50% {
+    transform: scaleY(0.96) scaleX(1.04);
+  }
+  75% {
+    transform: scaleY(1.04) scaleX(0.98);
+  }
+}
+
+/* Home dashboard — entrada escalonada das sections. Cada <section> da home
+   é envolvida em .home-section; o nth-of-type aplica delay crescente. Como
+   é animação só de entrada (não reversa), o número de seções não precisa
+   bater exatamente — passar disso fica sem delay e a animação ainda roda. */
+@keyframes home-section-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.home-section {
+  animation: home-section-fade-in 0.5s ease-out backwards;
+}
+.home-section:nth-of-type(1) { animation-delay: 0ms; }
+.home-section:nth-of-type(2) { animation-delay: 80ms; }
+.home-section:nth-of-type(3) { animation-delay: 160ms; }
+.home-section:nth-of-type(4) { animation-delay: 240ms; }
+.home-section:nth-of-type(5) { animation-delay: 320ms; }
+.home-section:nth-of-type(6) { animation-delay: 400ms; }
+.home-section:nth-of-type(7) { animation-delay: 480ms; }
+.home-section:nth-of-type(8) { animation-delay: 560ms; }
+
+/* Home dashboard — hover de elevação dos stat cards. Sutil; só nos cards
+   da StatsStrip pra evitar que outros cards do layout pulem. A classe
+   `.stat-card` já existe nesses cards (StatsStrip.tsx). */
+.stat-card {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.15s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(133, 79, 11, 0.08);
+}
+
+/* Home dashboard — célula "hoje" no heatmap pulsa suavemente entre uma
+   borda inset ink-deep e burgundy. 3s pra não chamar muita atenção. Sessão
+   17.3: troca de gold pra burgundy (gold conflita com escala da própria
+   célula; burgundy destaca como "marcador especial"). */
+@keyframes heatmap-today-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 0 1px var(--color-burgundy);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1.5px var(--color-burgundy);
+  }
+}
+.heatmap-cell-today {
+  animation: heatmap-today-pulse 3s ease-in-out infinite;
+}
+
+/* Home dashboard — ícone de trend do sparkline aparece depois que a linha
+   acaba de desenhar (linha total = 500ms delay + 1500ms duração). Daí o
+   delay 1.5s pra cair logo antes da linha terminar. */
+@keyframes pace-trend-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.7) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+.pace-trend-icon {
+  animation: pace-trend-arrive 0.4s ease-out 1.5s backwards;
+}
+
+/* Acessibilidade — respeita usuários que pediram menos movimento. Desliga
+   animações infinitas (quill-sway, flame-flicker, today-pulse) e zera
+   transições. O `!important` é necessário porque várias animações vêm de
+   `style={{ animation: ... }}` inline nos componentes (heatmap, donut,
+   sparkline, etc.) e perderiam pra especificidade sem ele. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+  height: 6px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 8px;
-  /* background: linear-gradient(to right, #fbbf24, #f59e0b); */
+  background: var(--color-border);
+  border-radius: 3px;
 }
-
-/* Para Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #fbbf24 transparent;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* ============================================================================
+   Library page — sessão 17.4: redesign pra "parede de prateleiras".
+   Tokens locais escopados em `.library-page` (não poluem design system).
+   ============================================================================ */
+
+.library-page {
+  --library-wall-top: #1A0E08;
+  --library-wall-mid: #0E0805;
+  --library-wood-top: #3A2818;
+  --library-wood-mid: #2A1810;
+  --library-wood-shadow: #15100A;
+  --library-wood-front-top: #4A3424;
+  --library-wood-front-bottom: #2A1810;
+  --library-light-warm: rgba(212, 176, 86, 0.06);
+
+  /* Sessão 17.11: parede com CONTRASTE dramatic claro/escuro inspirado
+     na bookshelf de referência — zonas quentes (luz batendo na madeira,
+     cobre/âmbar) alternando com zonas muito escuras (sombras profundas
+     nos cantos), sem hatching/listras. */
+  background:
+    /* Glow radial central forte — "spotlight" quente atrás dos livros */
+    radial-gradient(
+      ellipse 60% 70% at 50% 40%,
+      rgba(120, 75, 38, 0.42) 0%,
+      rgba(80, 48, 24, 0.18) 35%,
+      transparent 75%
+    ),
+    /* Hotspot lateral menor — quebra a simetria, como se a luz não fosse
+       perfeitamente centrada (mais natural) */
+    radial-gradient(
+      ellipse 35% 50% at 22% 35%,
+      rgba(110, 70, 35, 0.25) 0%,
+      transparent 65%
+    ),
+    /* Sombra profunda nos cantos esquerdo e direito — vinheta horizontal
+       AGRESSIVA pra dar contraste com o spotlight central */
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.7) 0%,
+      rgba(0, 0, 0, 0.25) 18%,
+      transparent 38%,
+      transparent 62%,
+      rgba(0, 0, 0, 0.25) 82%,
+      rgba(0, 0, 0, 0.7) 100%
+    ),
+    /* Sombra nas bordas superior e inferior (vinheta vertical) */
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      transparent 18%,
+      transparent 82%,
+      rgba(0, 0, 0, 0.55) 100%
+    ),
+    /* Base — gradiente vertical entre top e mid */
+    linear-gradient(
+      180deg,
+      var(--library-wall-mid) 0%,
+      var(--library-wall-top) 50%,
+      var(--library-wall-mid) 100%
+    );
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Sessão 17.10: substituído o "raio de luz" diagonal (que ficou aparecendo
+   como uma linha amarela atravessando a página) por um glow radial sutil
+   no canto superior esquerdo — iluminação ambiente quente, sem artefato. */
+.library-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 800px 600px at 0% 0%,
+    rgba(212, 176, 86, 0.07),
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Estrutura da prateleira */
+.shelf-row {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  height: 200px;
+}
+@media (max-width: 1024px) {
+  .shelf-row {
+    height: 180px;
+  }
+}
+@media (max-width: 640px) {
+  .shelf-row {
+    height: 160px;
+  }
+}
+
+/* Sessão 17.11: madeira escura tipo carvalho/nogueira da bookshelf
+   referência — base muito escura, grão horizontal forte, nós/manchas
+   espalhados, variação tonal entre claro/escuro, borda superior iluminada
+   pelo verniz refletindo, sombra inferior pra dar peso. */
+.shelf-wood-bottom {
+  height: 18px;
+  background:
+    /* Borda superior iluminada (verniz refletindo) */
+    linear-gradient(
+      180deg,
+      rgba(212, 176, 86, 0.22) 0%,
+      transparent 14%,
+      transparent 100%
+    ),
+    /* Nós e manchas escuras (knots) — espalhados em x, sutis */
+    radial-gradient(
+      ellipse 28px 5px at 12% 65%,
+      rgba(8, 4, 2, 0.4),
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 18px 4px at 28% 35%,
+      rgba(15, 8, 4, 0.35),
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 34px 5px at 47% 70%,
+      rgba(10, 5, 2, 0.32),
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 22px 4px at 63% 30%,
+      rgba(15, 8, 4, 0.35),
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 32px 5px at 81% 60%,
+      rgba(8, 4, 2, 0.36),
+      transparent 75%
+    ),
+    radial-gradient(
+      ellipse 20px 4px at 93% 40%,
+      rgba(15, 8, 4, 0.32),
+      transparent 75%
+    ),
+    /* Veios horizontais finos (grão da madeira, paralelo ao comprimento) —
+       sutis, espaçamento maior pra não virar listra agressiva. */
+    repeating-linear-gradient(
+      0deg,
+      rgba(8, 4, 2, 0.16) 0px,
+      rgba(8, 4, 2, 0.16) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(95, 60, 32, 0.06) 0px,
+      rgba(95, 60, 32, 0.06) 1px,
+      transparent 1px,
+      transparent 9px
+    ),
+    /* Variação tonal horizontal escura (mancha clara/escura) */
+    linear-gradient(
+      90deg,
+      #2a1812 0%,
+      #3a2820 22%,
+      #2f1d15 48%,
+      #3d2b22 72%,
+      #2a1812 100%
+    ),
+    /* Base (top → bottom) */
+    linear-gradient(
+      180deg,
+      var(--library-wood-front-top) 0%,
+      var(--library-wood-front-bottom) 100%
+    );
+  background-blend-mode: normal, multiply, multiply, multiply, multiply, multiply,
+    multiply, normal, normal, overlay, normal;
+  box-shadow:
+    inset 0 1px 0 rgba(212, 176, 86, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.7),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.5),
+    /* Sombra projetada abaixo da prateleira na parede */
+    0 2px 6px rgba(0, 0, 0, 0.55);
+  position: relative;
+  z-index: 2;
+}
+@media (max-width: 1024px) {
+  .shelf-wood-bottom {
+    height: 16px;
+  }
+}
+@media (max-width: 640px) {
+  .shelf-wood-bottom {
+    height: 14px;
+  }
+}
+
+.shelf-content {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 0 16px 0 60px;
+  position: relative;
+  /* Sessão 17.10: overflow-y: visible pra que o tooltip de hover
+     (`.book-hover-label`) possa transbordar pra cima da prateleira.
+     Spec do CSS força overflow-y: auto quando overflow-x: auto, então
+     usamos `clip` no eixo X via clip-path em vez de overflow-x. */
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.shelf-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Sombra projetada da prateleira de cima dentro do vão. */
+.shelf-content::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4), transparent);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Lombada vintage (sessão 17.10). Sombras de borda pra dar profundidade
+   de couro, textura de grão sutil, dois "raised bands" (nervuras) clássicos
+   de encadernação antiga via ::before/::after, e título com efeito gold-foil. */
+.book-spine {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 200ms ease;
+  scroll-snap-align: start;
+  border-radius: 1px;
+  /* Sessão 17.10: removido `overflow: hidden` pra que o tooltip
+     `.book-hover-label` possa transbordar pra cima da lombada no hover. */
+  /* Profundidade de couro: bordas laterais escuras, vinheta interna,
+     pequena luz no topo simulando ângulo de iluminação. */
+  box-shadow:
+    inset 2px 0 3px rgba(0, 0, 0, 0.55),
+    inset -2px 0 3px rgba(0, 0, 0, 0.55),
+    inset 0 2px 1px rgba(0, 0, 0, 0.35),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.55),
+    inset 0 0 14px rgba(0, 0, 0, 0.28),
+    -1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+/* Textura de grão de couro (verniz craquelado discreto). */
+.book-spine::before,
+.book-spine::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+/* "Raised band" superior — nervura horizontal clássica de livro encadernado. */
+.book-spine::before {
+  top: 22%;
+  height: 7px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(255, 220, 140, 0.18) 38%,
+      rgba(255, 220, 140, 0.28) 50%,
+      rgba(255, 220, 140, 0.18) 62%,
+      rgba(0, 0, 0, 0.55) 100%
+    );
+  box-shadow:
+    0 -1px 0 rgba(212, 176, 86, 0.45),
+    0 1px 0 rgba(212, 176, 86, 0.45),
+    inset 0 0 3px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+}
+/* "Raised band" inferior. */
+.book-spine::after {
+  bottom: 22%;
+  height: 7px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(255, 220, 140, 0.18) 38%,
+      rgba(255, 220, 140, 0.28) 50%,
+      rgba(255, 220, 140, 0.18) 62%,
+      rgba(0, 0, 0, 0.55) 100%
+    );
+  box-shadow:
+    0 -1px 0 rgba(212, 176, 86, 0.45),
+    0 1px 0 rgba(212, 176, 86, 0.45),
+    inset 0 0 3px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+}
+.book-spine:hover {
+  transform: translateY(-4px);
+}
+/* Frisos top/bottom — agora mais ornamentados (linha dourada + sombra). */
+.book-spine .spine-friso {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  height: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 220, 140, 0.55) 0%,
+    rgba(212, 176, 86, 0.85) 50%,
+    rgba(120, 88, 50, 0.7) 100%
+  );
+  box-shadow:
+    0 -1px 0 rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(0, 0, 0, 0.45);
+  z-index: 2;
+}
+.book-spine .spine-friso.top {
+  top: 7px;
+}
+.book-spine .spine-friso.bottom {
+  bottom: 7px;
+}
+/* Título: cor clara unificada (ivory) + outline preto forte em 4 direções
+   pra garantir legibilidade em qualquer cor de fundo (verde, vinho, terracota,
+   ouro etc.) — antes ficava ilegível em moss/olive/terracota. Glow dourado
+   sutil mantém o ar vintage. */
+.book-spine .spine-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(180deg);
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  max-height: 56%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 3;
+  color: #FAF6EC !important;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.95),
+    1px -1px 0 rgba(0, 0, 0, 0.95),
+    -1px 1px 0 rgba(0, 0, 0, 0.95),
+    1px 1px 0 rgba(0, 0, 0, 0.95),
+    0 0 4px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(255, 220, 140, 0.35);
+  font-style: italic;
+  font-weight: 600;
+}
+.book-spine .spine-halo {
+  position: absolute;
+  inset: -4px;
+  border-radius: 4px;
+  background: rgba(212, 176, 86, 0.3);
+  z-index: -1;
+  filter: blur(6px);
+  pointer-events: none;
+}
+/* Sessão 17.10: pequenos ornamentos (fleurons SVG) em cada painel da
+   lombada — entre o friso da borda e a raised band a 22%. Análogos aos
+   painéis decorativos de lombadas antigas. */
+.book-spine .spine-ornament {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  max-width: 32px;
+  height: 8px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.85;
+}
+.book-spine .spine-ornament.top {
+  top: 13%;
+}
+.book-spine .spine-ornament.bottom {
+  bottom: 13%;
+}
+
+/* Slot "+" no fim de cada prateleira */
+.add-book-slot {
+  width: 32px;
+  height: 100%;
+  flex-shrink: 0;
+  border: 2px dashed rgba(212, 176, 86, 0.4);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 200ms ease;
+  background: transparent;
+}
+.add-book-slot:hover {
+  border-color: var(--color-gold);
+  transform: scale(1.05);
+}
+
+/* Slot "+ Nova estante" integrado — ghost shelf no fim da parede.
+   Sessão 17.5: substitui o FAB do 17.4 por uma estante fantasma. */
+.add-shelf-slot {
+  width: 100%;
+  height: 200px;
+  border: 2px dashed rgba(212, 176, 86, 0.3);
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 200ms ease;
+  border-radius: 4px;
+}
+.add-shelf-slot:hover {
+  border-color: var(--color-gold);
+  background: rgba(212, 176, 86, 0.05);
+}
+@media (max-width: 1024px) {
+  .add-shelf-slot {
+    height: 180px;
+  }
+}
+@media (max-width: 640px) {
+  .add-shelf-slot {
+    height: 160px;
+  }
+}
+
+/* Slot vazio com tracejado por tipo (sessão 17.6).
+   Invisível por padrão (sem .drop-target); vira tracejado dourado durante
+   drag, com forma específica por tipo. */
+.empty-slot {
+  border: 2px dashed transparent;
+  background: transparent;
+  border-radius: 2px;
+  transition: all 200ms ease;
+  pointer-events: none; /* Só captura pointer quando drop-target */
+}
+.empty-slot.drop-target {
+  pointer-events: auto;
+  border-color: rgba(212, 176, 86, 0.55);
+  background: rgba(212, 176, 86, 0.04);
+}
+.empty-slot.drop-target.is-over {
+  border-color: var(--color-gold);
+  background: rgba(212, 176, 86, 0.18);
+  transform: scale(1.04);
+}
+
+.empty-slot-standing {
+  width: 32px;
+  height: 160px;
+}
+.empty-slot-tilted {
+  width: 36px;
+  height: 152px;
+  transform-origin: bottom center;
+}
+.empty-slot-tilted.lean-left.drop-target {
+  transform: rotateZ(12deg);
+}
+.empty-slot-tilted.lean-right.drop-target {
+  transform: rotateZ(-12deg);
+}
+.empty-slot-tilted.lean-left.drop-target.is-over {
+  transform: rotateZ(12deg) scale(1.04);
+}
+.empty-slot-tilted.lean-right.drop-target.is-over {
+  transform: rotateZ(-12deg) scale(1.04);
+}
+.empty-slot-laying {
+  width: 90px;
+  height: 40px;
+  align-self: flex-end;
+  margin-bottom: 0;
+}
+
+/* Sessão 17.10: livro deitado = lombada standing rotacionada 90°. Mesmas
+   sombras de couro nas bordas longas, mesmos raised bands (agora verticais),
+   mesmos frisos dourados (agora nas pontas), mesmo título com gold-foil. */
+.book-laying-horizontal {
+  width: 160px;
+  /* height vem do inline (layingThicknessForPages); fallback 16. */
+  min-height: 12px;
+  position: relative;
+  cursor: grab;
+  flex-shrink: 0;
+  touch-action: none;
+  transition: filter 150ms ease;
+  border-radius: 1px;
+  box-shadow:
+    -1px 1px 2px rgba(0, 0, 0, 0.5),
+    inset 0 2px 1px rgba(0, 0, 0, 0.35),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.55),
+    inset 2px 0 3px rgba(0, 0, 0, 0.55),
+    inset -2px 0 3px rgba(0, 0, 0, 0.55),
+    inset 0 0 10px rgba(0, 0, 0, 0.28);
+}
+.book-laying-horizontal:hover {
+  filter: brightness(1.12);
+}
+.book-laying-horizontal:active {
+  cursor: grabbing;
+}
+/* Raised band 1 — vertical, a 22% da largura (análogo ao ::before da spine
+   standing que fica a 22% do topo). */
+.book-laying-horizontal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 22%;
+  width: 7px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(255, 220, 140, 0.18) 38%,
+    rgba(255, 220, 140, 0.28) 50%,
+    rgba(255, 220, 140, 0.18) 62%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  box-shadow:
+    -1px 0 0 rgba(212, 176, 86, 0.45),
+    1px 0 0 rgba(212, 176, 86, 0.45),
+    inset 0 0 3px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+  pointer-events: none;
+}
+/* Raised band 2 — vertical, a 78% da largura. */
+.book-laying-horizontal::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 78%;
+  width: 7px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(255, 220, 140, 0.18) 38%,
+    rgba(255, 220, 140, 0.28) 50%,
+    rgba(255, 220, 140, 0.18) 62%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  box-shadow:
+    -1px 0 0 rgba(212, 176, 86, 0.45),
+    1px 0 0 rgba(212, 176, 86, 0.45),
+    inset 0 0 3px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+  pointer-events: none;
+}
+/* Frisos dourados nas pontas (análogos a .spine-friso top/bottom; aqui
+   verticais, próximos das bordas left/right). */
+.book-laying-horizontal .laying-friso {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  width: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 220, 140, 0.55) 0%,
+    rgba(212, 176, 86, 0.85) 50%,
+    rgba(120, 88, 50, 0.7) 100%
+  );
+  box-shadow:
+    -1px 0 0 rgba(0, 0, 0, 0.45),
+    1px 0 0 rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  pointer-events: none;
+}
+.book-laying-horizontal .laying-friso.left {
+  left: 7px;
+}
+.book-laying-horizontal .laying-friso.right {
+  right: 7px;
+}
+/* Título horizontal com cor clara + outline preto (mesma lógica da spine
+   standing — legível em qualquer cor de capa). */
+.book-laying-horizontal .laying-title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 38px; /* evita os raised bands a 22% (~35px) e 78% (~125px) */
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #FAF6EC;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.95),
+    1px -1px 0 rgba(0, 0, 0, 0.95),
+    -1px 1px 0 rgba(0, 0, 0, 0.95),
+    1px 1px 0 rgba(0, 0, 0, 0.95),
+    0 0 4px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(255, 220, 140, 0.3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Sessão 17.10: tooltip do hover renderizado em portal (position: fixed),
+   pra contornar overflow:hidden/auto dos containers. JS aplica `left`/`top`
+   inline; aqui só o estilo visual. */
+.book-hover-label-fixed {
+  background: rgba(20, 12, 6, 0.96);
+  border: 1px solid rgba(212, 176, 86, 0.55);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-style: italic;
+  letter-spacing: 0.3px;
+  color: var(--color-paper-aged);
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
+  animation: bookHoverFadeIn 180ms ease both;
+}
+.book-hover-label-fixed::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(212, 176, 86, 0.55);
+}
+@keyframes bookHoverFadeIn {
+  from { opacity: 0; transform: translate(-50%, -100%) translateY(4px); }
+  to { opacity: 1; transform: translate(-50%, -100%) translateY(0); }
+}
+
+.empty-laying-slot {
+  width: 160px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 1.5px dashed transparent;
+  background: transparent;
+  border-radius: 1px;
+  transition: all 200ms ease;
+  pointer-events: none;
+}
+.empty-laying-slot.drop-target {
+  border-color: rgba(212, 176, 86, 0.4);
+}
+.empty-laying-slot.drop-target.is-valid-drop {
+  pointer-events: auto;
+  border-color: var(--color-gold);
+  background: rgba(212, 176, 86, 0.15);
+}
+.empty-laying-slot.drop-target.is-valid-drop.is-over {
+  background: rgba(212, 176, 86, 0.32);
+  transform: scale(1.04);
+}
+
+/* Sessão 17.8: container de decoração — bumped pra acomodar SVGs
+   ~1.8-2x maiores. */
+.decoration-slot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 100px;
+  padding-bottom: 2px;
+  flex-shrink: 0;
+}
+
+/* Sessão 17.8: animações das novas decorações. */
+@keyframes plant-sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(1.5deg); }
+  75% { transform: rotate(-1.5deg); }
+}
+.plant-sway {
+  animation: plant-sway 4s ease-in-out infinite;
+}
+
+@keyframes globe-rotate {
+  from { transform: rotateZ(0deg); }
+  to { transform: rotateZ(360deg); }
+}
+.globe-rotate {
+  animation: globe-rotate 30s linear infinite;
+  transform-box: fill-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plant-sway,
+  .globe-rotate {
+    animation: none;
+  }
+}
+
+/* Sessão 17.10: varal de lâmpadas Edison. Cada lâmpada é um SVG inline
+   com soquete de bronze, bulbo formato pera com gradiente vidro-âmbar,
+   filamento em zigue-zague e halo radial. As animações abaixo apenas
+   pulsam o brilho/halo/filamento de forma dessincronizada por delay. */
+.varal-lamp-wrapper {
+  width: 22px;
+  height: 36px;
+  pointer-events: none;
+}
+.varal-halo-anim {
+  animation: varalHaloPulse 3.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.varal-bulb-anim {
+  animation: varalBulbPulse 3.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.varal-filament-anim {
+  animation: varalFilamentPulse 3.2s ease-in-out infinite;
+}
+@keyframes varalHaloPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+@keyframes varalBulbPulse {
+  0%, 100% { filter: brightness(0.92); }
+  50% { filter: brightness(1.18); }
+}
+@keyframes varalFilamentPulse {
+  0%, 100% { stroke: #FFE08A; filter: drop-shadow(0 0 0.6px #FFE08A); }
+  50% { stroke: #FFFCE0; filter: drop-shadow(0 0 1.4px #FFFCE0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .varal-halo-anim,
+  .varal-bulb-anim,
+  .varal-filament-anim {
+    animation: none;
+  }
+}
+
+/* Sessão 17.7 → 17.10: VintageCover — capa de livro antigo com textura
+   de couro, 3 molduras concêntricas, fleurons nos cantos, flourishes ao
+   redor do título e emblema central inferior. */
+.vintage-cover {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border-radius: 2px;
+  box-shadow:
+    -6px 6px 16px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 230, 140, 0.18);
+  overflow: hidden;
+}
+/* Textura de couro (granulado fino + variação tonal) — soma à cor base
+   passada pelo inline style (background gradient). */
+.vintage-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      37deg,
+      rgba(0, 0, 0, 0.06) 0px,
+      rgba(0, 0, 0, 0.06) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      -53deg,
+      rgba(0, 0, 0, 0.05) 0px,
+      rgba(0, 0, 0, 0.05) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 50% 30%,
+      rgba(255, 230, 140, 0.06),
+      transparent 70%
+    );
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Molduras concêntricas (3 níveis) */
+.vintage-cover-frame {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+.vintage-cover-frame.outer {
+  inset: 8px;
+  border: 1px solid rgba(212, 176, 86, 0.65);
+  border-radius: 1px;
+}
+.vintage-cover-frame.mid {
+  inset: 14px;
+  border: 2px solid rgba(212, 176, 86, 0.85);
+  border-radius: 1px;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 220, 140, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+.vintage-cover-frame.inner {
+  inset: 22px;
+  border: 1px solid rgba(212, 176, 86, 0.55);
+  border-radius: 1px;
+}
+/* Fleurons nos 4 cantos (SVG dentro de cada span) */
+.vintage-cover-corner {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+  z-index: 2;
+}
+.vintage-cover-corner.tl { top: 6px; left: 6px; }
+.vintage-cover-corner.tr { top: 6px; right: 6px; }
+.vintage-cover-corner.bl { bottom: 6px; left: 6px; }
+.vintage-cover-corner.br { bottom: 6px; right: 6px; }
+/* Bloco central com título */
+.vintage-cover-title-block {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0 14px;
+}
+/* Flourishes só na variante heraldic — posicionados acima/abaixo do título.
+   Em vez de gap no flex (que afetaria as outras variantes), uso position
+   absolute por cima do bloco do título. */
+.vintage-cover-heraldic .vintage-cover-flourish {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  max-width: 200px;
+  pointer-events: none;
+  opacity: 0.85;
+  z-index: 4;
+}
+.vintage-cover-heraldic .vintage-cover-flourish.top {
+  top: calc(50% - 38px);
+}
+.vintage-cover-heraldic .vintage-cover-flourish.bottom {
+  top: calc(50% + 38px);
+  transform: translateX(-50%) rotate(180deg);
+}
+.vintage-cover-title {
+  font-family: var(--font-display);
+  color: #FAF6EC;
+  text-align: center;
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.18;
+  letter-spacing: 0.6px;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.85),
+    1px -1px 0 rgba(0, 0, 0, 0.85),
+    -1px 1px 0 rgba(0, 0, 0, 0.85),
+    1px 1px 0 rgba(0, 0, 0, 0.85),
+    0 0 6px rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(255, 220, 140, 0.4);
+}
+/* Emblema central inferior (heraldic only) */
+.vintage-cover-heraldic .vintage-cover-emblem {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.75;
+}
+
+/* Variante BOTANICAL — vinhas saindo dos cantos */
+.vintage-cover-botanical .vintage-cover-frame.outer {
+  inset: 8px;
+  border: 1px solid rgba(212, 176, 86, 0.5);
+}
+.vintage-cover-botanical .vintage-cover-frame.inner {
+  inset: 14px;
+  border: 1px solid rgba(212, 176, 86, 0.7);
+  border-radius: 1px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+.vintage-cover-botanical-svg {
+  position: absolute;
+  inset: 18px;
+  width: calc(100% - 36px);
+  height: calc(100% - 36px);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.85;
+}
+
+/* Variante ARCHITECTURAL — frontão clássico no topo + pedestal embaixo */
+.vintage-cover-architectural .vintage-cover-frame.outer {
+  inset: 8px;
+  border: 1px solid rgba(212, 176, 86, 0.5);
+}
+.vintage-cover-architectural .vintage-cover-frame.mid {
+  inset: 16px;
+  border: 2px solid rgba(212, 176, 86, 0.85);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 220, 140, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+.vintage-cover-pediment {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 36px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.92;
+}
+.vintage-cover-pediment.top {
+  top: 28px;
+}
+.vintage-cover-pediment.bottom {
+  bottom: 28px;
+  transform: translateX(-50%) rotate(180deg);
+}
+/* Colunas laterais sutis (frisos verticais) */
+.vintage-cover-column {
+  position: absolute;
+  top: 64px;
+  bottom: 64px;
+  width: 3px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(212, 176, 86, 0.55) 10%,
+    rgba(212, 176, 86, 0.55) 90%,
+    transparent 100%
+  );
+  box-shadow:
+    -1px 0 0 rgba(0, 0, 0, 0.3),
+    1px 0 0 rgba(0, 0, 0, 0.3);
+}
+.vintage-cover-column.left {
+  left: 28px;
+}
+.vintage-cover-column.right {
+  right: 28px;
+}
+
+/* Sessão 17.10 Fase 1: profundidade 3D do livro agora vem do Three.js
+   (BookOpenOverlay.tsx). Os pseudo-elementos CSS 3D foram removidos pra
+   evitar conflito visual com a cena WebGL. */
+
+/* Sessão 17.8: livro aberto com edges visíveis nos 4 lados (laterais via
+   pseudo-elementos + topo/base via wrapper extra `<.book-spread-edges-h>`),
+   binding curvado no centro, backface flip 3D + skew/sombra dinâmica
+   simulando curl. */
+.book-spread {
+  background-color: var(--color-paper-aged);
+  position: relative;
+}
+/* Sessão 17.10: lateral do livro — leather binding (cover marrom escuro
+   nas pontas) + stack de páginas com pinstripe HORIZONTAL fininho:
+   cada traço = uma folha vista de lado (edge-on da pilha de páginas).
+   Manchas tonais por cima quebram a regularidade do pinstripe. */
+.book-spread::before,
+.book-spread::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 18px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* Cada folha como traço horizontal fino — pages stack edge-on */
+    repeating-linear-gradient(
+      to bottom,
+      rgba(140, 100, 60, 0.30) 0px,
+      rgba(140, 100, 60, 0.30) 0.5px,
+      transparent 0.5px,
+      transparent 1.6px
+    ),
+    /* Vinheta vertical — pontas mais escuras (livro envelhecido) */
+    linear-gradient(
+      to bottom,
+      rgba(40, 22, 8, 0.55) 0%,
+      transparent 7%,
+      transparent 93%,
+      rgba(40, 22, 8, 0.55) 100%
+    ),
+    /* Manchas tonais — variação natural do papel quebrando o pinstripe */
+    radial-gradient(ellipse 18px 32px at 50% 14%, rgba(160, 120, 70, 0.34), transparent 75%),
+    radial-gradient(ellipse 14px 28px at 50% 36%, rgba(180, 140, 90, 0.24), transparent 75%),
+    radial-gradient(ellipse 16px 30px at 50% 56%, rgba(140, 100, 55, 0.30), transparent 75%),
+    radial-gradient(ellipse 13px 26px at 50% 76%, rgba(170, 130, 80, 0.26), transparent 75%);
+  background-color: #DCC59A;
+}
+.book-spread::before {
+  left: -18px;
+  border-radius: 1px 0 0 1px;
+  box-shadow:
+    /* Couro escuro do binding (faixa externa esquerda) */
+    inset 4px 0 0 #3D2418,
+    inset 5px 0 0 rgba(42, 26, 14, 0.85),
+    /* Sombra externa */
+    -3px 0 10px rgba(0, 0, 0, 0.5);
+}
+.book-spread::after {
+  right: -18px;
+  border-radius: 0 1px 1px 0;
+  box-shadow:
+    inset -4px 0 0 #3D2418,
+    inset -5px 0 0 rgba(42, 26, 14, 0.85),
+    3px 0 10px rgba(0, 0, 0, 0.5);
+}
+/* Edges horizontais (topo e base) — CURVADOS via mask SVG: pages
+   sobem nas bordas externas (corners) e DESCEM no binding (centro),
+   formando o "valley" da lombada. Resultado: livro aberto parece
+   um saddle/diamante, não retangular plano. Strokes VERTICAIS
+   (cada folha vista do alto, edge-on, projetando como fina linha
+   vertical) — no sentido da página, não da pilha. */
+.book-spread-edges-h {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 26px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* Cada folha como traço VERTICAL fininho — vista de cima/baixo,
+       no sentido da página (não da pilha empilhada) */
+    repeating-linear-gradient(
+      to right,
+      rgba(140, 100, 60, 0.32) 0px,
+      rgba(140, 100, 60, 0.32) 0.5px,
+      transparent 0.5px,
+      transparent 1.5px
+    ),
+    /* Sombra do binding valley no centro — escuro pq pages dipam aqui */
+    radial-gradient(ellipse 120px 40px at 50% 50%, rgba(20, 8, 0, 0.55), transparent 70%),
+    /* Vinheta horizontal — cantos escurecidos (bordas envelhecidas) */
+    linear-gradient(
+      to right,
+      rgba(40, 22, 8, 0.5) 0%,
+      transparent 5%,
+      transparent 95%,
+      rgba(40, 22, 8, 0.5) 100%
+    ),
+    /* Manchas tonais ao longo do edge — variação natural */
+    radial-gradient(ellipse 32px 14px at 22% 50%, rgba(160, 120, 70, 0.28), transparent 75%),
+    radial-gradient(ellipse 30px 12px at 78% 50%, rgba(170, 130, 80, 0.26), transparent 75%);
+  background-color: #DCC59A;
+}
+/* Top edge — VALLEY no centro (binding desce), CORNERS sobem.
+   Mask: top boundary curva PRA BAIXO no centro (control y=130 puxa
+   a curva pra baixo, deixando só ~35% da altura visível ali). */
+.book-spread-edges-h.top {
+  top: -26px;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path d='M 0 0 Q 50 130 100 0 L 100 100 L 0 100 Z' fill='black'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path d='M 0 0 Q 50 130 100 0 L 100 100 L 0 100 Z' fill='black'/></svg>");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  filter: drop-shadow(0 -3px 6px rgba(0, 0, 0, 0.45));
+}
+/* Bottom edge — espelho do top: VALLEY no centro (binding sobe pra
+   dentro do livro), CORNERS descem. Control y=-30 puxa a curva
+   inferior PRA CIMA no centro. */
+.book-spread-edges-h.bottom {
+  bottom: -26px;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path d='M 0 0 L 100 0 L 100 100 Q 50 -30 0 100 Z' fill='black'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path d='M 0 0 L 100 0 L 100 100 Q 50 -30 0 100 Z' fill='black'/></svg>");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+}
+
+/* Sessão 17.10: binding como "valley" PROFUNDO curvado entre as duas
+   páginas. Gradient horizontal mais largo + escuro forte concentrado
+   no eixo central, simulando a sombra da curva natural do miolo +
+   linha sharp da dobra/costura. */
+.book-binding {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  margin-left: -40px;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    /* Gradient horizontal — valley fundo, escuro forte no meio */
+    linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(30, 16, 4, 0.10) 12%,
+      rgba(30, 16, 4, 0.32) 30%,
+      rgba(30, 16, 4, 0.62) 45%,
+      rgba(20, 10, 0, 0.82) 49%,
+      rgba(15, 6, 0, 0.92) 50%,
+      rgba(20, 10, 0, 0.82) 51%,
+      rgba(30, 16, 4, 0.62) 55%,
+      rgba(30, 16, 4, 0.32) 70%,
+      rgba(30, 16, 4, 0.10) 88%,
+      transparent 100%
+    );
+}
+/* Linha sharp da dobra do miolo (a costura central — quase preta) */
+.book-binding::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 1%;
+  bottom: 1%;
+  width: 1.5px;
+  margin-left: -0.75px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(8, 4, 0, 0.95) 5%,
+    rgba(0, 0, 0, 1) 50%,
+    rgba(8, 4, 0, 0.95) 95%,
+    transparent 100%
+  );
+}
+
+/* Curva visual nas páginas perto do binding — inset shadow MUITO funda
+   que simula as páginas curvando pra dentro do miolo. Larga e escura
+   pra ler como "curva da lombada" mesmo de longe. */
+.book-page.page-left {
+  box-shadow:
+    /* Curva inward na borda do binding (direita da page-left) — escura e larga */
+    inset -60px 0 80px -32px rgba(30, 14, 0, 0.78),
+    /* Sombra mais sutil simulando o leve curl da página antes da dobra */
+    inset -16px 0 24px -10px rgba(60, 35, 12, 0.35),
+    /* Sombra suave externa */
+    inset 4px 0 8px -6px rgba(60, 40, 20, 0.18);
+}
+.book-page.page-right {
+  box-shadow:
+    inset 60px 0 80px -32px rgba(30, 14, 0, 0.78),
+    inset 16px 0 24px -10px rgba(60, 35, 12, 0.35),
+    inset -4px 0 8px -6px rgba(60, 40, 20, 0.18);
+}
+
+/* Sessão 17.10: papel envelhecido com foxing (manchas de oxidação),
+   variação tonal e vinheta sutil nas bordas — matching da referência
+   de livro antigo do usuário. */
+.book-page {
+  background-color: #F0E2C2;
+  background-image:
+    /* Foxing: várias manchas marrons aleatórias (radial-gradients) */
+    radial-gradient(ellipse 22px 14px at 18% 22%, rgba(140, 92, 50, 0.18), transparent 60%),
+    radial-gradient(ellipse 14px 9px at 72% 38%, rgba(140, 92, 50, 0.14), transparent 60%),
+    radial-gradient(ellipse 26px 16px at 44% 68%, rgba(150, 100, 60, 0.12), transparent 60%),
+    radial-gradient(ellipse 12px 8px at 86% 78%, rgba(140, 92, 50, 0.18), transparent 60%),
+    radial-gradient(ellipse 18px 11px at 8% 88%, rgba(150, 100, 60, 0.14), transparent 60%),
+    radial-gradient(ellipse 10px 7px at 60% 12%, rgba(140, 92, 50, 0.16), transparent 60%),
+    radial-gradient(ellipse 16px 10px at 30% 50%, rgba(150, 100, 60, 0.10), transparent 60%),
+    /* Vinheta nas bordas (mais escuro nas extremidades) */
+    radial-gradient(
+      ellipse at center,
+      transparent 50%,
+      rgba(94, 60, 28, 0.18) 100%
+    ),
+    /* Variação tonal cream-bege sutil */
+    linear-gradient(
+      135deg,
+      #F4E8C8 0%,
+      #EFE0B6 50%,
+      #E9D8A8 100%
+    );
+}
+/* Posicionamento dos ornamentos — base é canto superior-esquerdo,
+   demais espelhados via scale(-1). Margens negativas pra que o canto
+   do SVG coincida com o canto da página. */
+.page-ornament {
+  position: absolute;
+  pointer-events: none;
+  width: 160px;
+  height: 160px;
+  z-index: 1;
+}
+.page-ornament.tl {
+  top: 4px;
+  left: 4px;
+}
+.page-ornament.tr {
+  top: 4px;
+  right: 4px;
+  transform: scaleX(-1);
+}
+.page-ornament.bl {
+  bottom: 4px;
+  left: 4px;
+  transform: scaleY(-1);
+}
+.page-ornament.br {
+  bottom: 4px;
+  right: 4px;
+  transform: scale(-1, -1);
+}
+
+/* Backface do flip 3D — papel envelhecido sem conteúdo. Visível durante a
+   virada graças ao `backface-visibility: hidden` na face front. */
+.book-spread-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.book-spread-face.back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  background-color: #F0E2C2;
+  background-image:
+    /* Foxing genérico no verso */
+    radial-gradient(ellipse 18px 12px at 25% 30%, rgba(140, 92, 50, 0.15), transparent 60%),
+    radial-gradient(ellipse 22px 14px at 70% 60%, rgba(150, 100, 60, 0.12), transparent 60%),
+    radial-gradient(ellipse 14px 9px at 50% 80%, rgba(140, 92, 50, 0.14), transparent 60%),
+    /* Vinheta nas bordas */
+    radial-gradient(ellipse at center, transparent 50%, rgba(94, 60, 28, 0.18) 100%),
+    /* Tonal cream-bege */
+    linear-gradient(135deg, #F4E8C8 0%, #EFE0B6 50%, #E9D8A8 100%);
+  border-radius: 2px;
+  border: 1px solid rgba(110, 70, 30, 0.35);
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.55),
+    inset 0 0 30px rgba(94, 60, 28, 0.12);
+}
+
+/* Frontispício (Spread 1 esquerda no contexto da /library) — só o título
+   grande no centro da página. Substitui o retângulo VintageCover + título
+   duplicado da iteração 17.7. */
+.book-page-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 460px;
+  padding: 48px 32px;
+}
+.book-title-large {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.2vw, 3.2rem);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--color-ink-deep);
+  text-align: center;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.book-subtitle {
+  margin-top: 14px;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--color-ink-fade);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* Empty state — "+" grande centralizado na prateleira vazia */
+.empty-shelf-cta {
+  margin: auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  border: 2px dashed rgba(212, 176, 86, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+.empty-shelf-cta:hover {
+  border-color: var(--color-gold);
+  transform: scale(1.05);
+}
+
+/* Overlay do livro abrindo (sessão 17.5 → 17.10 Fase 1).
+   `perspective` removido — agora o Three.js (Canvas r3f) cuida da câmera
+   e perspectiva 3D real dentro do overlay. */
+.book-open-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(31, 22, 16, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-open-overlay {
+    backdrop-filter: none;
+  }
+}
+
+/* Sessão 17.8: animação de varal foi reescrita acima (.varal-lamp +
+   .varal-lamp-halo). `lightPulse` antigo removido. */
+
+/* Vela tremulando */
+@keyframes flameFlicker {
+  0%, 100% {
+    transform: scale(1, 1) translateX(0);
+  }
+  25% {
+    transform: scale(1.05, 0.97) translateX(-1px);
+  }
+  50% {
+    transform: scale(0.97, 1.03) translateX(1px);
+  }
+  75% {
+    transform: scale(1.02, 0.98) translateX(0);
+  }
+}
+@keyframes haloPulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.flame-flicker {
+  animation: flameFlicker 1.2s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+.halo-pulse {
+  animation: haloPulse 2s ease-in-out infinite;
+}
+
+/* Partículas de poeira — sobem da base ao topo da viewport */
+.dust-motes {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 30%;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 5;
+}
+@keyframes drift {
+  0% {
+    transform: translateY(100vh) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.4;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(40px);
+    opacity: 0;
+  }
+}
+.dust-mote {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 2px;
+  background: rgba(245, 240, 230, 0.18);
+  border-radius: 50%;
+  animation: drift linear infinite;
+}
+
+/* prefers-reduced-motion — desabilita animações da library. Sessão 17.9:
+   `.varal-lamp` (selector legado SVG) substituído pelos novos
+   `.varal-lamp-bulb` / `.varal-lamp-halo` cobertos no bloco do varal acima. */
+@media (prefers-reduced-motion: reduce) {
+  .flame-flicker,
+  .halo-pulse,
+  .dust-mote {
+    animation: none !important;
+  }
+  .dust-motes {
+    display: none;
+  }
+}
+
+.bg-library-dark {
+  background: linear-gradient(
+    180deg,
+    var(--color-library-dark-grad) 0%,
+    var(--color-library-dark) 100%
+  );
+}
+
+.shadow-shelf-inset {
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
+}
+
+.shadow-shelf-deep {
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Sombra projetada pela lombada à direita — sugere profundidade entre livros
+   na mesma prateleira. */
+.shadow-spine {
+  box-shadow: 1px 0 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Sombra discreta de pilha deitada. */
+.shadow-stack {
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Texto vertical pra título na lombada (lê-se de baixo pra cima). */
+.vertical-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/* Pulso suave pra slots vazios "+" sinalizarem que aceitam livros. */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 2.5s ease-in-out infinite;
+}
+
+/* Papel envelhecido para a vista "livro abrindo" — gradiente sutil cream/beige
+   reforçado por sombra inset cor sépia. */
+.bg-paper-aged {
+  background: linear-gradient(
+    135deg,
+    var(--color-paper-aged-bg) 0%,
+    var(--color-paper-aged-mid) 100%
+  );
 }

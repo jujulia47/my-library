@@ -1,43 +1,32 @@
-import UpdateCollection from "@/components/Update/Collection";
-import { bookList } from "@/services/book";
-import { serieList } from "@/services/serie";
-import { wishlistList } from "@/services/wishlist";
-import {
-  collectionById, getCollectionWithRelations
-} from "@/services/collections";
+import AppShell from "@/components/AppShell";
+import CollectionFull from "@/components/Update/CollectionFull";
+import { createClient } from "@/utils/supabase/server";
+import { notFound } from "next/navigation";
 
 export default async function Page({
   params,
 }: {
-  params: Promise<{ id: number }>;
+  params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const collection = await collectionById(id);
-  const collectionRelations = await getCollectionWithRelations(id);
-  const series = await serieList();
-  const books = await bookList();
-  const wishlist = await wishlistList();
+  const supabase = await createClient();
 
-  if (!collection) {
-    return <div>Sem coleções disponíveis.</div>;
-  }
+  const { data: collection } = await supabase
+    .from("collection")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  if (!collectionRelations) {
-    return <div>Sem Relations disponíveis.</div>;
-  }
+  if (!collection) notFound();
+
+  const { count: itemCount } = await supabase
+    .from("collection_item")
+    .select("id", { count: "exact", head: true })
+    .eq("collection_id", id);
 
   return (
-    <>
-      <main>
-        <UpdateCollection
-          id={id}
-          collection={collection}
-          collectionRelations={collectionRelations}
-          series={series}
-          books={books}
-          wishlist={wishlist}
-        />
-      </main>
-    </>
+    <AppShell>
+      <CollectionFull collection={collection} itemCount={itemCount ?? 0} />
+    </AppShell>
   );
 }

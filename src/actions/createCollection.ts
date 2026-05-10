@@ -1,96 +1,131 @@
-import supabase from "@/utils/supabaseClient";
+"use server";
 
-export default async function createCollection(formData: FormData) {
-  const collection_name = formData.get("collection_name") as string;
-  const slug = formData.get("slug") as string;
-  const description = formData.get("description") as string;
-  const init_date = formData.get("init_date") as string;
-  const finish_date = formData.get("finish_date") as string;
-  const book_ids = formData.getAll("book_id") as string[];
-  const serie_ids = formData.getAll("serie_id") as string[];
-  const wishlist_ids = formData.getAll("wishlist_id") as string[];
-  const status = formData.get("status") as string;
-  const type_collection = formData.get("type_collection") as string;
+import { createClient } from "@/utils/supabase/server";
+import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import {
+  translateSupabaseError,
+  type ActionResult,
+} from "@/utils/translateSupabaseError";
+import type { Database } from "@/utils/typings/supabase";
 
-  // 1. Cria a coleção
+type CollectionType = Database["public"]["Enums"]["collection_type"];
+type CollectionInsert = Database["public"]["Tables"]["collection"]["Insert"];
+
+const VALID_TYPES: CollectionType[] = [
+  "shelf",
+  "list",
+  "challenge",
+  "subscription",
+  "wishlist",
+];
+
+function pickEnum<T extends string>(value: unknown, allowed: T[]): T | null {
+  return typeof value === "string" && allowed.includes(value as T)
+    ? (value as T)
+    : null;
+}
+
+export default async function createCollection(
+  formData: FormData,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Não autenticado." };
+
+  const name = (formData.get("name") as string)?.trim();
+  if (!name) return { ok: false, message: "Nome obrigatório.", field: "name" };
+
+  const type = pickEnum(formData.get("type"), VALID_TYPES);
+  if (!type)
+    return { ok: false, message: "Tipo inválido.", field: "type" };
+
+  const description =
+    ((formData.get("description") as string) || "").trim() || null;
+  const start_date = (formData.get("start_date") as string) || null;
+  const end_date = (formData.get("end_date") as string) || null;
+
+  const goalRaw = (formData.get("goal_count") as string) || "";
+  let goal_count: number | null = null;
+  if (goalRaw.trim() !== "") {
+    const parsed = Number(goalRaw);
+    if (!Number.isFinite(parsed) || parsed < 1)
+      return {
+        ok: false,
+        message: "Meta deve ser um número maior que zero.",
+        field: "goal_count",
+      };
+    goal_count = Math.floor(parsed);
+  }
+
+  const provider =
+    ((formData.get("provider") as string) || "").trim() || null;
+
+  // Validações específicas por tipo.
+  if (type === "challenge") {
+    if (!goal_count)
+      return {
+        ok: false,
+        message: "Meta de livros obrigatória para desafios.",
+        field: "goal_count",
+      };
+    if (!start_date)
+      return {
+        ok: false,
+        message: "Data de início obrigatória para desafios.",
+        field: "start_date",
+      };
+    if (!end_date)
+      return {
+        ok: false,
+        message: "Data de fim obrigatória para desafios.",
+        field: "end_date",
+      };
+  }
+
+  if (type === "subscription") {
+    if (!provider)
+      return {
+        ok: false,
+        message: "Provedor obrigatório para assinaturas.",
+        field: "provider",
+      };
+    if (!start_date)
+      return {
+        ok: false,
+        message: "Data de início obrigatória para assinaturas.",
+        field: "start_date",
+      };
+  }
+
+  const slug = formateTitleToSlug(name);
+
+  // Limpa campos não-aplicáveis pro tipo escolhido.
+  // shelf/subscription não tem end_date; goal_count só challenge; provider só
+  // subscription. start_date é livre exceto em shelf (que zera).
+  const payload: CollectionInsert = {
+    name,
+    slug,
+    type,
+    description,
+    start_date: type === "shelf" ? null : start_date,
+    end_date: type === "subscription" || type === "shelf" ? null : end_date,
+    goal_count: type === "challenge" ? goal_count : null,
+    provider: type === "subscription" ? provider : null,
+    user_id: user.id,
+  };
+
   const { data, error } = await supabase
     .from("collection")
-    .insert({
-      collection_name,
-      slug,
-      description,
-      init_date,
-      finish_date,
-      status,
-      type_collection,
-    })
-    .select()
+    .insert(payload)
+    .select("slug")
     .single();
 
-    if (error) {
-      console.log(error, "erro");
-    }
-    if (data) {
-      console.log(data);
-    }
-  
+  if (error || !data) return { ok: false, ...translateSupabaseError(error) };
 
-  const collection_id: number | null | FormDataEntryValue = data.id;
-
-  if (book_ids.length > 0) {
-    const relations = book_ids.map((book_id) => ({
-      collection_id: collection_id,
-      book_id: Number(book_id),
-    }));
-
-
-    const { data: data_book_id, error } = await supabase
-      .from("collection_book")
-      .insert(relations)
-
-    if (error) {
-      console.log(error);
-    }
-    if (data_book_id) {
-      console.log(data_book_id);
-    } 
-  }
-
-  if (serie_ids.length > 0) {
-    const relations = serie_ids.map((serie_id) => ({
-      collection_id: data.id,
-      serie_id: Number(serie_id),
-    }));
-
-    const { data: data_serie_id, error } = await supabase
-      .from("collection_serie")
-      .insert(relations)
-
-    if (error) {
-      console.log(error);
-    }
-    if (data_serie_id) {
-      console.log(data_serie_id);
-    } 
-  }
-
-
-  if (wishlist_ids.length > 0) {
-    const relations = wishlist_ids.map((wishlist_id) => ({
-      collection_id: data.id,
-      wishlist_id: Number(wishlist_id),
-    }));
-    const { data: data_wishlist_id, error } = await supabase
-      .from("collection_wishlist")
-      .insert(relations)
-      //Com chaves é inserido um único objeto com chave relations, que não existe na tabela.
-      // .insert({ relations });
-
-    if (error) {
-      console.log(error);
-    }
-    if (data_wishlist_id) {
-      console.log(data_wishlist_id);
-    } 
-  }
+  revalidatePath("/collection");
+  redirect(`/collection/${data.slug}`);
 }

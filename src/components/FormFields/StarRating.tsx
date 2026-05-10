@@ -25,11 +25,11 @@ const StarRating = ({
   return (
     <div className={clsx('space-y-1', className)}>
       {label && (
-        <label className="block text-[14px] font-medium text-[#5A3522] mb-1 ml-1">
+        <label className="block text-sm font-body font-medium text-ink-deep mb-1">
           {label}
         </label>
       )}
-      <div className="flex items-center" onMouseLeave={() => setHover(null)}>
+      <div className="flex items-center gap-1" onMouseLeave={() => setHover(null)}>
         {[...Array(maxStars)].map((_, index) => {
           const ratingValue = index + 1;
           return (
@@ -37,12 +37,9 @@ const StarRating = ({
               key={ratingValue}
               type="button"
               className={clsx(
-                'text-2xl transition-colors duration-200',
-                'focus:outline-none',
-                (hover || value) >= ratingValue 
-                  ? 'text-[#F5A623]' 
-                  : 'text-[#E1D9C9]',
-                hover === ratingValue && 'scale-110 transform transition-transform duration-200'
+                'text-2xl transition-colors duration-150 focus:outline-none',
+                (hover || value) >= ratingValue ? 'text-gold' : 'text-paper-soft',
+                hover === ratingValue && 'scale-110 transform transition-transform duration-150',
               )}
               onClick={() => onChange(ratingValue)}
               onMouseEnter={() => setHover(ratingValue)}
@@ -60,10 +57,10 @@ const StarRating = ({
               e.stopPropagation();
               onChange(0);
             }}
-            className="ml-2 text-sm text-[#5A3522] hover:text-[#7F4B30] transition-colors"
+            className="ml-3 text-xs italic text-ink-fade hover:text-ink-deep transition-colors font-body"
             aria-label="Remover avaliação"
           >
-            Limpar
+            limpar
           </button>
         )}
       </div>

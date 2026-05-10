@@ -1,53 +1,42 @@
-import supabase from "@/utils/supabaseClient";
-import { Database } from "@/utils/typings/supabase";
+import { createClient } from "@/utils/supabase/server";
+import type { Database } from "@/utils/typings/supabase";
+import type { RereadingLegacyShape } from "@/utils/typings/app";
 
-type RereadingRead = Database["public"]["Tables"]["rereading"]["Row"];
-type RereadingUpdate = Database["public"]["Tables"]["rereading"]["Update"];
+type ReadingRow = Database["public"]["Tables"]["reading"]["Row"];
+
+export type { RereadingLegacyShape };
+
+function flatten(row: ReadingRow): RereadingLegacyShape {
+  return {
+    ...row,
+    date_started: row.start_date,
+    date_finished: row.finish_date,
+  };
+}
 
 export async function rereadingList() {
+  const supabase = await createClient();
   const { data, error } = await supabase
-    .from("rereading")
-    .select(`*, book(id, title)`)
-    .overrideTypes<RereadingRead[]>();
-
-  if (error) {
-    console.log(error);
-  }
-  if (data) {
-    console.log(data);
-  }
-  return data;
+    .from("reading")
+    .select(`*, book(id, title)`);
+  if (error) return null;
+  return data?.map((row) => flatten(row as ReadingRow)) ?? null;
 }
 
-export async function readById(id: number) {
-  const { data, error } = await supabase
-    .from("rereading")
-    .select()
-    .eq("id", id)
-    .overrideTypes<RereadingUpdate[]>();
-
-  if (error) {
-    console.log(error);
-  }
-  if (data) {
-    console.log(data);
-  }
-
-  return data;
+export async function readById(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("reading").select().eq("id", id);
+  if (error) return null;
+  return data?.map((row) => flatten(row as ReadingRow)) ?? null;
 }
 
-export async function rereadingByBookId(bookId: number) {
+export async function rereadingByBookId(bookId: string) {
+  const supabase = await createClient();
   const { data, error } = await supabase
-    .from("rereading")
+    .from("reading")
     .select(`*, book(id, title)`)
     .eq("book_id", bookId)
-    .order("date_started", { ascending: false })
-    .overrideTypes<RereadingRead[]>();
-
-  if (error) {
-    console.error("Erro ao buscar releituras:", error);
-    return [];
-  }
-
-  return data ?? [];
+    .order("start_date", { ascending: false });
+  if (error) return [];
+  return (data ?? []).map((row) => flatten(row as ReadingRow));
 }

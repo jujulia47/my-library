@@ -1,25 +1,53 @@
-import UpdateQuote from "@/components/Update/Quote";
+import AppShell from "@/components/AppShell";
+import QuoteForm, { type BookOption } from "@/components/forms/QuoteForm";
 import { bookList } from "@/services/book";
-import { quoteById } from "@/services/quotes"
+import { createClient } from "@/utils/supabase/server";
 
-export default async function Page({
+export default async function EditQuotePage({
   params,
 }: {
-  params: Promise<{ id: number }>;
+  params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const quote = await quoteById(id);
-  const books = await bookList();
+  const supabase = await createClient();
+  const { data: quote, error } = await supabase
+    .from("quote")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (!quote) {
-    return <div>Sem citações disponíveis.</div>;
+  if (error || !quote) {
+    return (
+      <AppShell>
+        <p className="text-ink-soft italic">Citação não encontrada.</p>
+      </AppShell>
+    );
   }
 
+  const books = (await bookList()) ?? [];
+  const bookOptions: BookOption[] = books.map((b) => ({
+    id: b.id,
+    title: b.title,
+    author: b.author?.trim() ? b.author : null,
+  }));
+
   return (
-    <>
-      <main>
-        <UpdateQuote id={id} books={books} quote={quote}/>
-      </main>
-    </>
+    <AppShell>
+      <QuoteForm
+        mode="edit"
+        books={bookOptions}
+        initial={{
+          id: quote.id,
+          text: quote.text,
+          type: quote.book_id ? "linked" : "standalone",
+          book_id: quote.book_id,
+          page: quote.page,
+          chapter: quote.chapter,
+          author_name: quote.author_name,
+          source: quote.source,
+          note: quote.note,
+        }}
+      />
+    </AppShell>
   );
 }

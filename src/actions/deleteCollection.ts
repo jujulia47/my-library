@@ -1,19 +1,22 @@
-'use server'
+"use server";
 
-import supabase from "@/utils/supabaseClient"; 
+import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
+import {
+  translateSupabaseError,
+  type ActionResult,
+} from "@/utils/translateSupabaseError";
 
-export async function deleteCollection(id: number) {
-  const { data, error } = await supabase
-  .from("collection")
-  .delete()
-  .eq("id", id)
-  .select();
+export async function deleteCollection(id: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Não autenticado." };
 
-  if(error){
-    console.log(error);
-  }
-  if(data){
-    console.log(data);
-  }
+  const { error } = await supabase.from("collection").delete().eq("id", id);
+  if (error) return { ok: false, ...translateSupabaseError(error) };
+
+  revalidatePath("/collection");
+  return { ok: true };
 }
-  

@@ -1,13 +1,10 @@
-import CreateSerie from "@/components/Create/Serie";
-import { bookList } from "@/services/book";
+import AppShell from "@/components/AppShell";
+import SerieMinimal from "@/components/Create/SerieMinimal";
 
-export default async function CreateSeriePage() {
-  const books = await bookList();
+export default function NewSeriePage() {
   return (
-    <>
-      <main>
-        < CreateSerie books={books}/>
-      </main>
-    </>
+    <AppShell>
+      <SerieMinimal />
+    </AppShell>
   );
 }

@@ -1,6 +1,7 @@
-import DetailsCollectionPage from "@/components/DetailsPage/collection";
-import {getCollectionWithRelationsSlug} from "@/services/collections";
-import { imagesUrl } from "@/services/images";
+import AppShell from "@/components/AppShell";
+import CollectionDetailClient from "@/components/DetailsPage/CollectionDetailClient";
+import { getCollectionDetailBySlug } from "@/services/collectionDetail";
+import { notFound } from "next/navigation";
 
 export default async function Page({
   params,
@@ -8,67 +9,12 @@ export default async function Page({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-
-  const collection = await getCollectionWithRelationsSlug(slug);
-
-  if (!collection || collection.length === 0 || !collection[0]) {
-    return (
-      <DetailsCollectionPage
-        collection={[]}
-        booksInfos={[]}
-        seriesInfos={[]}
-        wishlistInfos={[]}
-      />
-    );
-  }
-
-  const books = collection?.[0]?.collection_book.map((book) => book.book) ?? [];
-  const series = collection?.[0]?.collection_serie.map((serie) => serie.serie) ?? [];
-  const wishlist = collection?.[0]?.collection_wishlist.map((wishlist) => wishlist.wishlist) ?? [];
-  const wishlistBook = wishlist?.map((wishlist) => wishlist?.book) ?? [];
-  
-  const booksInfos = books.map((book) => ({
-    id: book?.id ?? 0,
-    title: book?.title ?? "",
-    volume: book?.volume ?? null,
-    rating: book?.rating ?? null,
-    status: book?.status ?? "",
-    author: book?.author ?? "",
-    cover: imagesUrl(book?.cover ?? "")
-  }));
-
-  const seriesInfos = series.map((serie) => ({
-    id: serie?.id ?? 0,
-    serie_name: serie?.serie_name ?? "",
-    qty_volumes: serie?.qty_volumes ?? null,
-    status: serie?.status ?? "",
-    rating: serie?.rating ?? null,
-  })); 
-
-  const wishlistInfos = wishlistBook.map((WishBook) => ({
-    id: WishBook?.id ?? 0,
-    title: WishBook?.title ?? "",
-    volume: WishBook?.volume ?? null,
-    rating: WishBook?.rating ?? null,
-    status: WishBook?.status ?? "",
-    author: WishBook?.author ?? "",
-    cover: imagesUrl(WishBook?.cover ?? "")
-  }));
-
-  if (!collection) {
-    return <div>Sem coleções disponíveis.</div>;
-  }
+  const data = await getCollectionDetailBySlug(slug);
+  if (!data) notFound();
 
   return (
-    <>
-      <main>
-        <DetailsCollectionPage
-          collection={collection}
-          booksInfos={booksInfos}
-          seriesInfos={seriesInfos}
-          wishlistInfos={wishlistInfos}
-        />
-      </main>
-    </>
+    <AppShell>
+      <CollectionDetailClient data={data} />
+    </AppShell>
   );
 }

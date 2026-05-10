@@ -1,16 +1,12 @@
-import supabase from "@/utils/supabaseClient";
+export function imagesUrl(path: string | null | undefined): string {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/${path}`;
+}
 
-export function imagesUrl(path: string) {
-  const { data } = supabase
-    .storage
-    .from("images")
-    .getPublicUrl(path);
-
-
-  if (data) {
-    console.log(data);
-    return data.publicUrl;
-  }
-
-  return data
+/** URL pública de foto de autor — bucket separado `author-photos`. */
+export function authorPhotoUrl(path: string | null | undefined): string {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/author-photos/${path}`;
 }

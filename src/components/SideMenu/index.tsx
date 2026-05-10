@@ -1,80 +1,42 @@
-"use client";
-
 import Link from "next/link";
+import { signOut } from "@/app/login/actions";
+import SideMenuMobile from "./SideMenuMobile";
+import NavItems from "./NavItems";
 import {
-  BookOpenIcon,
-  Squares2X2Icon,
-  HeartIcon,
-  ChatBubbleLeftRightIcon,
-  ArchiveBoxIcon,
+  ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 
-const SideMenu = () => {
+export default function SideMenu() {
   return (
-    <aside className="fixed top-0 left-0 w-64 h-screen bg-[#7F4B30] shadow-2xl flex flex-col items-center py-8 transition-all duration-300 z-40">
-      <h1 className="text-3xl font-extrabold text-[#F3E2C7] mb-10 tracking-wide text-center drop-shadow-lg select-none">
-        <Link href="/">Menu</Link>
-      </h1>
-      <nav className="flex flex-col gap-4 w-full px-6">
-
-        {/* Books */}
-        <article className="bg-[#F3E2C7] rounded-lg shadow hover:shadow-xl transition-all duration-200 group">
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex fixed top-0 left-0 w-60 h-screen bg-paper border-r border-border flex-col z-40">
+        <div className="px-6 py-6 border-b border-border">
           <Link
-            href="/book"
-            className="flex justify-center items-center gap-3 w-full py-3 px-4 text-[#7F4B30] font-bold text-lg rounded-lg hover:bg-[#e8c9a0] focus:outline-none focus:ring-2 focus:ring-[#7F4B30] transition-all duration-200"
+            href="/"
+            className="font-display text-[22px] font-medium tracking-wide text-ink-deep"
           >
-            <BookOpenIcon className="w-6 h-6 text-[#7F4B30]" />
-            Books
+            My Library
           </Link>
-        </article>
+        </div>
+        <nav className="flex-1 px-3 py-4 overflow-y-auto custom-scrollbar">
+          <NavItems />
+        </nav>
+        <div className="border-t border-border p-3">
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-ink-soft hover:text-ink-deep hover:bg-paper-soft transition-colors duration-150 font-body"
+            >
+              <ArrowRightOnRectangleIcon className="w-5 h-5" />
+              Sair
+            </button>
+          </form>
+        </div>
+      </aside>
 
-        {/* Series */}
-        <article className="bg-[#F3E2C7] rounded-lg shadow hover:shadow-xl transition-all duration-200 group">
-          <Link
-            href="/serie"
-            className="flex justify-center items-center gap-3 w-full py-3 px-4 text-[#7F4B30] font-bold text-lg rounded-lg hover:bg-[#e8c9a0] focus:outline-none focus:ring-2 focus:ring-[#7F4B30] transition-all duration-200"
-          >
-            <Squares2X2Icon className="w-6 h-6 text-[#7F4B30]" />
-            Series
-          </Link>
-        </article>
-
-        {/* Wishlist */}
-        <article className="bg-[#F3E2C7] rounded-lg shadow hover:shadow-xl transition-all duration-200 group">
-          <Link
-            href="/wishlist"
-            className="flex justify-center items-center gap-3 w-full py-3 px-4 text-[#7F4B30] font-bold text-lg rounded-lg hover:bg-[#e8c9a0] focus:outline-none focus:ring-2 focus:ring-[#7F4B30] transition-all duration-200"
-          >
-            <HeartIcon className="w-6 h-6 text-[#7F4B30]" />
-            Wishlist
-          </Link>
-        </article>
-
-        {/* Quotes */}
-        <article className="bg-[#F3E2C7] rounded-lg shadow hover:shadow-xl transition-all duration-200 group">
-          <Link
-            href="/quote"
-            className="flex justify-center items-center gap-3 w-full py-3 px-4 text-[#7F4B30] font-bold text-lg rounded-lg hover:bg-[#e8c9a0] focus:outline-none focus:ring-2 focus:ring-[#7F4B30] transition-all duration-200"
-          >
-            <ChatBubbleLeftRightIcon className="w-6 h-6 text-[#7F4B30]" />
-            Quotes
-          </Link>
-        </article>
-
-        {/* Collection */}
-        <article className="bg-[#F3E2C7] rounded-lg shadow hover:shadow-xl transition-all duration-200 group">
-          <Link
-            href="/collection"
-            className="flex justify-center items-center gap-3 w-full py-3 px-4 text-[#7F4B30] font-bold text-lg rounded-lg hover:bg-[#e8c9a0] focus:outline-none focus:ring-2 focus:ring-[#7F4B30] transition-all duration-200"
-          >
-            <ArchiveBoxIcon className="w-6 h-6 text-[#7F4B30]" />
-            Collection
-          </Link>
-        </article>
-
-      </nav>
-    </aside>
+      {/* Mobile topbar + drawer */}
+      <SideMenuMobile />
+    </>
   );
-};
-
-export default SideMenu;
+}

@@ -1,0 +1,80 @@
+import Link from "next/link";
+import Image from "next/image";
+import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
+import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
+import { BookCoverFallback } from "@/components/ui";
+import type { TopBookOfYear } from "@/services/yearData";
+
+type Props = {
+  books: TopBookOfYear[];
+};
+
+export function TopBooksOfYear({ books }: Props) {
+  if (books.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {books.map((book) => (
+        <Link
+          key={book.id}
+          href={`/book/${book.slug}`}
+          className="group flex gap-3 p-3 rounded-lg border border-border bg-ivory-light hover:border-gold transition-colors duration-150"
+        >
+          <div
+            className="relative flex-shrink-0 w-[50px] h-[75px] rounded-sm overflow-hidden border border-ink-deep/15"
+            style={{ aspectRatio: "2 / 3" }}
+          >
+            {book.cover_url ? (
+              <Image
+                src={book.cover_url}
+                alt={`Capa de ${book.title}`}
+                fill
+                className="object-cover"
+                sizes="50px"
+              />
+            ) : (
+              <BookCoverFallback
+                title={book.title}
+                size="sm"
+                className="w-full h-full"
+              />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start gap-1.5">
+              <h3 className="font-display text-sm font-medium text-ink-deep leading-tight line-clamp-2 flex-1 min-w-0">
+                {book.title}
+              </h3>
+              {book.is_favorite && (
+                <HeartSolidIcon
+                  className="w-3.5 h-3.5 text-burgundy flex-shrink-0 mt-0.5"
+                  aria-label="Favorito"
+                />
+              )}
+            </div>
+            {book.author_name && (
+              <p className="font-body text-xs italic text-ink-fade truncate mt-0.5">
+                {book.author_name}
+              </p>
+            )}
+            {book.rating !== null && book.rating > 0 && (
+              <div
+                className="flex items-center gap-0.5 mt-1.5"
+                aria-label={`${book.rating} de 5 estrelas`}
+              >
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <StarSolidIcon
+                    key={i}
+                    className={`w-3 h-3 ${
+                      i < (book.rating ?? 0) ? "text-gold" : "text-ink-fade/25"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
