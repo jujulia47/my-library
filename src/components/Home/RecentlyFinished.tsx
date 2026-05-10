@@ -34,10 +34,10 @@ export function RecentlyFinished({ data }: Props) {
                 key={book.id}
                 href={`/book/${book.slug}`}
                 title={tooltip}
-                className="block hover:-translate-y-1 hover:shadow-[0_4px_12px_rgba(74,56,38,0.15)] transition-all rounded overflow-hidden"
+                className="block group hover:-translate-y-1 transition-all"
               >
                 <div
-                  className="relative w-full"
+                  className="relative w-full group-hover:shadow-[0_4px_12px_rgba(74,56,38,0.15)] rounded overflow-hidden transition-shadow"
                   style={{ aspectRatio: "2 / 3" }}
                 >
                   {book.cover_url ? (
@@ -56,6 +56,12 @@ export function RecentlyFinished({ data }: Props) {
                     />
                   )}
                 </div>
+                <p
+                  className="mt-1.5 text-[10px] leading-tight text-center text-ink-soft group-hover:text-gold-deep transition-colors line-clamp-2 font-body"
+                  title={book.title}
+                >
+                  {book.title}
+                </p>
               </Link>
             );
           })}

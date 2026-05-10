@@ -8,17 +8,20 @@ import type { MonthlyTimeline, TimelineReading } from "@/services/yearData";
 // Constantes
 // =============================================================================
 
-// Sessão 17.8: bump adicional sobre 17.2.6 — tipografia da timeline
-// reportada como ainda pequena. Header maior, day height +30%, lane offset
-// pra absorver títulos maiores.
-const MONTH_WIDTH = 220;
+// MONTH_WIDTH é dinâmico — medido em runtime via ResizeObserver no container
+// e dividido pelo número de colunas, com clamp em [MIN, MAX].
+const MONTH_WIDTH_MIN = 270;
+const MONTH_WIDTH_MAX = 380;
 const MONTH_HEADER_HEIGHT = 64;
 const DAY_HEIGHT = 18;
 const DAYS_TOTAL = 31;
-const TOTAL_HEIGHT = MONTH_HEADER_HEIGHT + DAYS_TOTAL * DAY_HEIGHT + 24;
+// Bottom padding generoso pra acomodar o lane stagger (até ~32px na lane 2).
+const TOTAL_HEIGHT = MONTH_HEADER_HEIGHT + DAYS_TOTAL * DAY_HEIGHT + 48;
 const PADDING_X = 32;
 const READING_X_BASE = PADDING_X + 6;
 const LANE_OFFSET = 20;
+const LANE_LABEL_Y_STAGGER = 16;
+const LABEL_X_GAP = 10;
 
 const MONTH_NAMES_PT = [
   "JAN",
@@ -35,10 +38,6 @@ const MONTH_NAMES_PT = [
   "DEZ",
 ];
 
-// Paleta de 8 cores cíclicas (sessão 17.3 — alinhada ao doc design-refresh).
-// Mesma rotação usada em GenrePie (via colorByHash); coerência visual entre
-// views. Sem rosa-fuchsia (fora da identidade outono); sem cappuccino puro
-// (conflita com cor de borda neutra).
 const COLORS = [
   "#82393A", // burgundy
   "#5C6E47", // moss
@@ -54,36 +53,25 @@ const COLORS = [
 // Helpers
 // =============================================================================
 
-/**
- * Decide quantas colunas mensais cabem por SVG baseado na largura do
- * container. Sessão 17.2.5: breakpoints recalibrados.
- *
- * **Causa do bug "sempre 2 cols"**: o `<AppShell>` envolve a página em
- * `max-w-6xl mx-auto px-6` (1152 - 48 = 1104px máx). Os breakpoints antigos
- * (1280/1700/2200) supunham viewport sem cap; o container nunca chega lá,
- * então sempre caía em 2.
- *
- * Cada coluna mensal = MONTH_WIDTH (220px). Mantemos folga pra padding e pra
- * o scroll horizontal não disparar:
- *   1 col = 220px,  2 = 440px,  3 = 660px,  4 = 880px
- * 4 cols cabe folgado no container atual (1104px).
- *
- * 5+ cols ficaria limitado pelo container — não habilitamos. Se quiser
- * permitir 5/6, expandir o container no /year (negative margins no
- * YearTimeline) e revisitar este map.
- */
-function getColumnsPerSvg(width: number): number {
-  if (width < 500) return 1;
-  if (width < 700) return 2;
-  if (width < 900) return 3;
-  return 4;
+function getLayoutForWidth(containerWidth: number): {
+  cols: number;
+  monthWidth: number;
+} {
+  let cols: number;
+  if (containerWidth < 560) cols = 1;
+  else if (containerWidth < 830) cols = 2;
+  else if (containerWidth < 1100) cols = 3;
+  else cols = 4;
+
+  const raw = Math.floor(containerWidth / cols);
+  const monthWidth = Math.max(MONTH_WIDTH_MIN, Math.min(MONTH_WIDTH_MAX, raw));
+  return { cols, monthWidth };
 }
 
-/**
- * Atribui readings em "lanes" (faixas laterais) pra evitar sobreposição
- * visual em meses com várias leituras simultâneas. Greedy: ordena por
- * start_day, encaixa na primeira lane livre.
- */
+function daysInMonth(year: number, monthIndex: number): number {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
 function assignLanes(
   readings: TimelineReading[],
 ): Map<string, number> {
@@ -118,22 +106,33 @@ function strokeDashFor(
 ): string | undefined {
   if (status === "finished") return undefined;
   if (status === "abandoned") return "1 4";
-  // paused / continues_next_month → tracejado padrão
   return "5 3";
 }
 
-function buildTooltip(r: TimelineReading, monthIndex: number): string {
-  const month = monthIndex + 1;
-  const parts = [
-    `${r.title}`,
-    `${r.start_day}/${month} → ${r.end_day}/${month}`,
-  ];
-  if (r.duration_days)
-    parts.push(`${r.duration_days} ${r.duration_days === 1 ? "dia" : "dias"} no total`);
-  if (r.pages_read) parts.push(`${r.pages_read} páginas`);
-  if (r.author_name) parts.push(r.author_name);
-  return parts.join(" · ");
-}
+// =============================================================================
+// Tooltip state — compartilhado entre ReadingLine (origem do hover) e o
+// componente HTML que renderiza o tooltip custom (fora da SVG, pra escapar
+// das limitações de estilização do <title> nativo do browser).
+// =============================================================================
+
+type HoverState = {
+  reading: TimelineReading;
+  monthIndex: number;
+  /** Coords em tela (clientX/Y), prontos pra usar com `position: fixed`. */
+  screenX: number;
+  screenY: number;
+  color: string;
+};
+
+type ReadingHoverHandler = (
+  reading: TimelineReading,
+  monthIndex: number,
+  // SVG coords; conversão pra screen coords é responsabilidade do receiver
+  // que tem acesso ao ref do <svg> + getScreenCTM().
+  svgX: number,
+  svgY: number,
+  color: string,
+) => void;
 
 // =============================================================================
 // Componente principal
@@ -146,29 +145,36 @@ type Props = {
 
 export function YearTimeline({ timeline, year }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [columnsPerSvg, setColumnsPerSvg] = useState<number>(3);
+  const [layout, setLayout] = useState<{ cols: number; monthWidth: number }>({
+    cols: 3,
+    monthWidth: MONTH_WIDTH_MIN,
+  });
 
   useEffect(() => {
     if (!containerRef.current) return;
-    setColumnsPerSvg(getColumnsPerSvg(containerRef.current.clientWidth));
+    setLayout(getLayoutForWidth(containerRef.current.clientWidth));
     const observer = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 0;
-      setColumnsPerSvg(getColumnsPerSvg(w));
+      setLayout(getLayoutForWidth(w));
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
 
-  // Quebra em chunks de N colunas
   const chunks: MonthlyTimeline[][] = [];
-  for (let i = 0; i < timeline.length; i += columnsPerSvg) {
-    chunks.push(timeline.slice(i, i + columnsPerSvg));
+  for (let i = 0; i < timeline.length; i += layout.cols) {
+    chunks.push(timeline.slice(i, i + layout.cols));
   }
 
   return (
     <div ref={containerRef} className="space-y-4 mt-2">
       {chunks.map((chunk, idx) => (
-        <TimelineChunkSvg key={idx} months={chunk} year={year} />
+        <TimelineChunkSvg
+          key={idx}
+          months={chunk}
+          year={year}
+          monthWidth={layout.monthWidth}
+        />
       ))}
     </div>
   );
@@ -181,19 +187,47 @@ export function YearTimeline({ timeline, year }: Props) {
 function TimelineChunkSvg({
   months,
   year,
+  monthWidth,
 }: {
   months: MonthlyTimeline[];
   year: number;
+  monthWidth: number;
 }) {
   const cols = months.length;
-  const svgWidth = cols * MONTH_WIDTH;
+  const svgWidth = cols * monthWidth;
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hovered, setHovered] = useState<HoverState | null>(null);
+
+  // Converte coords SVG (lógicas do viewBox) → coords de tela (clientX/Y)
+  // usando o CTM atual da SVG. `getScreenCTM` retorna a matriz que mapeia
+  // pontos do viewBox pra coordenadas do viewport, levando em conta scroll,
+  // zoom da página, etc.
+  const handleReadingHover: ReadingHoverHandler = (
+    reading,
+    monthIndex,
+    svgX,
+    svgY,
+    color,
+  ) => {
+    if (!svgRef.current) return;
+    const ctm = svgRef.current.getScreenCTM();
+    if (!ctm) return;
+    const screenX = svgX * ctm.a + svgY * ctm.c + ctm.e;
+    const screenY = svgX * ctm.b + svgY * ctm.d + ctm.f;
+    setHovered({ reading, monthIndex, screenX, screenY, color });
+  };
+  const handleReadingLeave = () => setHovered(null);
+
   return (
     <div className="overflow-x-auto">
       <svg
+        ref={svgRef}
         width={svgWidth}
         height={TOTAL_HEIGHT}
         viewBox={`0 0 ${svgWidth} ${TOTAL_HEIGHT}`}
         className="block"
+        overflow="hidden"
         role="img"
         aria-label={`Linha do tempo de ${months.length} meses`}
       >
@@ -202,10 +236,14 @@ function TimelineChunkSvg({
             key={month.month}
             month={month}
             year={year}
-            offsetX={idx * MONTH_WIDTH}
+            offsetX={idx * monthWidth}
+            monthWidth={monthWidth}
+            onReadingHover={handleReadingHover}
+            onReadingLeave={handleReadingLeave}
           />
         ))}
       </svg>
+      {hovered && <ReadingTooltip state={hovered} />}
     </div>
   );
 }
@@ -214,17 +252,58 @@ function MonthColumn({
   month,
   year,
   offsetX,
+  monthWidth,
+  onReadingHover,
+  onReadingLeave,
 }: {
   month: MonthlyTimeline;
   year: number;
   offsetX: number;
+  monthWidth: number;
+  onReadingHover: ReadingHoverHandler;
+  onReadingLeave: () => void;
 }) {
   const lanes = assignLanes(month.readings);
   const monthName = MONTH_NAMES_PT[month.month - 1];
 
+  const totalDays = daysInMonth(year, month.month - 1);
+
+  const maxLane =
+    month.readings.length > 0
+      ? Math.max(...Array.from(lanes.values()))
+      : 0;
+  const labelX = READING_X_BASE + (maxLane + 1) * LANE_OFFSET + LABEL_X_GAP;
+  const labelMaxChars = Math.max(
+    12,
+    Math.floor((monthWidth - labelX - 6) / 6.5),
+  );
+
+  // Stagger vertical do label — separado da lane horizontal. Lane é
+  // calculada por overlap temporal (assignLanes) e governa onde a LINHA fica
+  // (eixo X); usar lane também pro stagger Y do label faz uma leitura
+  // sozinha no dia 31 mas em lane 2 (porque leituras anteriores no mês
+  // ocupavam lanes 0 e 1) receber +32px de stagger, jogando o label bem
+  // abaixo do dia 31 — bug reportado pela usuária. Solução: agrupar por
+  // start_day e estagar apenas entre leituras que começam no MESMO dia.
+  const labelOffsets = new Map<string, number>();
+  const groupedByStart = new Map<number, TimelineReading[]>();
+  for (const r of month.readings) {
+    const list = groupedByStart.get(r.start_day) ?? [];
+    list.push(r);
+    groupedByStart.set(r.start_day, list);
+  }
+  for (const list of groupedByStart.values()) {
+    list.sort((a, b) => a.reading_id.localeCompare(b.reading_id));
+    list.forEach((r, idx) => labelOffsets.set(r.reading_id, idx));
+  }
+  // Bordas do grid de dias — usadas pra decidir se o stagger vai pra baixo
+  // (default, mais natural de ler) ou se precisa virar pra cima quando a
+  // leitura está nos últimos dias do mês e o stagger transbordaria.
+  const gridTop = MONTH_HEADER_HEIGHT;
+  const gridBottom = MONTH_HEADER_HEIGHT + totalDays * DAY_HEIGHT;
+
   return (
     <g transform={`translate(${offsetX}, 0)`}>
-      {/* Header — fontes 17.8: maiores e mais legíveis. */}
       <text
         x={PADDING_X}
         y={24}
@@ -249,7 +328,7 @@ function MonthColumn({
       </text>
       {month.is_best_month && (
         <text
-          x={MONTH_WIDTH - 10}
+          x={monthWidth - 10}
           y={24}
           fontSize="12"
           fontWeight="500"
@@ -260,18 +339,16 @@ function MonthColumn({
         </text>
       )}
 
-      {/* Eixo vertical: trilho sutil — um pouco mais grosso pra ler melhor. */}
       <line
         x1={PADDING_X}
         y1={MONTH_HEADER_HEIGHT}
         x2={PADDING_X}
-        y2={MONTH_HEADER_HEIGHT + DAYS_TOTAL * DAY_HEIGHT}
+        y2={MONTH_HEADER_HEIGHT + totalDays * DAY_HEIGHT}
         stroke="var(--color-paper-soft)"
         strokeWidth="1.5"
       />
 
-      {/* Labels de dias-âncora */}
-      {[1, 5, 10, 15, 20, 25, 31].map((day) => (
+      {Array.from({ length: totalDays }, (_, i) => i + 1).map((day) => (
         <text
           key={day}
           x={PADDING_X - 8}
@@ -286,8 +363,8 @@ function MonthColumn({
 
       {!month.has_readings && (
         <text
-          x={MONTH_WIDTH / 2}
-          y={MONTH_HEADER_HEIGHT + (DAYS_TOTAL * DAY_HEIGHT) / 2}
+          x={monthWidth / 2}
+          y={MONTH_HEADER_HEIGHT + (totalDays * DAY_HEIGHT) / 2}
           fontSize="14"
           fontStyle="italic"
           fontFamily="var(--font-display)"
@@ -304,7 +381,15 @@ function MonthColumn({
           key={`${r.reading_id}-${month.month}`}
           reading={r}
           lane={lanes.get(r.reading_id) ?? 0}
+          labelOffset={labelOffsets.get(r.reading_id) ?? 0}
+          gridTop={gridTop}
+          gridBottom={gridBottom}
           monthIndex={month.month - 1}
+          labelX={labelX}
+          labelMaxChars={labelMaxChars}
+          offsetX={offsetX}
+          onHover={onReadingHover}
+          onLeave={onReadingLeave}
         />
       ))}
     </g>
@@ -314,31 +399,67 @@ function MonthColumn({
 function ReadingLine({
   reading,
   lane,
+  labelOffset,
+  gridTop,
+  gridBottom,
   monthIndex,
+  labelX,
+  labelMaxChars,
+  offsetX,
+  onHover,
+  onLeave,
 }: {
   reading: TimelineReading;
   lane: number;
+  /** Índice 0-based dentro do grupo de leituras com o mesmo `start_day` — só
+   *  estagara verticalmente quando há colisão real de labels no mesmo dia. */
+  labelOffset: number;
+  gridTop: number;
+  gridBottom: number;
   monthIndex: number;
+  labelX: number;
+  labelMaxChars: number;
+  offsetX: number;
+  onHover: ReadingHoverHandler;
+  onLeave: () => void;
 }) {
   const x = READING_X_BASE + lane * LANE_OFFSET;
   const y1 = MONTH_HEADER_HEIGHT + (reading.start_day - 1) * DAY_HEIGHT + DAY_HEIGHT / 2;
   const y2 = MONTH_HEADER_HEIGHT + (reading.end_day - 1) * DAY_HEIGHT + DAY_HEIGHT / 2;
   const color = COLORS[reading.color_index] ?? COLORS[0];
   const dashArray = strokeDashFor(reading.status_at_end);
-  const tooltip = buildTooltip(reading, monthIndex);
 
-  // Texto à direita da linha — alinhado com lane × espacejamento. Trunca pra
-  // caber no espaço restante da coluna.
-  const textX = x + 7;
-  const labelMaxChars = 22;
+  // Posição Y do label: para offset 0 (única leitura naquele start_day),
+  // alinha exatamente na linha do dia. Para offsets >0 (colisão), tenta
+  // descer; se o downward transbordaria o grid do mês, vira pra cima.
+  const labelYTitle = (() => {
+    const naturalY = y1 + 6;
+    if (labelOffset === 0) return naturalY;
+    const downward = naturalY + labelOffset * LANE_LABEL_Y_STAGGER;
+    if (downward <= gridBottom - 2) return downward;
+    const upward = y1 - 6 - labelOffset * LANE_LABEL_Y_STAGGER;
+    if (upward >= gridTop + 4) return upward;
+    // Ambas direções extrapolam → cap no grid (best effort, raro na prática).
+    return Math.min(gridBottom - 2, Math.max(gridTop + 4, downward));
+  })();
   const titleShort =
     reading.title.length > labelMaxChars
       ? `${reading.title.slice(0, labelMaxChars - 1)}…`
       : reading.title;
 
+  // Coords absolutas no SVG (column offset + x da lane).
+  const handleMouseEnter = () => {
+    onHover(reading, monthIndex, offsetX + x, y1, color);
+  };
+
   return (
-    <g>
-      <title>{tooltip}</title>
+    <g
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={onLeave}
+    >
+      {/* <title> nativo do browser foi removido em favor do tooltip HTML
+          custom renderizado pelo TimelineChunkSvg. A acessibilidade
+          continua coberta pelo aria-label do Link abaixo. */}
       <Link href={`/book/${reading.book_slug}`} aria-label={`${reading.title} — abrir livro`}>
         {/* Linha vertical */}
         <line
@@ -382,31 +503,88 @@ function ReadingLine({
           </text>
         )}
 
-        {/* Título + autor — fontes 17.8 (mais legíveis). */}
+        {/* Conector horizontal sutil ligando o dot de início à entrada do
+            label — reforça a associação visual quando há várias lanes. */}
+        <line
+          x1={x + 3}
+          y1={labelYTitle - 3}
+          x2={labelX - 3}
+          y2={labelYTitle - 3}
+          stroke={color}
+          strokeWidth="0.6"
+          opacity="0.4"
+        />
+
+        {/* Título tingido na cor da leitura */}
         <text
-          x={textX}
-          y={y1 + 6}
+          x={labelX}
+          y={labelYTitle}
           fontSize="13"
           fontWeight="500"
-          fill="var(--color-ink-deep)"
+          fill={color}
         >
           {titleShort}
         </text>
-        {reading.author_name && (
-          <text
-            x={textX}
-            y={y1 + 21}
-            fontSize="11"
-            fontStyle="italic"
-            fill="var(--color-ink-fade)"
-          >
-            {reading.author_name.length > labelMaxChars
-              ? `${reading.author_name.slice(0, labelMaxChars - 1)}…`
-              : reading.author_name}
-            {reading.rating ? ` · ${"★".repeat(reading.rating)}` : ""}
-          </text>
-        )}
       </Link>
     </g>
+  );
+}
+
+// =============================================================================
+// Tooltip HTML — render fora da SVG, posicionado em coords de tela com
+// `position: fixed`. Mesmo vocabulário visual do tooltip da `GenrePie`:
+// fundo `ink-deep`, texto ivory, acentos numéricos em `gold`.
+// =============================================================================
+
+function ReadingTooltip({ state }: { state: HoverState }) {
+  const { reading, monthIndex } = state;
+  const month = monthIndex + 1;
+  const hasDuration = reading.duration_days != null;
+  const hasPages = reading.pages_read != null;
+  return (
+    <div
+      className="fixed pointer-events-none bg-ink-deep text-ivory rounded px-2.5 py-1.5 shadow-card z-50 whitespace-nowrap"
+      style={{
+        left: state.screenX,
+        top: state.screenY - 10,
+        // Centraliza horizontal sobre o dot e ancora pela base do tooltip
+        // (sobe acima da bolinha por translateY -100%).
+        transform: "translate(-50%, -100%)",
+      }}
+      role="status"
+      aria-live="polite"
+    >
+      <p className="text-xs font-medium leading-tight">{reading.title}</p>
+      <p className="text-[10px] leading-tight mt-1 text-paper-soft">
+        <span className="text-gold tabular-nums">
+          {reading.start_day}/{month}
+        </span>
+        <span className="opacity-60 mx-1">→</span>
+        <span className="text-gold tabular-nums">
+          {reading.end_day}/{month}
+        </span>
+        {hasDuration && (
+          <>
+            <span className="opacity-50 mx-1.5">·</span>
+            <span className="text-gold tabular-nums">
+              {reading.duration_days}
+            </span>{" "}
+            {reading.duration_days === 1 ? "dia" : "dias"}
+          </>
+        )}
+        {hasPages && (
+          <>
+            <span className="opacity-50 mx-1.5">·</span>
+            <span className="text-gold tabular-nums">{reading.pages_read}</span>{" "}
+            págs
+          </>
+        )}
+      </p>
+      {reading.author_name && (
+        <p className="text-[10px] leading-tight italic mt-1 text-paper-soft">
+          {reading.author_name}
+        </p>
+      )}
+    </div>
   );
 }

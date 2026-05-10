@@ -46,9 +46,9 @@ export function BooksPerMonthChart({ data, currentMonth }: Props) {
         {data.map((entry, idx) => {
           const isFuture = entry.month > currentMonth;
           const isCurrent = entry.month === currentMonth;
-          // Sessão 17.3: meses futuros NÃO renderizam barra (só label cinza
-          // do mês). Mês corrente em gradient burgundy. Demais em gradient
-          // gold-deep → gold (vertical, base mais escura).
+          // Meses futuros NÃO renderizam barra (só label cinza do mês). Mês
+          // corrente em gradient navy. Demais em gradient gold-deep → gold
+          // (vertical, base mais escura).
           const heightPct =
             entry.count > 0
               ? (entry.count / maxCount) * 100
@@ -56,7 +56,7 @@ export function BooksPerMonthChart({ data, currentMonth }: Props) {
                 ? 0
                 : 14;
           const barGradient = isCurrent
-            ? "linear-gradient(180deg, var(--color-burgundy) 0%, var(--color-burgundy-soft) 100%)"
+            ? "linear-gradient(180deg, var(--color-navy-soft) 0%, var(--color-navy) 100%)"
             : "linear-gradient(180deg, var(--color-gold) 0%, var(--color-gold-deep) 100%)";
           return (
             <div

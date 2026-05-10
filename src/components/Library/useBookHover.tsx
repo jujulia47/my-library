@@ -23,6 +23,15 @@ export function useBookHover(label: string): {
     onMouseLeave: () => void;
   };
   tooltip: React.ReactNode;
+  /**
+   * Limpa o tooltip imediatamente — necessário ao abrir o overlay do
+   * livro 3D: a lombada fica "embaixo" do overlay no z-stacking, e em
+   * alguns browsers o `mouseleave` não dispara nessa condição (porque o
+   * cursor não saiu fisicamente das bounds da lombada — só foi coberto
+   * por nova camada). Sem essa limpeza explícita, o tooltip do hover
+   * persistia sobreposto ao livro aberto.
+   */
+  clear: () => void;
 } {
   const [pos, setPos] = useState<HoverPos | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -65,5 +74,5 @@ export function useBookHover(label: string): {
         )
       : null;
 
-  return { handlers, tooltip };
+  return { handlers, tooltip, clear: () => setPos(null) };
 }

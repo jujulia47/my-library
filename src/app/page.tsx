@@ -93,9 +93,13 @@ export default async function HomePage() {
 
       <section className="home-section">
         <SectionLabel>Padrões de leitura</SectionLabel>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           <FormatDonut data={data.format_distribution} />
-          <GenrePie data={data.genre_distribution} />
+          <div className="md:col-span-2">
+            <GenrePie data={data.genre_distribution} />
+          </div>
+        </div>
+        <div className="mb-6">
           <ReadingPaceSparkline data={data.pace_sparkline} />
         </div>
       </section>

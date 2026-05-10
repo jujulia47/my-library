@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource/cormorant-garamond/400.css";
 import "@fontsource/cormorant-garamond/500.css";
 import "@fontsource/eb-garamond/400.css";
@@ -10,6 +10,24 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "My Library",
   description: "Sua biblioteca pessoal",
+  manifest: '/manifest.webmanifest',
+  applicationName: "Minha Biblioteca",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Biblioteca",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#8B6F50",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

@@ -66,6 +66,9 @@ export type FormatDistribution = {
  */
 export type GenreDistribution = {
   genre: string;
+  /** Slug da categoria pra navegar pra /category/[slug]. `null` quando o
+   *  "gênero" é o pseudo-bucket "Sem gênero" (livros sem categoria). */
+  slug: string | null;
   count: number;
   percent: number;
 };
@@ -588,12 +591,16 @@ async function fetchFormatDistribution(
 /**
  * Distribuição por categoria. Cada par reading×categoria conta como 1
  * "atribuição"; readings sem categoria contribuem 1 atribuição em "Sem gênero".
- * Top 4 + "Outros" agregando o resto. Percent é sobre o total de atribuições
- * (soma 100%), não sobre o número de readings.
+ * Retorna TODOS os gêneros (sem agrupar em "Outros") — a pizza na home
+ * mostra a lista completa pra que gêneros minoritários (ex.: Romance fora do
+ * top 4) fiquem visíveis. Percent é sobre o total de atribuições (soma 100%),
+ * não sobre o número de readings.
  */
 type GenreRaw = {
   book: {
-    book_category: { category: { name: string } | null }[] | null;
+    book_category:
+      | { category: { name: string; slug: string } | null }[]
+      | null;
   } | null;
 };
 
@@ -605,7 +612,7 @@ async function fetchGenreDistribution(
   const { data } = await supabase
     .from("reading")
     .select(
-      `book:book_id(book_category(category(name)))`,
+      `book:book_id(book_category(category(name, slug)))`,
     )
     .eq("user_id", userId)
     .eq("status", "finished")
@@ -613,18 +620,22 @@ async function fetchGenreDistribution(
     .lte("finish_date", `${currentYear}-12-31`);
 
   const rows = (data as unknown as GenreRaw[] | null) ?? [];
+  // Conta atribuições por categoria (chaveado por nome) e guarda o slug
+  // pareado pra cada nome — necessário pra montar o link na home.
   const counts = new Map<string, number>();
+  const slugs = new Map<string, string>();
   for (const r of rows) {
     const cats =
       r.book?.book_category
-        ?.map((bc) => bc.category?.name)
-        .filter((n): n is string => !!n) ?? [];
+        ?.map((bc) => bc.category)
+        .filter((c): c is { name: string; slug: string } => !!c) ?? [];
     if (cats.length === 0) {
       counts.set("Sem gênero", (counts.get("Sem gênero") ?? 0) + 1);
       continue;
     }
-    for (const name of cats) {
-      counts.set(name, (counts.get(name) ?? 0) + 1);
+    for (const cat of cats) {
+      counts.set(cat.name, (counts.get(cat.name) ?? 0) + 1);
+      slugs.set(cat.name, cat.slug);
     }
   }
 
@@ -632,18 +643,10 @@ async function fetchGenreDistribution(
   if (total === 0) return [];
 
   const sorted = Array.from(counts.entries())
-    .map(([genre, count]) => ({ genre, count }))
+    .map(([genre, count]) => ({ genre, count, slug: slugs.get(genre) ?? null }))
     .sort((a, b) => b.count - a.count);
 
-  const top4 = sorted.slice(0, 4);
-  const rest = sorted.slice(4);
-  const restCount = rest.reduce((acc, r) => acc + r.count, 0);
-  const merged = [
-    ...top4,
-    ...(restCount > 0 ? [{ genre: "Outros", count: restCount }] : []),
-  ];
-
-  return merged.map((r) => ({
+  return sorted.map((r) => ({
     ...r,
     percent: Math.round((r.count / total) * 100),
   }));

@@ -5,14 +5,14 @@ import { BookOpenIcon } from "@heroicons/react/24/outline";
 import { HomeCard, HomeCardEmpty } from "./HomeCard";
 import type { FormatDistribution } from "@/services/homeData";
 
-// Sessão 17.3: cores semânticas alinhadas ao doc design-refresh:
-// físico=cappuccino, ebook=moss, audio=terracota (era gold, conflita com
-// chips de status "lendo"). Mesmo set é usado em chips de filtro.
+// Cores semânticas alinhadas ao doc design-refresh, com `unknown` puxado
+// pra burgundy (em vez de ink-fade cinza) — quando o usuário só tem livros
+// "Outro" o donut renderizava todo apagado.
 const FORMAT_COLOR: Record<string, string> = {
-  physical: "#6B5240", // cappuccino
-  ebook: "#5C6E47", // moss
-  audiobook: "#BC6E48", // terracota
-  unknown: "#948977", // ink-fade
+  physical: "#BC6E48", // terracota — quente, distingue do "outro"
+  ebook: "#2C5078", // navy-soft — frio, contrasta com físico
+  audiobook: "#5C6E47", // moss
+  unknown: "#82393A", // burgundy — não fica neutro/apagado
 };
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -22,12 +22,12 @@ const FORMAT_LABEL: Record<string, string> = {
   unknown: "Outro",
 };
 
-const VIEW = 80;
+const VIEW = 130;
 const CENTER = VIEW / 2;
-const RADIUS = 32;
-const STROKE = 14;
+const RADIUS = 52;
+const STROKE = 18;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const GAP = 4; // pequeno espaço visual entre segmentos
+const GAP = 6; // pequeno espaço visual entre segmentos
 
 type Props = {
   data: FormatDistribution[];
@@ -110,10 +110,10 @@ export function FormatDonut({ data }: Props) {
               })}
               <text
                 x={CENTER}
-                y={CENTER + 1}
+                y={CENTER + 2}
                 textAnchor="middle"
                 className="font-display"
-                fontSize="18"
+                fontSize="26"
                 fontWeight="500"
                 fill="var(--color-ink-deep)"
               >
@@ -121,9 +121,9 @@ export function FormatDonut({ data }: Props) {
               </text>
               <text
                 x={CENTER}
-                y={CENTER + 13}
+                y={CENTER + 18}
                 textAnchor="middle"
-                fontSize="8"
+                fontSize="11"
                 fill="var(--color-ink-fade)"
               >
                 {total === 1 ? "livro" : "livros"}

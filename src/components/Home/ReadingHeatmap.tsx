@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { HomeHeatmap } from "@/services/homeData";
 
 const MONTHS_PT = [
@@ -65,9 +65,14 @@ function formatTooltip(iso: string, pages: number): string {
   return `${day} de ${month} · ${pagesLabel}`;
 }
 
-const CELL_SIZE = 12;
+// CELL_SIZE agora é dinâmico (ver useEffect no componente) — mede o container
+// e cresce pra ocupar a largura disponível. Os valores aqui são bounds:
+//   MIN: 12 (mobile, mesmo do design anterior)
+//   MAX: 20 (desktop wide, evita virar quadrado gigante e desproporcional)
+const CELL_SIZE_MIN = 12;
+const CELL_SIZE_MAX = 20;
 const CELL_GAP = 2;
-const CELL_PITCH = CELL_SIZE + CELL_GAP;
+const LABEL_COL_WIDTH = 26; // largura da coluna de labels (Seg/Qua/Sex)
 
 type Props = {
   data: HomeHeatmap;
@@ -75,6 +80,9 @@ type Props = {
 };
 
 export function ReadingHeatmap({ data, year }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [cellSize, setCellSize] = useState<number>(CELL_SIZE_MIN);
+
   // Computamos uma vez os "leading empties" (dias da semana antes de 1/jan
   // que não pertencem ao ano), os índices de coluna onde cada mês começa,
   // e o número total de colunas. `weekDay` 0 = domingo (padrão JS).
@@ -115,18 +123,42 @@ export function ReadingHeatmap({ data, year }: Props) {
     return `${y}-${m}-${d}`;
   }, []);
 
+  // Mede o container e calcula o maior CELL_SIZE que cabe sem disparar
+  // scroll horizontal. Fórmula: largura útil (descontando label col + gaps)
+  // dividida pelo número de colunas. Clamp pra não passar do MAX
+  // (`20px` — quadrados acima disso ficam grandes e visualmente "celulares
+  // de Excel"). Em telas estreitas, cai pro MIN e o scroll horizontal
+  // interno do container continua funcionando.
+  useEffect(() => {
+    const compute = (width: number) => {
+      const cellSpace = width - LABEL_COL_WIDTH - 8; // 8px de folga
+      const totalGap = (layout.totalColumns - 1) * CELL_GAP;
+      const raw = Math.floor((cellSpace - totalGap) / layout.totalColumns);
+      const clamped = Math.max(CELL_SIZE_MIN, Math.min(CELL_SIZE_MAX, raw));
+      setCellSize(clamped);
+    };
+    if (!containerRef.current) return;
+    compute(containerRef.current.clientWidth);
+    const observer = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      compute(w);
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [layout.totalColumns]);
+
   return (
-    <div className="font-body">
-      {/* Container rolável horizontalmente em mobile. Em desktop, o heatmap
-          do ano todo cabe sem scroll na maioria dos viewports (~53 colunas
-          × 14px ≈ 742px); telas estreitas viram scroll interno. */}
+    <div className="font-body" ref={containerRef}>
+      {/* Container rolável horizontalmente quando cellSize já está no MIN
+          e ainda não cabe (mobile estreitíssimo). Em telas largas o cellSize
+          é calculado pra preencher e o scroll não dispara. */}
       <div className="overflow-x-auto custom-scrollbar -mx-1 px-1 pb-1">
         <div className="inline-flex flex-col">
           {/* Linha de meses no topo */}
           <div
             className="grid"
             style={{
-              gridTemplateColumns: `26px repeat(${layout.totalColumns}, ${CELL_SIZE}px)`,
+              gridTemplateColumns: `${LABEL_COL_WIDTH}px repeat(${layout.totalColumns}, ${cellSize}px)`,
               columnGap: `${CELL_GAP}px`,
               marginBottom: "4px",
               fontSize: "9px",
@@ -154,8 +186,8 @@ export function ReadingHeatmap({ data, year }: Props) {
           <div
             className="grid"
             style={{
-              gridTemplateColumns: `26px repeat(${layout.totalColumns}, ${CELL_SIZE}px)`,
-              gridTemplateRows: `repeat(7, ${CELL_SIZE}px)`,
+              gridTemplateColumns: `${LABEL_COL_WIDTH}px repeat(${layout.totalColumns}, ${cellSize}px)`,
+              gridTemplateRows: `repeat(7, ${cellSize}px)`,
               columnGap: `${CELL_GAP}px`,
               rowGap: `${CELL_GAP}px`,
             }}
@@ -281,6 +313,3 @@ export function ReadingHeatmap({ data, year }: Props) {
   );
 }
 
-// Pitch usado externamente caso outro componente queira posicionar marcadores
-// em sincronia com a grade. Exportado pra evitar duplicar a constante.
-export const HEATMAP_CELL_PITCH = CELL_PITCH;

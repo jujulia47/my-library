@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Select, Input } from "@/components/ui";
 import {
-  OWNERSHIP_STATUS_OPTIONS,
+  OWNERSHIP_STATUS_OPTIONS_PHYSICAL,
   PURCHASE_ORIGIN_OPTIONS,
   STATUSES_WITH_PURCHASE_ORIGIN,
   STATUSES_WITH_BORROWED_FROM,
@@ -37,12 +37,28 @@ export type OwnershipInitialValues = {
   subscription_id: string | null;
 };
 
+export type FormatsState = {
+  physical: boolean;
+  ebook: boolean;
+  audiobook: boolean;
+};
+
 export type OwnershipFieldsProps = {
   initial: OwnershipInitialValues;
   /** Lista de assinaturas pra popular o SubscriptionSelect (do server). */
   subscriptions: SubscriptionOption[];
   /** Erros do form, indexados pelo `name` do campo. */
   fieldErrors?: Record<string, string>;
+  /**
+   * Formatos atualmente marcados no form. Define quais opções aparecem no
+   * "Estado físico":
+   *   - `physical` checked → opções tradicionais (Em casa / Emprestei / etc.)
+   *   - só `ebook`         → opção única "Kindle"
+   *   - só `audiobook`     → opção única "Audible"
+   *   - `ebook` + `audiobook` (sem físico) → ambas
+   *   - nenhum formato     → seletor escondido, valor fixo "owned" via hidden
+   */
+  formats: FormatsState;
 };
 
 /**
@@ -75,15 +91,61 @@ const TERMINAL_STATES: OwnershipStatus[] = [
  * Persistência: campos invisíveis ficam no state local (recovery se user
  * volta pro estado), mas a action só persiste os relevantes.
  */
+/**
+ * Calcula quais valores de `ownership_status` fazem sentido dado o conjunto
+ * de formatos marcados. Físico tem precedência: se o usuário marcou físico,
+ * mesmo que também tenha ebook/audiobook, mostramos opções físicas (o estado
+ * mais informativo). Caso contrário, mapeamos cada formato digital pra sua
+ * plataforma padrão.
+ */
+function availableStatusesForFormats(formats: FormatsState): OwnershipStatus[] {
+  if (formats.physical) {
+    return OWNERSHIP_STATUS_OPTIONS_PHYSICAL.map((o) => o.value);
+  }
+  const out: OwnershipStatus[] = [];
+  if (formats.ebook) out.push("kindle");
+  if (formats.audiobook) out.push("audible");
+  return out;
+}
+
 export function OwnershipFields({
   initial,
   subscriptions,
   fieldErrors = {},
+  formats,
 }: OwnershipFieldsProps) {
   // `previousStatus` é o estado persistido (não muda durante edição).
   const previousStatus = initial.ownership_status;
 
   const [status, setStatus] = useState<OwnershipStatus>(previousStatus);
+
+  // Quando o usuário muda formatos, o status atual pode deixar de ser válido
+  // (ex.: tira físico → "lent_out" não cabe; só ebook → defaulta pra "kindle").
+  // Esse efeito reconcilia: se status atual já está na lista, mantém;
+  // senão, troca pro primeiro disponível.
+  const available = availableStatusesForFormats(formats);
+  useEffect(() => {
+    if (available.length === 0) return;
+    if (!available.includes(status)) {
+      setStatus(available[0]);
+    }
+  }, [available, status]);
+
+  // Sem formato algum → fallback silencioso pra "owned". Não deve acontecer
+  // no fluxo normal (formulário exige pelo menos 1 formato) mas é defesa.
+  const effectiveStatus: OwnershipStatus =
+    available.length > 0
+      ? available.includes(status)
+        ? status
+        : available[0]
+      : "owned";
+
+  // Visibilidade do seletor de "Estado físico":
+  //   - 0 opções: esconde + hidden input com "owned"
+  //   - 1 opção: ainda mostra (deixa explícito qual plataforma) mas sem
+  //     interatividade real além do label.
+  //   - 2+ opções: select normal.
+  const showStatusSelect = available.length > 0;
   const [origin, setOrigin] = useState<PurchaseOrigin | "">(
     initial.purchase_origin ?? "",
   );
@@ -111,43 +173,67 @@ export function OwnershipFields({
     initial.subscription_id,
   );
 
-  // === Visibilidade derivada do estado atual ===
-  const showOrigin = STATUSES_WITH_PURCHASE_ORIGIN.includes(status);
-  const showBorrowedFrom = STATUSES_WITH_BORROWED_FROM.includes(status);
-  const showLentTo = STATUSES_WITH_LENT_TO.includes(status);
+  // === Visibilidade derivada do estado efetivo ===
+  const showOrigin = STATUSES_WITH_PURCHASE_ORIGIN.includes(effectiveStatus);
+  const showBorrowedFrom = STATUSES_WITH_BORROWED_FROM.includes(effectiveStatus);
+  const showLentTo = STATUSES_WITH_LENT_TO.includes(effectiveStatus);
   const showSubscription = showOrigin && origin === "assinatura";
   const showPriceRequired = showOrigin && origin === "compra";
   const showPriceOptional = showOrigin && origin === "assinatura";
   const showPrice = showPriceRequired || showPriceOptional;
 
-  const showAcquiredAt = STATUSES_WITH_ACQUIRED_AT.includes(status);
-  const showLentOutAt = status === "lent_out";
-  const showBorrowedAt = STATUSES_WITH_BORROWED_AT.includes(status);
-  const showReturnedAt = status === "returned";
-  const showDisposedDate = TERMINAL_STATES.includes(status);
+  const showAcquiredAt = STATUSES_WITH_ACQUIRED_AT.includes(effectiveStatus);
+  const showLentOutAt = effectiveStatus === "lent_out";
+  const showBorrowedAt = STATUSES_WITH_BORROWED_AT.includes(effectiveStatus);
+  const showReturnedAt = effectiveStatus === "returned";
+  const showDisposedDate = TERMINAL_STATES.includes(effectiveStatus);
 
-  // Transição especial: lent_out → owned ("voltou pro acervo").
-  const transition = eventDateForTransition(previousStatus, status);
-  const showReturnedToAcervoAt = transition !== null;
+  // Transição especial: lent_out → owned ("voltou pro acervo"). Só faz
+  // sentido em livros físicos.
+  const transition = eventDateForTransition(previousStatus, effectiveStatus);
+  const showReturnedToAcervoAt = formats.physical && transition !== null;
 
   // Label do `disposed_date` muda por estado — pega via helper.
-  const disposedConfig = showDisposedDate ? eventDateForStatus(status) : null;
+  const disposedConfig = showDisposedDate
+    ? eventDateForStatus(effectiveStatus)
+    : null;
+
+  // Mapa nome → label pra renderizar os <option> (cobre tanto opções físicas
+  // quanto kindle/audible — todos vivem em OWNERSHIP_STATUS_OPTIONS).
+  const labelFor = (value: OwnershipStatus): string => {
+    const opt = OWNERSHIP_STATUS_OPTIONS_PHYSICAL.find(
+      (o) => o.value === value,
+    );
+    if (opt) return opt.label;
+    if (value === "kindle") return "Kindle";
+    if (value === "audible") return "Audible";
+    return value;
+  };
+
+  const helperText = formats.physical
+    ? "Onde está esse livro hoje? (Define o que aparece nos próximos campos.)"
+    : "Plataforma onde o arquivo digital vive.";
 
   return (
     <div className="space-y-5">
-      <Select
-        label="Estado físico"
-        name="ownership_status"
-        value={status}
-        onChange={(e) => setStatus(e.target.value as OwnershipStatus)}
-        helperText="Onde está esse livro hoje? (Define o que aparece nos próximos campos.)"
-      >
-        {OWNERSHIP_STATUS_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </Select>
+      {showStatusSelect ? (
+        <Select
+          label="Estado físico"
+          name="ownership_status"
+          value={effectiveStatus}
+          onChange={(e) => setStatus(e.target.value as OwnershipStatus)}
+          helperText={helperText}
+        >
+          {available.map((value) => (
+            <option key={value} value={value}>
+              {labelFor(value)}
+            </option>
+          ))}
+        </Select>
+      ) : (
+        // Sem nenhum formato marcado: action ainda espera o campo; valor neutro.
+        <input type="hidden" name="ownership_status" value="owned" />
+      )}
 
       {showBorrowedFrom && (
         <Input

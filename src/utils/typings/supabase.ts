@@ -980,10 +980,14 @@ export type Database = {
         | "sold"
         | "traded"
         | "lost"
+        | "kindle"
+        | "audible"
       priority_level: "low" | "medium" | "high"
       purchase_origin:
         | "compra"
         | "assinatura"
+        | "kindle_unlimited"
+        | "audible"
         | "presente"
         | "troca"
         | "outro"
@@ -1182,11 +1186,15 @@ export const Constants = {
         "sold",
         "traded",
         "lost",
+        "kindle",
+        "audible",
       ],
       priority_level: ["low", "medium", "high"],
       purchase_origin: [
         "compra",
         "assinatura",
+        "kindle_unlimited",
+        "audible",
         "presente",
         "troca",
         "outro",

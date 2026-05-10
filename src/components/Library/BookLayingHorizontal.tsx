@@ -38,8 +38,11 @@ export function BookLayingHorizontal({ book, onSpineClick }: Props) {
   const thickness = layingThicknessForPages(book.pages);
   const showTitle = thickness >= 14;
 
-  const { handlers: hoverHandlers, tooltip: hoverTooltip } =
-    useBookHover(titleAttr);
+  const {
+    handlers: hoverHandlers,
+    tooltip: hoverTooltip,
+    clear: clearHover,
+  } = useBookHover(titleAttr);
 
   return (
     <div
@@ -61,6 +64,8 @@ export function BookLayingHorizontal({ book, onSpineClick }: Props) {
         }
         if (onSpineClick) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          // Fecha o tooltip antes do overlay aparecer — vide comentário no BookSpine.
+          clearHover();
           onSpineClick(book, rect);
           return;
         }

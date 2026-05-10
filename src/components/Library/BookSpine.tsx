@@ -177,8 +177,11 @@ export function BookSpine({
   // Sessão 17.10: tooltip portal-based (fixed position) — funciona pra
   // todos os livros, contornando o overflow:hidden dos containers.
   const hoverLabel = isWall ? titleAttr : "";
-  const { handlers: hoverHandlers, tooltip: hoverTooltip } =
-    useBookHover(hoverLabel);
+  const {
+    handlers: hoverHandlers,
+    tooltip: hoverTooltip,
+    clear: clearHover,
+  } = useBookHover(hoverLabel);
 
   // Wall mode usa classe `.book-spine` (CSS em globals.css) + height 100%
   // herdado do `.shelf-content` pai. Outros modos: comportamento antigo.
@@ -217,6 +220,10 @@ export function BookSpine({
             const rect = (
               e.currentTarget as HTMLElement
             ).getBoundingClientRect();
+            // Fecha o tooltip ANTES de abrir o overlay — caso contrário ele
+            // fica órfão sobre o livro 3D (mouseleave não dispara quando o
+            // overlay aparece em cima da lombada).
+            clearHover();
             onSpineClick(book, rect);
           }}
           {...hoverHandlers}
@@ -247,6 +254,7 @@ export function BookSpine({
       titleAttr={titleAttr}
       hoverHandlers={hoverHandlers}
       hoverTooltip={hoverTooltip}
+      clearHover={clearHover}
       innerStyle={innerStyle}
       isWall={isWall}
       onSpineClick={onSpineClick}
@@ -274,6 +282,7 @@ function DraggableSpine({
   disableOpen = false,
   hoverHandlers,
   hoverTooltip,
+  clearHover,
 }: {
   book: ShelfBook;
   finalHref: string;
@@ -289,6 +298,7 @@ function DraggableSpine({
     onMouseLeave: () => void;
   };
   hoverTooltip?: React.ReactNode;
+  clearHover?: () => void;
 }) {
   const router = useRouter();
   const {
@@ -353,6 +363,7 @@ function DraggableSpine({
           const rect = (
             e.currentTarget as HTMLElement
           ).getBoundingClientRect();
+          clearHover?.();
           onSpineClick(book, rect);
           return;
         }

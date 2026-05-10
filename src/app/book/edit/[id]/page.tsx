@@ -2,13 +2,18 @@ import AppShell from "@/components/AppShell";
 import BookFull from "@/components/Update/BookFull";
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
 
 export default async function EditBookPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const fromWishlistMatch = sp.from_wishlist_match === "1";
   const supabase = await createClient();
 
   const { data: book } = await supabase
@@ -55,6 +60,19 @@ export default async function EditBookPage({
 
   return (
     <AppShell>
+      {fromWishlistMatch && (
+        <div className="mb-4 flex items-start gap-2 rounded-md border border-moss/40 bg-moss/10 px-3 py-2.5 text-sm text-ink-deep max-w-4xl">
+          <CheckCircleIcon
+            className="w-5 h-5 flex-shrink-0 text-moss mt-0.5"
+            aria-hidden
+          />
+          <p>
+            Esse livro já estava cadastrado. Movemos o item da wishlist pra cá
+            — atualize abaixo os campos de <strong>posse</strong> (estado,
+            origem, data de aquisição) e salve.
+          </p>
+        </div>
+      )}
       <BookFull
         book={book}
         initialAuthors={initialAuthors}

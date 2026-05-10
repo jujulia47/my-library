@@ -159,22 +159,52 @@ export function ShelfRow({ shelf, onZoom, onSpineClick }: Props) {
     return booksByPosition.has(neighborPos);
   };
 
+  // Mobile detection: em viewports estreitas, quebramos a prateleira em
+  // múltiplas "sub-prateleiras", cada uma com sua prancha de madeira própria
+  // (em vez de uma única prancha com livros flutuando acima — o que dava a
+  // sensação de "livro voando" reportada na sessão).
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    setIsMobile(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Quantos itens cabem por sub-prateleira em mobile. Pequenas variações de
+  // largura de slot (standing 32, tilted 36, laying-stack ~90, decoration
+  // ~70) são absorvidas com folga em 6 itens por linha em 375-414px viewport.
+  const ITEMS_PER_ROW_MOBILE = 6;
+  const subRows: RenderItem[][] = isMobile
+    ? (() => {
+        const out: RenderItem[][] = [];
+        for (let i = 0; i < renderItems.length; i += ITEMS_PER_ROW_MOBILE) {
+          out.push(renderItems.slice(i, i + ITEMS_PER_ROW_MOBILE));
+        }
+        return out.length > 0 ? out : [[]];
+      })()
+    : [renderItems];
+
   if (shelf.books.length === 0) {
     return (
-      <div ref={ref} className="shelf-row relative" data-shelf-id={shelf.id}>
-        <div className="shelf-wood-bottom" aria-hidden />
-        <div className="shelf-content">
-          <ShelfLabel
-            symbol={shelf.symbol}
-            bookCount={0}
-            onClick={onZoom ? () => onZoom(shelf.id) : undefined}
-          />
-          <EmptyShelfCta shelfId={shelf.id} />
-          {decorEnabled && (
-            <span className="ml-auto self-end pb-1">
-              {renderDecoration("vela", `${shelf.id}-empty`)}
-            </span>
-          )}
+      <div ref={ref} className="shelf-row" data-shelf-id={shelf.id}>
+        <ShelfLabel
+          symbol={shelf.symbol}
+          bookCount={0}
+          onClick={onZoom ? () => onZoom(shelf.id) : undefined}
+        />
+        <div className="shelf-sub-row">
+          <div className="shelf-wood-bottom" aria-hidden />
+          <div className="shelf-content">
+            <EmptyShelfCta shelfId={shelf.id} />
+            {decorEnabled && (
+              <span className="ml-auto self-end pb-1">
+                {renderDecoration("vela", `${shelf.id}-empty`)}
+              </span>
+            )}
+          </div>
         </div>
         {/* Botão de excluir estante vazia — top-right da row, sutil */}
         <div className="absolute top-1 right-2 z-10">
@@ -188,91 +218,98 @@ export function ShelfRow({ shelf, onZoom, onSpineClick }: Props) {
 
   return (
     <div ref={ref} className="shelf-row" data-shelf-id={shelf.id}>
-      <div className="shelf-wood-bottom" aria-hidden />
-      <div className="shelf-content">
-        <ShelfLabel
-          symbol={shelf.symbol}
-          bookCount={shelf.books.length}
-          onClick={onZoom ? () => onZoom(shelf.id) : undefined}
-        />
+      <ShelfLabel
+        symbol={shelf.symbol}
+        bookCount={shelf.books.length}
+        onClick={onZoom ? () => onZoom(shelf.id) : undefined}
+      />
+      {subRows.map((rowItems, rowIdx) => {
+        const isLastRow = rowIdx === subRows.length - 1;
+        return (
+          <div key={rowIdx} className="shelf-sub-row">
+            <div className="shelf-wood-bottom" aria-hidden />
+            <div className="shelf-content">
+              {rowItems.map((item) => {
+                if (item.kind === "stack") {
+                  return (
+                    <LayingStackCluster
+                      key={`stack-${item.stackId}`}
+                      shelfId={shelf.id}
+                      stackSlots={item.slots}
+                      booksByPosition={booksByPosition}
+                      isDragging={isDragging}
+                      onSpineClick={onSpineClick}
+                    />
+                  );
+                }
 
-        {renderItems.map((item) => {
-          if (item.kind === "stack") {
-            return (
-              <LayingStackCluster
-                key={`stack-${item.stackId}`}
-                shelfId={shelf.id}
-                stackSlots={item.slots}
-                booksByPosition={booksByPosition}
-                isDragging={isDragging}
-                onSpineClick={onSpineClick}
-              />
-            );
-          }
+                const slot = item.slot;
+                if (slot.type === "decoration") {
+                  if (!decorEnabled || !slot.decorationVariant) {
+                    return (
+                      <span
+                        key={`d-${slot.position}`}
+                        className="empty-slot-laying"
+                        aria-hidden
+                      />
+                    );
+                  }
+                  return (
+                    <span
+                      key={`d-${slot.position}`}
+                      className="decoration-slot self-end z-[2]"
+                    >
+                      {renderDecoration(
+                        slot.decorationVariant,
+                        `${shelf.id}-d-${slot.position}`,
+                      )}
+                    </span>
+                  );
+                }
 
-          const slot = item.slot;
-          if (slot.type === "decoration") {
-            if (!decorEnabled || !slot.decorationVariant) {
-              return (
-                <span
-                  key={`d-${slot.position}`}
-                  className="empty-slot-laying"
-                  aria-hidden
-                />
-              );
-            }
-            return (
-              <span
-                key={`d-${slot.position}`}
-                className="decoration-slot self-end z-[2]"
-              >
-                {renderDecoration(
-                  slot.decorationVariant,
-                  `${shelf.id}-d-${slot.position}`,
-                )}
-              </span>
-            );
-          }
+                const book = booksByPosition.get(slot.position);
+                if (!book) {
+                  return (
+                    <EmptySlot
+                      key={`e-${slot.position}`}
+                      shelfId={shelf.id}
+                      slot={slot}
+                      isDragging={isDragging}
+                    />
+                  );
+                }
 
-          const book = booksByPosition.get(slot.position);
-          if (!book) {
-            return (
-              <EmptySlot
-                key={`e-${slot.position}`}
-                shelfId={shelf.id}
-                slot={slot}
-                isDragging={isDragging}
-              />
-            );
-          }
-
-          if (slot.type === "standing") {
-            return (
-              <BookSpine
-                key={book.id}
-                book={book}
-                mode="wall"
-                draggable
-                onSpineClick={onSpineClick}
-              />
-            );
-          }
-          if (slot.type === "tilted") {
-            return (
-              <BookSpineTilted
-                key={book.id}
-                book={book}
-                leanDirection={slot.leanDirection ?? "left"}
-                isSupported={isTiltedSupported(slot)}
-                onSpineClick={onSpineClick}
-              />
-            );
-          }
-          return null;
-        })}
-
-        <AddBookSlot shelfId={shelf.id} position={addSlotPosition} />
-      </div>
+                if (slot.type === "standing") {
+                  return (
+                    <BookSpine
+                      key={book.id}
+                      book={book}
+                      mode="wall"
+                      draggable
+                      onSpineClick={onSpineClick}
+                    />
+                  );
+                }
+                if (slot.type === "tilted") {
+                  return (
+                    <BookSpineTilted
+                      key={book.id}
+                      book={book}
+                      leanDirection={slot.leanDirection ?? "left"}
+                      isSupported={isTiltedSupported(slot)}
+                      onSpineClick={onSpineClick}
+                    />
+                  );
+                }
+                return null;
+              })}
+              {isLastRow && (
+                <AddBookSlot shelfId={shelf.id} position={addSlotPosition} />
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

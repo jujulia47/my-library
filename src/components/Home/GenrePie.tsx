@@ -1,27 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TagIcon } from "@heroicons/react/24/outline";
 import { HomeCard, HomeCardEmpty } from "./HomeCard";
-import { colorHexForName } from "@/utils/colorByHash";
 import type { GenreDistribution } from "@/services/homeData";
 
-// Sessão 17.3: paleta de cores agora vem de `colorByHash` — 8 cores cíclicas
-// estáveis por nome da categoria. Garante que "Fantasia" sempre seja a mesma
-// cor mesmo que mude de posição na lista.
+// Paleta posicional (não hash) — garante contraste entre fatias adjacentes
+// alternando warm/cool/light/dark. Cíclica: depois de 8 gêneros volta ao
+// início, mas como a primeira fatia é sempre a maior, colisões só atingem
+// fatias minoritárias. Antes a paleta vinha de `colorHexForName` (hash do
+// nome) — com poucos gêneros os hashes colidiam em verde/marrom.
+const SLICE_COLORS = [
+  "#82393A", // burgundy — vermelho profundo
+  "#1E3A5F", // navy — azul escuro
+  "#BC6E48", // terracota — laranja
+  "#5C6E47", // moss — verde
+  "#A0843E", // gold-deep — dourado
+  "#A24749", // burgundy-soft — vermelho claro
+  "#2C5078", // navy-soft — azul médio
+  "#6F8456", // moss-soft — verde claro
+] as const;
 
-const VIEW = 110;
+function colorForIndex(idx: number): string {
+  return SLICE_COLORS[idx % SLICE_COLORS.length];
+}
+
+const VIEW = 160;
 const CENTER = VIEW / 2;
-const RADIUS = 44;
+const RADIUS = 68;
+const HOVER_PUSH = 6; // px que a fatia desliza pra fora no hover
 
 type Props = {
   data: GenreDistribution[];
 };
 
-function buildSlicePath(
-  startAngle: number,
-  endAngle: number,
-): string {
+function buildSlicePath(startAngle: number, endAngle: number): string {
   // Caso especial: 1 fatia única ocupa o círculo todo. SVG arc não desenha
   // arco completo (start === end), então usamos dois arcos de 180°.
   if (Math.abs(endAngle - startAngle - Math.PI * 2) < 0.001) {
@@ -38,10 +52,21 @@ function buildSlicePath(
 }
 
 export function GenrePie({ data }: Props) {
+  const router = useRouter();
   // Cada fatia ganha um scale 0→1 escalonado em 80ms. `revealedCount`
-  // controla quantas já estão "abertas". Cada slice individualmente
-  // transiciona transform graças ao CSS.
+  // controla quantas já estão "abertas".
   const [revealedCount, setRevealedCount] = useState(0);
+  // Hover bidirecional: setado tanto ao passar mouse na fatia (SVG) quanto
+  // no item da legenda. Quando !== null, fatia destacada (translate pra fora
+  // + tooltip ON sobre o centro da fatia), demais reduzem opacidade.
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  // Navega pra detail page da categoria. "Sem gênero" não tem slug — clique
+  // é no-op nesse caso.
+  function goToCategory(idx: number) {
+    const slug = data[idx]?.slug;
+    if (slug) router.push(`/category/${slug}`);
+  }
 
   useEffect(() => {
     if (data.length === 0) return;
@@ -52,70 +77,144 @@ export function GenrePie({ data }: Props) {
     return () => timeouts.forEach(clearTimeout);
   }, [data]);
 
+  // Pré-computa ângulos e ancoragem do tooltip — tooltip vai FORA da fatia,
+  // logo após a borda do raio, na direção do ângulo médio. Anchor +
+  // translate baseados em cos/sin pra que o tooltip se "afaste" do centro
+  // (fatia à direita → tooltip extende pra direita, etc).
+  const TOOLTIP_OFFSET = 12; // px além da borda do raio
   let cumulativeAngle = -Math.PI / 2; // começa às 12h
   const slices = data.map((item, idx) => {
     const sliceAngle = (item.percent / 100) * 2 * Math.PI;
-    const path = buildSlicePath(
-      cumulativeAngle,
-      cumulativeAngle + sliceAngle,
-    );
-    cumulativeAngle += sliceAngle;
+    const startAngle = cumulativeAngle;
+    const endAngle = cumulativeAngle + sliceAngle;
+    const midAngle = (startAngle + endAngle) / 2;
+    const path = buildSlicePath(startAngle, endAngle);
+    cumulativeAngle = endAngle;
+    const cosA = Math.cos(midAngle);
+    const sinA = Math.sin(midAngle);
     return {
       key: `${item.genre}-${idx}`,
+      idx,
       path,
-      color: colorHexForName(item.genre),
+      color: colorForIndex(idx),
       visible: idx < revealedCount,
+      // Ancoragem do tooltip — ponto logo fora da fatia no eixo radial.
+      tipX: CENTER + (RADIUS + TOOLTIP_OFFSET) * cosA,
+      tipY: CENTER + (RADIUS + TOOLTIP_OFFSET) * sinA,
+      // Translate em porcentagem da própria largura/altura do tooltip pra
+      // ele crescer "pra fora": cos=1 (direita) → translateX=0% (anchor na
+      // borda esquerda); cos=-1 → -100% (anchor na borda direita); cos=0
+      // → -50% (centralizado horizontalmente). Idem pro Y.
+      tipTranslateX: -((1 - cosA) / 2) * 100,
+      tipTranslateY: -((1 - sinA) / 2) * 100,
+      // Vetor unitário no sentido radial pra "puxar a fatia pra fora".
+      pushDx: HOVER_PUSH * cosA,
+      pushDy: HOVER_PUSH * sinA,
     };
   });
+
+  const hovered = hoveredIdx !== null ? slices[hoveredIdx] : null;
+  const hoveredItem = hoveredIdx !== null ? data[hoveredIdx] : null;
 
   return (
     <HomeCard title="Gênero" icon={<TagIcon className="w-3.5 h-3.5" />}>
       {data.length === 0 ? (
         <HomeCardEmpty>Sem gêneros classificados</HomeCardEmpty>
       ) : (
-        <div className="flex flex-col items-center gap-3">
-          <svg
-            width={VIEW}
-            height={VIEW}
-            viewBox={`0 0 ${VIEW} ${VIEW}`}
-            aria-hidden
-          >
-            {slices.map((s) => (
-              <path
-                key={s.key}
-                d={s.path}
-                fill={s.color}
-                style={{
-                  transform: s.visible ? "scale(1)" : "scale(0)",
-                  transformOrigin: `${CENTER}px ${CENTER}px`,
-                  transition:
-                    "transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                }}
-              />
-            ))}
-          </svg>
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5">
+          <div className="relative flex-shrink-0" style={{ width: VIEW, height: VIEW }}>
+            <svg
+              width={VIEW}
+              height={VIEW}
+              viewBox={`0 0 ${VIEW} ${VIEW}`}
+              aria-hidden
+            >
+              {slices.map((s) => {
+                const isHovered = hoveredIdx === s.idx;
+                const isOther = hoveredIdx !== null && !isHovered;
+                const baseTransform = s.visible ? "scale(1)" : "scale(0)";
+                const pushTransform = isHovered && s.visible
+                  ? `translate(${s.pushDx}px, ${s.pushDy}px)`
+                  : "";
+                const hasSlug = data[s.idx]?.slug !== null;
+                return (
+                  <path
+                    key={s.key}
+                    d={s.path}
+                    fill={s.color}
+                    onMouseEnter={() => setHoveredIdx(s.idx)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                    onClick={() => goToCategory(s.idx)}
+                    style={{
+                      transform: `${pushTransform} ${baseTransform}`.trim(),
+                      transformOrigin: `${CENTER}px ${CENTER}px`,
+                      transition:
+                        "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease",
+                      opacity: isOther ? 0.45 : 1,
+                      cursor: hasSlug ? "pointer" : "default",
+                    }}
+                  />
+                );
+              })}
+            </svg>
 
-          <ul className="w-full flex flex-col gap-1 text-xs font-body">
-            {data.map((item, idx) => (
-              <li
-                key={`${item.genre}-${idx}`}
-                className="flex items-center gap-2 min-w-0"
+            {hovered && hoveredItem && (
+              <div
+                className="absolute pointer-events-none bg-ink-deep text-ivory rounded px-2 py-1 shadow-card whitespace-nowrap z-10"
+                style={{
+                  left: hovered.tipX,
+                  top: hovered.tipY,
+                  transform: `translate(${hovered.tipTranslateX}%, ${hovered.tipTranslateY}%)`,
+                }}
+                role="status"
+                aria-live="polite"
               >
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{
-                    backgroundColor: colorHexForName(item.genre),
-                  }}
-                  aria-hidden
-                />
-                <span className="text-ink-soft truncate" title={item.genre}>
-                  {item.genre}
+                <span className="text-xs font-medium">
+                  {hoveredItem.genre}
                 </span>
-                <span className="ml-auto text-ink-fade tabular-nums">
-                  {item.percent}%
+                <span className="ml-1.5 text-[11px] text-gold tabular-nums">
+                  {hoveredItem.percent}%
                 </span>
-              </li>
-            ))}
+              </div>
+            )}
+          </div>
+
+          <ul className="flex-1 min-w-0 w-full grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-body self-center">
+            {data.map((item, idx) => {
+              const isHovered = hoveredIdx === idx;
+              const hasSlug = item.slug !== null;
+              return (
+                <li
+                  key={`${item.genre}-${idx}`}
+                  onMouseEnter={() => setHoveredIdx(idx)}
+                  onMouseLeave={() => setHoveredIdx(null)}
+                  onClick={() => goToCategory(idx)}
+                  className={`flex items-center gap-1.5 min-w-0 rounded px-1 -mx-1 transition-colors ${
+                    hasSlug ? "cursor-pointer" : "cursor-default"
+                  } ${isHovered ? "bg-paper-soft" : ""}`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0 transition-transform"
+                    style={{
+                      backgroundColor: colorForIndex(idx),
+                      transform: isHovered ? "scale(1.4)" : "scale(1)",
+                    }}
+                    aria-hidden
+                  />
+                  <span
+                    className={`truncate transition-colors ${
+                      isHovered ? "text-ink-deep font-medium" : "text-ink-soft"
+                    }`}
+                    title={item.genre}
+                  >
+                    {item.genre}
+                  </span>
+                  <span className="ml-auto text-ink-fade tabular-nums">
+                    {item.percent}%
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

@@ -18,7 +18,8 @@ const readingMap: Record<LegacyReadingStatus, { variant: BadgeVariant; label: st
 };
 
 const ownershipMap: Record<OwnershipStatus, { variant: BadgeVariant; label: string }> = {
-  // Sessão 17.2 — 8 estados granulares (substituiu owned/disposed/lent/never_owned).
+  // 8 estados físicos granulares + 2 plataformas digitais (Kindle/Audible
+  // adicionadas pra livros sem formato físico).
   owned: { variant: "moss", label: "Em casa" },
   lent_out: { variant: "olive", label: "Emprestei" },
   borrowed: { variant: "navy", label: "Tenho emprestado" },
@@ -27,6 +28,8 @@ const ownershipMap: Record<OwnershipStatus, { variant: BadgeVariant; label: stri
   sold: { variant: "fade", label: "Vendi" },
   traded: { variant: "fade", label: "Troquei" },
   lost: { variant: "burgundy", label: "Perdi" },
+  kindle: { variant: "navy", label: "Kindle" },
+  audible: { variant: "burgundy", label: "Audible" },
 };
 
 const serieMap: Record<SerieStatus, { variant: BadgeVariant; label: string }> = {

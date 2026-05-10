@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-const SPACING = 90;
-const MIN_LAMPS = 8;
+// Mobile (< 640px): espaçamento e count mínimos reduzidos pra não
+// transbordar a viewport. Desktop mantém 90px / 8 lâmpadas pra coreografia
+// mais cheia.
+const SPACING_DESKTOP = 90;
+const SPACING_MOBILE = 56;
+const MIN_LAMPS_DESKTOP = 8;
+const MIN_LAMPS_MOBILE = 5;
+const MOBILE_BREAKPOINT = 640;
 const SSR_FALLBACK_WIDTH = 1200;
 
 const LAMP_W = 22;
@@ -28,7 +34,10 @@ export function VaralLuzes() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const lampCount = Math.max(MIN_LAMPS, Math.floor(width / SPACING));
+  const isMobile = width < MOBILE_BREAKPOINT;
+  const spacing = isMobile ? SPACING_MOBILE : SPACING_DESKTOP;
+  const minLamps = isMobile ? MIN_LAMPS_MOBILE : MIN_LAMPS_DESKTOP;
+  const lampCount = Math.max(minLamps, Math.floor(width / spacing));
 
   return (
     <div
@@ -68,7 +77,7 @@ export function VaralLuzes() {
       </svg>
 
       {Array.from({ length: lampCount }, (_, i) => {
-        const x = (i + 0.5) * SPACING;
+        const x = (i + 0.5) * spacing;
         // Sag da catenária aproximado (peak central ~y=27 → bulbo abaixo do fio).
         const yOffset =
           Math.sin((i / Math.max(1, lampCount - 1)) * Math.PI) * 9;

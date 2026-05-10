@@ -207,6 +207,21 @@ function describeHistoryEvent(
       return "Troquei";
     case "lost":
       return "Perdi";
+    case "kindle":
+    case "audible": {
+      // Plataformas digitais — narrativa mais leve. Primeira ocorrência =
+      // entrou no acervo; transição entre digitais = mudou de plataforma.
+      const platform = entry.status === "kindle" ? "Kindle" : "Audible";
+      if (!previous) {
+        const originLabel = book.purchase_origin
+          ? labelForPurchaseOrigin(book.purchase_origin).toLowerCase()
+          : null;
+        return originLabel
+          ? `Entrou no acervo (${platform}) · ${originLabel}`
+          : `Entrou no acervo (${platform})`;
+      }
+      return `Disponível no ${platform}`;
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HomeOrnaments } from "./HomeOrnaments";
+import { MiniBookshelf } from "@/components/decorations/MiniBookshelf";
 import type { HomeData } from "@/services/homeData";
 
 const MONTHS = [
@@ -73,22 +74,10 @@ export function HomeHeader({
         </div>
 
         <div className="relative flex flex-col items-end text-right pr-0 sm:pr-16">
-          <svg
-            width="56"
-            height="48"
-            viewBox="0 0 56 48"
-            aria-hidden
+          <MiniBookshelf
             className="hidden sm:block absolute -top-1 right-0 pointer-events-none"
             style={{ opacity: 0.35 }}
-          >
-            <rect x="6" y="20" width="6" height="22" fill="#6B5240" rx="1" />
-            <rect x="14" y="14" width="6" height="28" fill="#993C1D" rx="1" />
-            <rect x="22" y="18" width="6" height="24" fill="#3B6D11" rx="1" />
-            <rect x="30" y="10" width="6" height="32" fill="#185FA5" rx="1" />
-            <rect x="38" y="22" width="6" height="20" fill="#993556" rx="1" />
-            <rect x="46" y="16" width="6" height="26" fill="#534AB7" rx="1" />
-            <rect x="3" y="42" width="50" height="3" fill="#854F0B" />
-          </svg>
+          />
           <p className="font-body text-sm text-ink-soft">{dateLabel}</p>
           {lastActivity && (
             <p className="font-body text-xs text-ink-fade mt-0.5">

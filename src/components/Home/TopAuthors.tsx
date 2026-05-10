@@ -33,26 +33,25 @@ export function TopAuthors({ data }: Props) {
         <ul className="space-y-2.5">
           {data.map((author, idx) => {
             const targetWidth = (author.book_count / max) * 100;
-            // Sessão 17.3: top 3 ganham cores de pódio:
-            //   1º → gold-deep, 2º → cappuccino-soft, 3º → burgundy-soft.
-            //   Demais → ink-soft. Aplica tanto no nome quanto na barra.
+            // Pódio com paleta saturada: 1º gold, 2º terracota, 3º burgundy,
+            // demais moss. Família vintage mantida, mas sem cair em marrom.
             // Strings completas pra Tailwind JIT detectar.
             const nameColorClass =
               idx === 0
                 ? "text-gold-deep"
                 : idx === 1
-                  ? "text-cappuccino-soft"
+                  ? "text-terracota"
                   : idx === 2
-                    ? "text-burgundy-soft"
-                    : "text-ink-soft";
+                    ? "text-burgundy"
+                    : "text-moss";
             const barColorClass =
               idx === 0
-                ? "bg-gold-deep"
+                ? "bg-gold"
                 : idx === 1
-                  ? "bg-cappuccino-soft"
+                  ? "bg-terracota"
                   : idx === 2
-                    ? "bg-burgundy-soft"
-                    : "bg-ink-soft";
+                    ? "bg-burgundy"
+                    : "bg-moss";
             return (
               <li
                 key={author.id}

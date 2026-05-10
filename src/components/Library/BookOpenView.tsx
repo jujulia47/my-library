@@ -299,7 +299,7 @@ const rootClass = embedded
         Fechar
       </button>
 
-<div className="container mx-auto py-12 max-w-7xl relative z-10 px-4">
+<div className="container mx-auto py-6 sm:py-12 max-w-7xl relative z-10 px-4 sm:px-4">
         <BookOpenAnimation skip={embedded}>
           {/* Sessão 17.11: spread base SEM rotação — o livro inteiro nunca
               vira. A virada acontece só na <FlippingPage> overlay por cima
@@ -340,12 +340,18 @@ const rootClass = embedded
 
 /**
  * Sessão 17.11: overlay animado que simula UMA folha virando — não o livro.
- * Posicionado por cima da metade ativa do spread (direita pra forward,
- * esquerda pra backward). Rotaciona em torno da lombada (eixo do meio)
- * de 0° → ±180°. A face FRONT mostra o conteúdo da página antiga (visível
- * 0–90°). A face BACK (pré-rotacionada 180° pra ficar correta no final)
- * mostra o conteúdo da página nova que aparece quando a folha cai do outro
- * lado (visível 90–180°). `backface-visibility: hidden` faz a troca.
+ *
+ * Desktop: spread renderizado em duas colunas (grid-cols-2). A FlippingPage
+ * cobre METADE do spread e rotaciona no eixo Y em torno da lombada — virando
+ * a página da direita pra esquerda (forward) ou vice-versa (backward).
+ *
+ * Mobile: spread fica single-column (grid-cols-1) com as duas páginas
+ * EMPILHADAS verticalmente. Aí a metáfora horizontal não cola — fazer a
+ * folha de baixo cair pra esquerda enquanto está embaixo da de cima seria
+ * confuso. Por isso o mobile usa flip VERTICAL (rotateX): forward "vira a
+ * página pra cima" (origin top, rotação -180° em X), backward inverso.
+ * A folha cobre o spread inteiro e mostra as duas páginas (left+right)
+ * empilhadas em cada face.
  */
 function FlippingPage({
   direction,
@@ -358,6 +364,32 @@ function FlippingPage({
   newContent: PageContent;
   onComplete: () => void;
 }) {
+  // Detecção sincrona via matchMedia: como o componente é remontado a cada
+  // flip (via AnimatePresence), o lazy init do useState garante a leitura
+  // correta no primeiro render — sem flicker entre orientações.
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const cb = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", cb);
+    return () => mq.removeEventListener("change", cb);
+  }, []);
+
+  if (isMobile) {
+    return (
+      <FlippingPageVertical
+        direction={direction}
+        oldContent={oldContent}
+        newContent={newContent}
+        onComplete={onComplete}
+      />
+    );
+  }
+
   const isForward = direction === 1;
   // Forward: vira a página DIREITA (front=old.right) que cai à esquerda
   // (back=new.left). Backward: vira a página ESQUERDA (front=old.left)
@@ -449,6 +481,120 @@ function FlippingPage({
 }
 
 /**
+ * Variante mobile: rotateX em vez de rotateY, cobrindo o spread inteiro
+ * (grid-cols-1). Cada face mostra `left` + `right` do `PageContent`
+ * empilhados verticalmente, espelhando o layout estático do
+ * `BookPageSpread` no mobile.
+ *
+ * Forward: hinge no topo, rotação -180° em X — a folha desce/cai pra cima,
+ * revelando o conteúdo novo por trás. Backward: hinge embaixo, +180°.
+ */
+function FlippingPageVertical({
+  direction,
+  oldContent,
+  newContent,
+  onComplete,
+}: {
+  direction: 1 | -1;
+  oldContent: PageContent;
+  newContent: PageContent;
+  onComplete: () => void;
+}) {
+  const isForward = direction === 1;
+  const rotateXEnd = isForward ? -180 : 180;
+  const origin = isForward ? "center top" : "center bottom";
+
+  // Sombra acompanha a inclinação: começa do lado oposto ao hinge (a face
+  // descolando da superfície), passa por brilho central (perpendicular) e
+  // termina no lado oposto (face nova caindo no lugar). Inverte conforme
+  // a direção pra a sensação física casar.
+  const shadowSequence = isForward
+    ? [
+        "0 0 0 rgba(0,0,0,0)",
+        "0 12px 24px rgba(0,0,0,0.35)",
+        "0 0 32px rgba(0,0,0,0.45)",
+        "0 -12px 24px rgba(0,0,0,0.35)",
+        "0 0 0 rgba(0,0,0,0)",
+      ]
+    : [
+        "0 0 0 rgba(0,0,0,0)",
+        "0 -12px 24px rgba(0,0,0,0.35)",
+        "0 0 32px rgba(0,0,0,0.45)",
+        "0 12px 24px rgba(0,0,0,0.35)",
+        "0 0 0 rgba(0,0,0,0)",
+      ];
+
+  return (
+    <motion.div
+      initial={{ rotateX: 0 }}
+      animate={{
+        rotateX: rotateXEnd,
+        boxShadow: shadowSequence,
+      }}
+      exit={{ opacity: 0 }}
+      transition={{
+        duration: 0.85,
+        ease: [0.22, 0.61, 0.36, 1],
+        boxShadow: { times: [0, 0.25, 0.5, 0.75, 1] },
+      }}
+      onAnimationComplete={(def) => {
+        if (typeof def === "object" && def !== null && "rotateX" in def) {
+          onComplete();
+        }
+      }}
+      style={{
+        position: "absolute",
+        inset: 0,
+        transformStyle: "preserve-3d",
+        transformOrigin: origin,
+        zIndex: 5,
+        pointerEvents: "none",
+      }}
+    >
+      {/* Front: spread antigo (left no topo, right embaixo) */}
+      <div
+        className="absolute inset-0 grid grid-cols-1"
+        style={{
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+        }}
+      >
+        <div className="relative px-6 py-8 book-page page-left">
+          <PageOrnamentTopLeft />
+          <PageOrnamentBottomLeft />
+          {oldContent.left}
+        </div>
+        <div className="relative px-6 py-8 book-page page-right">
+          <PageOrnamentTopRight />
+          <PageOrnamentBottomRight />
+          {oldContent.right}
+        </div>
+      </div>
+      {/* Back: spread novo, pré-rotacionado 180° em X pra cair correto no final */}
+      <div
+        className="absolute inset-0 grid grid-cols-1"
+        style={{
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+          transform: "rotateX(180deg)",
+        }}
+      >
+        <div className="relative px-6 py-8 book-page page-left">
+          <PageOrnamentTopLeft />
+          <PageOrnamentBottomLeft />
+          {newContent.left}
+        </div>
+        <div className="relative px-6 py-8 book-page page-right">
+          <PageOrnamentTopRight />
+          <PageOrnamentBottomRight />
+          {newContent.right}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/**
  * Animação de entrada do livro. Sessão 17.7: pulada quando consumido pelo
  * `<BookOpenOverlay>`, que já anima o wrapper externamente — evita dupla
  * animação ("volta e sai de novo" reportado pelo user).
@@ -494,9 +640,8 @@ function BookPageSpread({
 }) {
   return (
     <div
-      className="book-spread relative grid grid-cols-1 md:grid-cols-2 overflow-hidden"
+      className="book-spread relative grid grid-cols-1 md:grid-cols-2 overflow-hidden min-h-[440px] sm:min-h-[620px]"
       style={{
-        minHeight: 620,
         borderRadius: 6,
         background:
           "linear-gradient(90deg, #8a5b2c 0%, #b8834a 2%, #d7b07a 4%, #f1dfbf 10%, #f4e6ca 50%, #f1dfbf 90%, #d7b07a 96%, #8a5b2c 100%)",
@@ -507,13 +652,13 @@ function BookPageSpread({
     >
       <span aria-hidden className="book-binding hidden md:block" />
 
-      <div className="relative px-12 py-14 md:px-16 book-page page-left">
+      <div className="relative px-6 py-8 sm:px-12 sm:py-14 md:px-16 book-page page-left">
         <PageOrnamentTopLeft />
         <PageOrnamentBottomLeft />
         {pageContent.left}
       </div>
 
-      <div className="relative px-12 py-14 md:px-16 book-page page-right">
+      <div className="relative px-6 py-8 sm:px-12 sm:py-14 md:px-16 book-page page-right">
         <PageOrnamentTopRight />
         <PageOrnamentBottomRight />
         {pageContent.right}

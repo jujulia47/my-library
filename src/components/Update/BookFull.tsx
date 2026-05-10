@@ -81,6 +81,20 @@ export default function BookFull({
 
   const initialUrl = book.cover ? imagesUrl(book.cover) : null;
   const formatsOwned = (book.formats_owned ?? []) as BookFormat[];
+  // Os três checkboxes precisam ser controlados pra OwnershipFields decidir
+  // dinamicamente quais opções de "Estado físico" mostrar:
+  //   físico marcado     → "Em casa / Emprestei / Doei / etc."
+  //   só e-book          → "Kindle"
+  //   só audiobook       → "Audible"
+  //   ambos digitais     → "Kindle" + "Audible"
+  const [formats, setFormats] = useState({
+    physical: formatsOwned.includes("physical"),
+    ebook: formatsOwned.includes("ebook"),
+    audiobook: formatsOwned.includes("audiobook"),
+  });
+  const toggleFormat = (key: keyof typeof formats) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormats((prev) => ({ ...prev, [key]: e.target.checked }));
+  };
 
   // Pré-popula a série atual (se houver) via lookup em `allSeries` — o tipo
   // `book` não traz `serie_name`. SerieSelect aceita value/onChange e renderiza
@@ -277,7 +291,8 @@ export default function BookFull({
                   <input
                     type="checkbox"
                     name={`format_${f.value}`}
-                    defaultChecked={formatsOwned.includes(f.value)}
+                    checked={formats[f.value]}
+                    onChange={toggleFormat(f.value)}
                     className="w-4 h-4 rounded border-border accent-moss focus:ring-moss/30"
                   />
                   {f.label}
@@ -304,15 +319,18 @@ export default function BookFull({
             }}
             subscriptions={subscriptions}
             fieldErrors={fieldErrors}
+            formats={formats}
           />
 
           {/* Hidden: previousStatus pra a action detectar transições server-
-              side (ex: lent_out → owned). FormData carrega o valor original;
-              comparado contra ownership_status submetido. */}
+              side (ex: lent_out → owned). Quando o usuário tira o formato
+              físico, neutralizamos pra "owned" — caso contrário, um livro que
+              estava "lent_out" e perdeu o físico dispararia a validação de
+              "data em que voltou pro acervo", que não faz sentido nesse fluxo. */}
           <input
             type="hidden"
             name="previous_ownership_status"
-            value={book.ownership_status}
+            value={formats.physical ? book.ownership_status : "owned"}
           />
         </Card>
 

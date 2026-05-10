@@ -11,15 +11,18 @@
  * Hash simples (soma de char codes mod length): suficiente pra <100 entradas
  * únicas; colisões aceitáveis no rotation cíclico de 8.
  */
+// Paleta reordenada (post-feedback): tons de marrom (olive, cappuccino-soft,
+// ink-soft) puxavam o pie pra monocromia. Trocados pelas variantes "-soft"
+// que já existem no design system → mantém família semântica, ganha contraste.
 export const PIE_COLORS_HEX = [
   "#82393A", // burgundy
   "#5C6E47", // moss
   "#1E3A5F", // navy
   "#BC6E48", // terracota
-  "#85614B", // olive
   "#A0843E", // gold-deep
-  "#8B6F50", // cappuccino-soft
-  "#6B5D4F", // ink-soft
+  "#A24749", // burgundy-soft
+  "#6F8456", // moss-soft
+  "#2C5078", // navy-soft
 ] as const;
 
 export const PIE_COLORS_TOKEN = [
@@ -27,10 +30,10 @@ export const PIE_COLORS_TOKEN = [
   "moss",
   "navy",
   "terracota",
-  "olive",
   "gold-deep",
-  "cappuccino-soft",
-  "ink-soft",
+  "burgundy-soft",
+  "moss-soft",
+  "navy-soft",
 ] as const;
 
 function hashIndex(name: string, mod = PIE_COLORS_HEX.length): number {

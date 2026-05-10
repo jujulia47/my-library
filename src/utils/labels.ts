@@ -18,6 +18,9 @@ const OWNERSHIP_LABELS: Record<OwnershipStatus, string> = {
   sold: "Vendi",
   traded: "Troquei",
   lost: "Perdi",
+  // Plataformas digitais — "estado físico" pra livros sem formato físico.
+  kindle: "Kindle",
+  audible: "Audible",
 };
 
 export function labelForOwnershipStatus(status: OwnershipStatus): string {
@@ -37,10 +40,21 @@ export const OWNERSHIP_STATUS_OPTIONS: {
   { value: "sold", label: "Vendi" },
   { value: "traded", label: "Troquei" },
   { value: "lost", label: "Perdi" },
+  { value: "kindle", label: "Kindle" },
+  { value: "audible", label: "Audible" },
 ];
 
+/** Subconjunto pra livros físicos — opções tradicionais de localização. */
+export const OWNERSHIP_STATUS_OPTIONS_PHYSICAL: {
+  value: OwnershipStatus;
+  label: string;
+}[] = OWNERSHIP_STATUS_OPTIONS.filter(
+  (o) => o.value !== "kindle" && o.value !== "audible",
+);
+
 /** Estados em que o livro **é meu** ou **era meu** — `purchase_origin` faz
- *  sentido. Pra `borrowed`/`returned`, origem deve ser null. */
+ *  sentido. Pra `borrowed`/`returned`, origem deve ser null. Inclui `kindle`
+ *  e `audible` (plataformas digitais — compra/assinatura também aplicam). */
 export const STATUSES_WITH_PURCHASE_ORIGIN: OwnershipStatus[] = [
   "owned",
   "lent_out",
@@ -48,6 +62,8 @@ export const STATUSES_WITH_PURCHASE_ORIGIN: OwnershipStatus[] = [
   "sold",
   "traded",
   "lost",
+  "kindle",
+  "audible",
 ];
 
 /** Estados que mostram o filtro "borrowed_from" (de quem peguei emprestado). */
@@ -74,6 +90,8 @@ export const STATUSES_WITH_ACQUIRED_AT: OwnershipStatus[] = [
   "sold",
   "traded",
   "lost",
+  "kindle",
+  "audible",
 ];
 
 /** Estados de empréstimo de fora — `borrowed_at` faz sentido. */
@@ -147,6 +165,8 @@ export function eventDateForTransition(
 const PURCHASE_ORIGIN_LABELS: Record<PurchaseOrigin, string> = {
   compra: "Compra",
   assinatura: "Assinatura",
+  kindle_unlimited: "Kindle Unlimited",
+  audible: "Audible",
   presente: "Presente",
   troca: "Troca",
   outro: "Outro",
@@ -163,6 +183,8 @@ export const PURCHASE_ORIGIN_OPTIONS: {
 }[] = [
   { value: "compra", label: "Compra" },
   { value: "assinatura", label: "Assinatura" },
+  { value: "kindle_unlimited", label: "Kindle Unlimited" },
+  { value: "audible", label: "Audible" },
   { value: "presente", label: "Presente" },
   { value: "troca", label: "Troca" },
   { value: "outro", label: "Outro" },

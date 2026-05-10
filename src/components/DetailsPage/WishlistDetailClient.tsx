@@ -11,6 +11,7 @@ import {
   ConfirmDialog,
 } from "@/components/ui";
 import { deleteWishlist } from "@/actions/deleteWishlist";
+import { markWishlistAcquired } from "@/actions/markWishlistAcquired";
 import {
   EllipsisVerticalIcon,
   PencilSquareIcon,
@@ -84,9 +85,26 @@ export default function WishlistDetailClient({
   };
 
   const handleMarkAcquired = () => {
-    // Vai pro form de criar livro com a wishlist item como origem.
-    // O createBookMinimal lê `from_wishlist` e deleta o item após criar.
-    router.push(`/book/new?from_wishlist=${item.id}`);
+    // Tenta match com livro já cadastrado pelo slug do título. Se acha,
+    // a action já migrou os collection_items e apagou a wishlist — só
+    // resta mandar o usuário pro edit pra ajustar posse/datas. Senão,
+    // cai no fluxo padrão de criar livro novo.
+    startTransition(async () => {
+      const result = await markWishlistAcquired(item.id);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      if (result.match) {
+        // ?from_wishlist_match=1 sinaliza pra a edit page mostrar um aviso
+        // contextual ("achamos esse livro, atualize a posse").
+        router.push(
+          `/book/edit/${result.match.bookId}?from_wishlist_match=1&from=/wishlist`,
+        );
+        return;
+      }
+      router.push(`/book/new?from_wishlist=${item.id}`);
+    });
   };
 
   const priceFormatted =

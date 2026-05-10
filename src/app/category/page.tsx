@@ -48,8 +48,22 @@ export default async function CategoryPage() {
           {list.map((c) => {
             const count = c.book_category?.[0]?.count ?? 0;
             return (
-              <Card key={c.id} size="sm" className="flex items-center justify-between">
-                <div className="min-w-0">
+              // Padrão "card clicável com ações dentro": a área inteira navega
+              // via um <Link> absoluto cobrindo o card; a textura central é
+              // pointer-events-none pra deixar o clique passar; os botões de
+              // editar/deletar ficam num stacking context acima (z-10) e
+              // capturam o clique deles sem disparar navegação.
+              <Card
+                key={c.id}
+                size="sm"
+                className="relative flex items-center justify-between gap-2 transition-colors hover:border-gold has-[a:focus-visible]:border-gold"
+              >
+                <Link
+                  href={`/category/${c.slug}`}
+                  className="absolute inset-0 rounded-lg focus:outline-none"
+                  aria-label={`Ver livros de ${c.name}`}
+                />
+                <div className="min-w-0 flex-1 pointer-events-none">
                   <p className="font-display text-lg font-medium text-ink-deep truncate">
                     {c.name}
                   </p>
@@ -57,7 +71,7 @@ export default async function CategoryPage() {
                     {count} {count === 1 ? "livro" : "livros"}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0 relative z-10">
                   <Link
                     href={`/category/edit/${c.id}`}
                     className="p-1.5 rounded text-ink-soft hover:text-ink-deep hover:bg-paper-soft transition-colors"
