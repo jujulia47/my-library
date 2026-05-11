@@ -948,7 +948,7 @@ function PagePhysicalStatus({ book }: { book: BookForOpenView }) {
       <div className="space-y-3 text-sm text-[#4b3725]">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-ink-fade mb-1.5">
-            Posse
+            Acervo
           </p>
           <p className="font-display text-base">
             {labelForOwnershipStatus(book.ownership_status)}

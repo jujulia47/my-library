@@ -8,6 +8,7 @@ import {
   ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { imagesUrl } from "@/services/images";
+import { BookCoverFallback } from "@/components/ui";
 import type { SerieListBook } from "@/services/serieList";
 
 type Props = {
@@ -344,12 +345,22 @@ function BookSlot({
             sizes="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 110px"
           />
         ) : (
-          <VolumeFallback volumeNumber={book.volume} />
+          <BookCoverFallback
+            title={book.title}
+            size="md"
+            className="w-full h-full rounded-none border-none shadow-none"
+          />
         )}
       </div>
+      {book.volume != null && (
+        <p className="mt-1.5 text-[11px] text-center text-ink-fade italic leading-tight">
+          Vol. {book.volume}
+        </p>
+      )}
       <p
         className={clsx(
-          "mt-1.5 text-sm text-center font-body italic leading-tight line-clamp-1",
+          "text-sm text-center font-body italic leading-tight line-clamp-1",
+          book.volume != null ? "mt-0.5" : "mt-1.5",
           highlight === "current"
             ? "text-gold-deep font-medium"
             : highlight === "next"
@@ -397,18 +408,3 @@ function PlaceholderSlot({
   );
 }
 
-function VolumeFallback({ volumeNumber }: { volumeNumber: number | null }) {
-  // Quando o livro existe mas não tem capa, mostramos o NÚMERO do volume
-  // em vez da inicial — ajuda a localizar visualmente "qual é o vol 4".
-  return (
-    <div
-      className="absolute inset-0 flex items-center justify-center bg-cappuccino"
-      role="img"
-      aria-label="Volume sem capa"
-    >
-      <span className="font-display italic font-medium text-3xl text-gold leading-none">
-        {volumeNumber ?? "?"}
-      </span>
-    </div>
-  );
-}

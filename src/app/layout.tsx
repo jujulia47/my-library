@@ -4,6 +4,8 @@ import "@fontsource/cormorant-garamond/500.css";
 import "@fontsource/eb-garamond/400.css";
 import "@fontsource/eb-garamond/500.css";
 import "@fontsource/eb-garamond/400-italic.css";
+import "@fontsource/cinzel/400.css";
+import "@fontsource/cinzel/600.css";
 import "flag-icons/css/flag-icons.min.css";
 import "./globals.css";
 

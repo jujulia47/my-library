@@ -46,9 +46,9 @@ export default async function BookPage({
   const monthStr = pickFirst(sp.month);
   const year = yearStr ? Number(yearStr) || undefined : undefined;
   const month = monthStr ? Number(monthStr) || undefined : undefined;
-  const sortRaw = pickFirst(sp.sort) ?? "title_asc";
+  const sortRaw = pickFirst(sp.sort) ?? "last_reading_desc";
   const sort = (
-    VALID_SORTS.has(sortRaw as BookListSort) ? sortRaw : "title_asc"
+    VALID_SORTS.has(sortRaw as BookListSort) ? sortRaw : "last_reading_desc"
   ) as BookListSort;
 
   const [books, counts, years] = await Promise.all([

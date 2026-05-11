@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
 import { BookCoverFallback } from "@/components/ui";
@@ -24,21 +23,11 @@ export function TopBooksOfYear({ books }: Props) {
             className="relative flex-shrink-0 w-[50px] h-[75px] rounded-sm overflow-hidden border border-ink-deep/15"
             style={{ aspectRatio: "2 / 3" }}
           >
-            {book.cover_url ? (
-              <Image
-                src={book.cover_url}
-                alt={`Capa de ${book.title}`}
-                fill
-                className="object-cover"
-                sizes="50px"
-              />
-            ) : (
-              <BookCoverFallback
-                title={book.title}
-                size="sm"
-                className="w-full h-full"
-              />
-            )}
+            <BookCoverFallback
+              title={book.title}
+              size="sm"
+              className="w-full h-full"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-1.5">

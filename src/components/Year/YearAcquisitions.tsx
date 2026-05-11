@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ShoppingBagIcon,
@@ -117,21 +116,11 @@ export function YearAcquisitions({ acquisitions, year }: Props) {
                     className="relative flex-shrink-0 w-7 h-9 rounded-sm overflow-hidden border border-ink-deep/15"
                     style={{ aspectRatio: "2 / 3" }}
                   >
-                    {it.cover_url ? (
-                      <Image
-                        src={it.cover_url}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="28px"
-                      />
-                    ) : (
-                      <BookCoverFallback
-                        title={it.title}
-                        size="sm"
-                        className="w-full h-full"
-                      />
-                    )}
+                    <BookCoverFallback
+                      title={it.title}
+                      size="sm"
+                      className="w-full h-full"
+                    />
                   </div>
                   <div className="flex-1 min-w-0 text-xs">
                     <p className="text-ink-deep truncate">{it.title}</p>

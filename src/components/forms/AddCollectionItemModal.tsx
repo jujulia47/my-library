@@ -673,17 +673,7 @@ function ResultRow({
         )}
         style={{ aspectRatio: "2 / 3" }}
       >
-        {cover ? (
-          <Image
-            src={imagesUrl(cover)}
-            alt={`Capa de ${title}`}
-            fill
-            className="object-cover"
-            sizes="36px"
-          />
-        ) : (
-          <BookCoverFallback title={title} size="sm" className="w-full h-full" />
-        )}
+        <BookCoverFallback title={title} size="sm" className="w-full h-full" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-display text-base text-ink-deep leading-tight line-clamp-1">

@@ -12,6 +12,7 @@ import {
   BackButton,
   ConfirmDialog,
   BookCoverFallback,
+  pickBookCoverColor,
 } from "@/components/ui";
 import BookshelfDecoration from "@/components/ui/BookshelfDecoration";
 import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
@@ -563,27 +564,24 @@ export default function BookDetailClient({
     return null;
   };
 
+  const coverColor = pickBookCoverColor(book.title);
+
   return (
     <div className="font-body max-w-4xl">
       <div className="mb-4">
         <BackButton fallback="/book" label="Voltar para a lista" />
       </div>
 
-      {/* Header com ações — sessão 17.3: border-l-4 colorida pela cor do
-          status atual da reading mais recente. Reading=gold, finished=moss,
-          paused=ink-fade, abandoned=burgundy, tbr=cappuccino. */}
+      {/* Header com ações — faixa lateral + gradiente do fundo derivam da
+          "cor de capa" do livro (mesma do BookCoverFallback), criando
+          identidade visual mesmo quando há capa real. Gradiente fade pra
+          ivory-light pra preservar contraste à direita, onde ficam os botões. */}
       <div
-        className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 bg-ivory-light border-l-4 rounded-r-md pl-4 pt-4 pb-3 ${
-          latestStatus === "reading"
-            ? "border-l-gold"
-            : latestStatus === "finished"
-              ? "border-l-moss"
-              : latestStatus === "paused"
-                ? "border-l-ink-fade"
-                : latestStatus === "abandoned"
-                  ? "border-l-burgundy"
-                  : "border-l-cappuccino"
-        }`}
+        className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 border border-border rounded-r-md pl-5 pr-4 pt-4 pb-3 shadow-sm"
+        style={{
+          borderLeft: `4px solid ${coverColor.hex}`,
+          background: `linear-gradient(95deg, ${coverColor.hex}33 0%, ${coverColor.hex}14 40%, var(--color-ivory-light) 80%)`,
+        }}
       >
         <div className="min-w-0">
           <h1 className="font-display text-4xl font-medium text-ink-deep leading-tight">
@@ -596,7 +594,7 @@ export default function BookDetailClient({
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-nowrap flex-shrink-0">
           <button
             type="button"
             aria-label={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
@@ -861,7 +859,7 @@ export default function BookDetailClient({
         )}
         <div className="relative z-10">
           <h2 className="font-display text-xl font-medium text-ink-deep mb-4 pb-3 border-b border-border">
-            Posse
+            Acervo
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6">

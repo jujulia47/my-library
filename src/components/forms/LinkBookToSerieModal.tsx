@@ -157,21 +157,11 @@ export default function LinkBookToSerieModal({
                       className="w-9 flex-shrink-0 relative rounded-sm overflow-hidden border border-ink-deep/20"
                       style={{ aspectRatio: "2 / 3" }}
                     >
-                      {b.cover ? (
-                        <Image
-                          src={imagesUrl(b.cover)}
-                          alt={`Capa de ${b.title}`}
-                          fill
-                          className="object-cover"
-                          sizes="36px"
-                        />
-                      ) : (
-                        <BookCoverFallback
-                          title={b.title}
-                          size="sm"
-                          className="w-full h-full"
-                        />
-                      )}
+                      <BookCoverFallback
+                        title={b.title}
+                        size="sm"
+                        className="w-full h-full"
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-display text-base text-ink-deep leading-tight line-clamp-1">
@@ -196,21 +186,11 @@ export default function LinkBookToSerieModal({
                 className="w-12 flex-shrink-0 relative rounded-sm overflow-hidden border border-ink-deep/20"
                 style={{ aspectRatio: "2 / 3" }}
               >
-                {selected.cover ? (
-                  <Image
-                    src={imagesUrl(selected.cover)}
-                    alt={`Capa de ${selected.title}`}
-                    fill
-                    className="object-cover"
-                    sizes="48px"
-                  />
-                ) : (
-                  <BookCoverFallback
-                    title={selected.title}
-                    size="sm"
-                    className="w-full h-full"
-                  />
-                )}
+                <BookCoverFallback
+                  title={selected.title}
+                  size="sm"
+                  className="w-full h-full"
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-display text-base text-ink-deep leading-tight line-clamp-1">

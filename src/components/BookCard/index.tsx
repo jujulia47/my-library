@@ -84,28 +84,13 @@ export default function BookCard({ book }: Props) {
     });
   };
 
-  // Sessão 17.3: border-l-3 colorida pelo status da reading mais recente.
-  // Vai na lateral esquerda do card (bg ivory-light pra realçar a barra).
-  const statusBorderClass =
-    status === "reading"
-      ? "border-l-gold"
-      : status === "finished"
-        ? "border-l-moss"
-        : status === "paused"
-          ? "border-l-ink-fade"
-          : status === "abandoned"
-            ? "border-l-burgundy"
-            : "border-l-cappuccino";
-
   return (
     <>
       <div
         className={clsx(
+          "book-card-hover",
           "relative group rounded-lg p-2 -m-2",
-          "border border-transparent border-l-[3px] bg-ivory-light",
-          statusBorderClass,
-          "transition-colors duration-150",
-          "hover:border-gold",
+          "border border-transparent bg-ivory-light",
         )}
       >
         <Link

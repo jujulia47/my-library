@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import Modal from "@/components/forms/Modal";
@@ -243,21 +242,11 @@ export function AcquisitionsModal({
                   className="relative flex-shrink-0 w-12 h-16 rounded-sm overflow-hidden border border-ink-deep/15"
                   style={{ aspectRatio: "2 / 3" }}
                 >
-                  {it.cover_url ? (
-                    <Image
-                      src={it.cover_url}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  ) : (
-                    <BookCoverFallback
-                      title={it.title}
-                      size="sm"
-                      className="w-full h-full"
-                    />
-                  )}
+                  <BookCoverFallback
+                    title={it.title}
+                    size="sm"
+                    className="w-full h-full"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-display text-sm text-ink-deep leading-tight line-clamp-2">

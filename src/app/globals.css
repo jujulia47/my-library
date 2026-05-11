@@ -4,6 +4,8 @@
   /* Fontes — carregadas via @fontsource em layout.tsx */
   --font-display: "Cormorant Garamond", Georgia, serif;
   --font-body: "EB Garamond", Georgia, serif;
+  /* Cinzel: romana clássica, usada nas capas-fallback dos livros (BookCoverFallback). */
+  --font-cover: "Cinzel", Georgia, serif;
 
   /* Surfaces */
   --color-ivory: #F5F0E6;
@@ -16,9 +18,10 @@
   --color-ink-soft: #6B5D4F;
   --color-ink-fade: #948977;
 
-  /* Cappuccino — tom warm intermediário (substitui pine) */
-  --color-cappuccino: #6B5240;
-  --color-cappuccino-soft: #8B6F50;
+  /* Cappuccino — marrom café escuro pra contrastar com o fundo bege da
+     ivory e dar presença aos cards/capas-fallback. */
+  --color-cappuccino: #4D2F1C;
+  --color-cappuccino-soft: #6E4D33;
 
   /* Gold — honey, mais vivo. gold-deep escurecido pra contraste AA do badge. */
   --color-gold: #F0C040;
@@ -270,6 +273,26 @@
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
+}
+
+/* Hover do BookCard na listagem: livro "levanta" com sombra quente.
+   CSS explícito (em vez de utilities) pra ter controle fino sobre a curva
+   de animação e garantir que a sombra colorida (tom ink-deep da paleta)
+   seja aplicada — `shadow-{color}/{alpha}` com Tailwind v4 + custom theme
+   colors estava inconsistente. */
+.book-card-hover {
+  transition:
+    transform 280ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transform-origin: center bottom;
+  will-change: transform;
+}
+.book-card-hover:hover {
+  transform: translateY(-6px) scale(1.06);
+  box-shadow:
+    0 18px 32px -10px rgba(74, 56, 38, 0.35),
+    0 8px 16px -8px rgba(74, 56, 38, 0.25);
+  z-index: 10;
 }
 
 /* ============================================================================

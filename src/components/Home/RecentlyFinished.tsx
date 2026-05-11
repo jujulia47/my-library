@@ -51,7 +51,7 @@ export function RecentlyFinished({ data }: Props) {
                   ) : (
                     <BookCoverFallback
                       title={book.title}
-                      size="sm"
+                      size="md"
                       className="w-full h-full"
                     />
                   )}

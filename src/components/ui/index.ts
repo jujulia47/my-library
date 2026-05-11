@@ -40,7 +40,7 @@ export type { FilterChipProps } from "./FilterChip";
 export { default as EmptyState } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 
-export { default as BookCoverFallback } from "./BookCoverFallback";
+export { default as BookCoverFallback, pickBookCoverColor } from "./BookCoverFallback";
 export type { BookCoverFallbackProps, BookCoverFallbackSize } from "./BookCoverFallback";
 
 export { default as ConfirmDialog } from "./ConfirmDialog";

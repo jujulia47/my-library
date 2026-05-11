@@ -218,7 +218,7 @@ export function OwnershipFields({
     <div className="space-y-5">
       {showStatusSelect ? (
         <Select
-          label="Estado físico"
+          label="Status do exemplar"
           name="ownership_status"
           value={effectiveStatus}
           onChange={(e) => setStatus(e.target.value as OwnershipStatus)}

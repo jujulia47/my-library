@@ -271,7 +271,7 @@ export default function BookFull({
         <Card className="border-l-[3px] border-l-moss">
           <h2 className="font-display text-xl font-medium text-ink-deep mb-5 pb-3 border-b border-border flex items-center gap-2">
             <ArchiveBoxIcon className="w-5 h-5 text-moss" aria-hidden />
-            Posse
+            Acervo
           </h2>
 
           <fieldset className="space-y-2 mb-6">

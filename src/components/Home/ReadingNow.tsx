@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { BookCoverFallback } from "@/components/ui";
 import UpdateProgressModal, {
@@ -80,21 +79,11 @@ function ReadingNowCard({
         style={{ aspectRatio: "2 / 3" }}
         aria-label={`Abrir ${item.title}`}
       >
-        {item.cover_url ? (
-          <Image
-            src={item.cover_url}
-            alt={`Capa de ${item.title}`}
-            fill
-            className="object-cover rounded-sm border border-ink-deep/20"
-            sizes="44px"
-          />
-        ) : (
-          <BookCoverFallback
-            title={item.title}
-            size="sm"
-            className="w-full h-full"
-          />
-        )}
+        <BookCoverFallback
+          title={item.title}
+          size="sm"
+          className="w-full h-full"
+        />
       </Link>
 
       <div className="flex-1 min-w-0 flex flex-col">

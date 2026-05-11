@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -121,21 +120,11 @@ export function BookPickerForShelf({ orphans, shelfId }: Props) {
                     className="relative flex-shrink-0 w-[44px] h-[66px] rounded-sm overflow-hidden border border-black/40"
                     style={{ aspectRatio: "2 / 3" }}
                   >
-                    {book.cover_url ? (
-                      <Image
-                        src={book.cover_url}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="44px"
-                      />
-                    ) : (
-                      <BookCoverFallback
-                        title={book.title}
-                        size="sm"
-                        className="w-full h-full"
-                      />
-                    )}
+                    <BookCoverFallback
+                      title={book.title}
+                      size="sm"
+                      className="w-full h-full"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-display text-sm leading-tight line-clamp-2">

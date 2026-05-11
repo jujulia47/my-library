@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
 import { BookCoverFallback } from "@/components/ui";
 import { HomeCard, HomeCardEmpty } from "./HomeCard";
@@ -30,21 +29,11 @@ export function NextReads({ data }: Props) {
                   style={{ aspectRatio: "2 / 3" }}
                   aria-hidden
                 >
-                  {item.cover_url ? (
-                    <Image
-                      src={item.cover_url}
-                      alt=""
-                      fill
-                      className="object-cover rounded-sm border border-ink-deep/20"
-                      sizes="22px"
-                    />
-                  ) : (
-                    <BookCoverFallback
-                      title={item.title}
-                      size="sm"
-                      className="w-full h-full"
-                    />
-                  )}
+                  <BookCoverFallback
+                    title={item.title}
+                    size="sm"
+                    className="w-full h-full"
+                  />
                 </div>
                 <div className="flex-1 min-w-0 leading-snug">
                   <p className="text-xs font-medium text-ink-deep truncate group-hover:text-gold-deep transition-colors">

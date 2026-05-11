@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import clsx from "clsx";
 import {
   Card,
@@ -11,11 +10,11 @@ import {
   BackButton,
   StatusBadge,
   ConfirmDialog,
+  BookCoverFallback,
 } from "@/components/ui";
 import LinkBookToSerieModal from "@/components/forms/LinkBookToSerieModal";
 import { deleteSerie } from "@/actions/deleteSerie";
 import { unlinkBookFromSerie } from "@/actions/unlinkBookFromSerie";
-import { imagesUrl } from "@/services/images";
 import { formatDate } from "@/utils/formatDate";
 import { deriveCurrentVolume } from "@/services/serieDerivedFields";
 import {
@@ -712,21 +711,11 @@ function VolumeRow({
           className="w-12 flex-shrink-0 relative rounded-sm overflow-hidden border border-ink-deep/20"
           style={{ aspectRatio: "2 / 3" }}
         >
-          {book.cover ? (
-            <Image
-              src={imagesUrl(book.cover)}
-              alt={`Capa de ${book.title}`}
-              fill
-              className="object-cover"
-              sizes="48px"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-cappuccino">
-              <span className="font-display italic font-medium text-base text-gold leading-none">
-                {book.volume ?? "?"}
-              </span>
-            </div>
-          )}
+          <BookCoverFallback
+            title={book.title}
+            size="sm"
+            className="w-full h-full rounded-none border-none shadow-none"
+          />
         </div>
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className="font-display text-base font-medium text-ink-deep leading-tight line-clamp-1">

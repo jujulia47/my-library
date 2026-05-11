@@ -1,8 +1,6 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { imagesUrl } from "@/services/images";
 import { BookCoverFallback } from "@/components/ui";
 
 export type CurrentReadingItem = {
@@ -64,21 +62,11 @@ export default function CurrentReadingCard({
     >
       <div className="flex-shrink-0 w-20" style={{ aspectRatio: "2 / 3" }}>
         <div className="relative w-full h-full">
-          {book.cover ? (
-            <Image
-              src={imagesUrl(book.cover)}
-              alt={`Capa de ${book.title}`}
-              fill
-              className="object-cover rounded-md border border-ink-deep/20"
-              sizes="80px"
-            />
-          ) : (
-            <BookCoverFallback
-              title={book.title}
-              size="sm"
-              className="w-full h-full"
-            />
-          )}
+          <BookCoverFallback
+            title={book.title}
+            size="sm"
+            className="w-full h-full"
+          />
         </div>
       </div>
 

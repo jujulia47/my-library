@@ -80,7 +80,7 @@ export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
   const formats = parseList(sp.get("format"));
   const year = sp.get("year") ? Number(sp.get("year")) : null;
   const month = sp.get("month") ? Number(sp.get("month")) : null;
-  const sort = sp.get("sort") ?? "title_asc";
+  const sort = sp.get("sort") ?? "last_reading_desc";
 
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -303,7 +303,7 @@ export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
             </FilterGroup>
 
             <FilterGroup
-              label="Posse"
+              label="Acervo"
               icon={ArchiveBoxIcon}
               iconColor="text-moss"
             >
