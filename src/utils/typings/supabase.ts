@@ -136,6 +136,7 @@ export type Database = {
           acquired_at: string | null
           borrowed_at: string | null
           borrowed_from: string | null
+          bundled_with: string[]
           comments: string | null
           cover: string | null
           created_at: string
@@ -153,6 +154,7 @@ export type Database = {
           priority: Database["public"]["Enums"]["priority_level"] | null
           publication_year: number | null
           publisher: string | null
+          purchase_group_id: string | null
           purchase_origin: Database["public"]["Enums"]["purchase_origin"] | null
           purchase_price: number | null
           returned_at: string | null
@@ -163,6 +165,7 @@ export type Database = {
           slug: string
           subscription_id: string | null
           synopsis: string | null
+          table_of_contents: { title: string; page_start: number | null }[]
           title: string
           title_normalized: string | null
           updated_at: string
@@ -173,6 +176,7 @@ export type Database = {
           acquired_at?: string | null
           borrowed_at?: string | null
           borrowed_from?: string | null
+          bundled_with?: string[]
           comments?: string | null
           cover?: string | null
           created_at?: string
@@ -190,6 +194,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["priority_level"] | null
           publication_year?: number | null
           publisher?: string | null
+          purchase_group_id?: string | null
           purchase_origin?:
             | Database["public"]["Enums"]["purchase_origin"]
             | null
@@ -202,6 +207,7 @@ export type Database = {
           slug: string
           subscription_id?: string | null
           synopsis?: string | null
+          table_of_contents?: { title: string; page_start: number | null }[]
           title: string
           title_normalized?: string | null
           updated_at?: string
@@ -212,6 +218,7 @@ export type Database = {
           acquired_at?: string | null
           borrowed_at?: string | null
           borrowed_from?: string | null
+          bundled_with?: string[]
           comments?: string | null
           cover?: string | null
           created_at?: string
@@ -229,6 +236,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["priority_level"] | null
           publication_year?: number | null
           publisher?: string | null
+          purchase_group_id?: string | null
           purchase_origin?:
             | Database["public"]["Enums"]["purchase_origin"]
             | null
@@ -241,6 +249,7 @@ export type Database = {
           slug?: string
           subscription_id?: string | null
           synopsis?: string | null
+          table_of_contents?: { title: string; page_start: number | null }[]
           title?: string
           title_normalized?: string | null
           updated_at?: string
@@ -842,6 +851,39 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      purchase_group: {
+        Row: {
+          acquired_at: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          total_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          total_price: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          total_price?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

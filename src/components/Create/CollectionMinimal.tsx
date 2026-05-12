@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Input,
   Textarea,
@@ -55,6 +56,7 @@ function formatShortDate(iso: string): string {
 }
 
 export default function CollectionMinimal() {
+  const router = useRouter();
   const [type, setType] = useState<CollectionType>("shelf");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -88,14 +90,16 @@ export default function CollectionMinimal() {
     startTransition(async () => {
       try {
         const result = await createCollection(fd);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) setFieldErrors({ [result.field]: result.message });
           else setGenericError(result.message);
+          return;
         }
+        const target = result.data?.redirectTo ?? "/collection";
+        router.replace(target);
+        router.refresh();
       } catch (err: unknown) {
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
-          setGenericError(err.message);
-        }
+        if (err instanceof Error) setGenericError(err.message);
       }
     });
   };

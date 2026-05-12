@@ -28,10 +28,11 @@ const PROGRESS_OPTIONS: { value: string; label: string; variant: BadgeVariant }[
 ];
 
 const SORT_OPTIONS = [
-  { value: "name_asc", label: "Nome (A-Z)" },
-  { value: "name_desc", label: "Nome (Z-A)" },
+  { value: "reading_first", label: "Lendo" },
   { value: "last_activity_desc", label: "Atividade recente" },
   { value: "started_asc", label: "Mais antiga começada" },
+  { value: "name_asc", label: "Nome (A-Z)" },
+  { value: "name_desc", label: "Nome (Z-A)" },
   { value: "qty_volumes_asc", label: "Menos volumes" },
   { value: "qty_volumes_desc", label: "Mais volumes" },
 ];
@@ -48,7 +49,7 @@ export default function SerieFilters() {
 
   const statuses = parseList(sp.get("status"));
   const progress = parseList(sp.get("progress"));
-  const sort = sp.get("sort") ?? "name_asc";
+  const sort = sp.get("sort") ?? "reading_first";
 
   const [panelOpen, setPanelOpen] = useState(false);
 

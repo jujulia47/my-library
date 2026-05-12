@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
 import {
@@ -28,7 +27,7 @@ function pickEnum<T extends string>(value: unknown, allowed: T[]): T | null {
 
 export default async function updateSerie(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -99,15 +98,17 @@ export default async function updateSerie(
   // aponta pra detail page desta mesma série (`/serie/{algumSlug}`), o slug
   // antigo já não existe — força redirect pro slug novo, evitando 404.
   const rawFrom = formData.get("from");
+  let redirectTo = `/serie/${newSlug}`;
   if (
     typeof rawFrom === "string" &&
     rawFrom.startsWith("/") &&
     !rawFrom.startsWith("//")
   ) {
     if (rawFrom.startsWith("/serie/") && rawFrom !== "/serie") {
-      redirect(`/serie/${newSlug}`);
+      redirectTo = `/serie/${newSlug}`;
+    } else {
+      redirectTo = rawFrom;
     }
-    redirect(rawFrom);
   }
-  redirect(`/serie/${newSlug}`);
+  return { ok: true, data: { redirectTo } };
 }

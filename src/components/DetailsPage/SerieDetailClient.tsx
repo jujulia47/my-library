@@ -3,14 +3,15 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import clsx from "clsx";
+import { imagesUrl } from "@/services/images";
 import {
   Card,
   Button,
   BackButton,
   StatusBadge,
   ConfirmDialog,
-  BookCoverFallback,
 } from "@/components/ui";
 import LinkBookToSerieModal from "@/components/forms/LinkBookToSerieModal";
 import { deleteSerie } from "@/actions/deleteSerie";
@@ -711,11 +712,29 @@ function VolumeRow({
           className="w-12 flex-shrink-0 relative rounded-sm overflow-hidden border border-ink-deep/20"
           style={{ aspectRatio: "2 / 3" }}
         >
-          <BookCoverFallback
-            title={book.title}
-            size="sm"
-            className="w-full h-full rounded-none border-none shadow-none"
-          />
+          {book.cover ? (
+            <Image
+              src={imagesUrl(book.cover)}
+              alt={`Capa de ${book.title}`}
+              fill
+              className="object-cover"
+              sizes="48px"
+            />
+          ) : (
+            // No contexto de série, mostra o número do volume na "capa" em
+            // vez do ícone genérico — ajuda a identificar visualmente qual é
+            // o vol 4 quando nenhum tem cover real. bg-cappuccino agora é
+            // marrom-café escuro (sessão 17.x).
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-cappuccino"
+              role="img"
+              aria-label={`Volume ${book.volume ?? "?"}`}
+            >
+              <span className="font-display italic font-medium text-base text-gold leading-none">
+                {book.volume ?? "?"}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className="font-display text-base font-medium text-ink-deep leading-tight line-clamp-1">

@@ -20,6 +20,7 @@ const SERIE_STATUSES: SerieStatus[] = [
 ];
 
 export type SerieListSort =
+  | "reading_first"
   | "name_asc"
   | "name_desc"
   | "last_activity_desc"
@@ -199,7 +200,7 @@ export async function serieListQuery(
   params: SerieListParams = {},
 ): Promise<SerieListItem[]> {
   const supabase = await createClient();
-  const sort = params.sort ?? "name_asc";
+  const sort = params.sort ?? "reading_first";
 
   let query = supabase
     .from("serie")
@@ -261,6 +262,36 @@ export async function serieListQuery(
       const ad = a.first_started_at ?? "9999";
       const bd = b.first_started_at ?? "9999";
       return ad.localeCompare(bd);
+    });
+  } else if (sort === "reading_first") {
+    // Séries com volumes pendentes (não completas) no topo, ordenadas por
+    // last_activity desc. Séries concluídas/abandonadas no fim, também por
+    // last_activity. Cobre o caso "estou no meio dessas séries" — o que o
+    // user quer ver primeiro.
+    const isIncomplete = (s: SerieListItem): boolean => {
+      // Status explícito reading/paused → sempre conta como incompleta.
+      if (s.status === "reading" || s.status === "paused") return true;
+      // Status tbr/finished/abandoned: deriva do progresso. tbr com leituras
+      // (ex.: user começou mas não atualizou o status) também conta.
+      const total = s.qty_volumes;
+      if (total != null && total > 0) return s.read_count < total;
+      // Sem total declarado: incompleta se há leitura em andamento entre os
+      // livros cadastrados.
+      return s.books.some((b) =>
+        b.readings.some(
+          (r) => r.status === "reading" || r.status === "paused",
+        ),
+      );
+    };
+
+    series = series.slice().sort((a, b) => {
+      const ai = isIncomplete(a) ? 0 : 1;
+      const bi = isIncomplete(b) ? 0 : 1;
+      if (ai !== bi) return ai - bi;
+      const ad = a.last_activity ?? "";
+      const bd = b.last_activity ?? "";
+      if (ad !== bd) return bd.localeCompare(ad);
+      return a.name.localeCompare(b.name);
     });
   }
 

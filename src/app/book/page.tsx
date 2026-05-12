@@ -15,6 +15,7 @@ import {
 } from "@/utils/typings/pagination";
 
 const VALID_SORTS = new Set<BookListSort>([
+  "reading_first",
   "title_asc",
   "title_desc",
   "created_desc",
@@ -46,9 +47,9 @@ export default async function BookPage({
   const monthStr = pickFirst(sp.month);
   const year = yearStr ? Number(yearStr) || undefined : undefined;
   const month = monthStr ? Number(monthStr) || undefined : undefined;
-  const sortRaw = pickFirst(sp.sort) ?? "last_reading_desc";
+  const sortRaw = pickFirst(sp.sort) ?? "reading_first";
   const sort = (
-    VALID_SORTS.has(sortRaw as BookListSort) ? sortRaw : "last_reading_desc"
+    VALID_SORTS.has(sortRaw as BookListSort) ? sortRaw : "reading_first"
   ) as BookListSort;
 
   const [books, counts, years] = await Promise.all([

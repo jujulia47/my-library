@@ -30,12 +30,19 @@ export default async function Page({
 
   if (!book) notFound();
 
+  const bundledIds = ((book.bundled_with ?? []) as string[]).filter(
+    (bid) => bid !== book.id,
+  );
+
   const [
     { data: bookAuthors },
     { data: bookCategories },
     { data: readings },
     { data: quotes },
     { data: history },
+    { data: bundledBooksRaw },
+    { data: groupRaw },
+    { data: groupBookCountRaw },
   ] = await Promise.all([
     supabase
       .from("book_author")
@@ -61,6 +68,25 @@ export default async function Page({
       .select("id, status, changed_at, notes")
       .eq("book_id", book.id)
       .order("changed_at", { ascending: true }),
+    bundledIds.length > 0
+      ? supabase
+          .from("book")
+          .select("id, slug, title")
+          .in("id", bundledIds)
+      : Promise.resolve({ data: [] }),
+    book.purchase_group_id
+      ? supabase
+          .from("purchase_group")
+          .select("id, name, total_price")
+          .eq("id", book.purchase_group_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    book.purchase_group_id
+      ? supabase
+          .from("book")
+          .select("id")
+          .eq("purchase_group_id", book.purchase_group_id)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const authors = (bookAuthors ?? [])
@@ -108,6 +134,50 @@ export default async function Page({
     notes: h.notes,
   }));
 
+  const bundled = (bundledBooksRaw ?? []) as {
+    id: string;
+    slug: string;
+    title: string;
+  }[];
+
+  const groupRow = groupRaw as {
+    id: string;
+    name: string;
+    total_price: number;
+  } | null;
+  const groupBookCount = (groupBookCountRaw ?? []).length;
+  const purchaseGroup = groupRow
+    ? {
+        id: groupRow.id,
+        name: groupRow.name,
+        total_price: Number(groupRow.total_price),
+        book_count: groupBookCount,
+      }
+    : null;
+
+  // table_of_contents vem como jsonb — parse defensivo pra desconfiar de
+  // estruturas inesperadas.
+  type TocItem = { title: string; page_start: number | null };
+  const tocRaw = book.table_of_contents;
+  const tableOfContents: TocItem[] = Array.isArray(tocRaw)
+    ? (tocRaw as unknown[])
+        .filter(
+          (it): it is { title: unknown; page_start?: unknown } =>
+            !!it && typeof it === "object",
+        )
+        .map((it) => ({
+          title:
+            typeof (it as { title?: unknown }).title === "string"
+              ? ((it as { title: string }).title as string)
+              : "",
+          page_start:
+            typeof (it as { page_start?: unknown }).page_start === "number"
+              ? ((it as { page_start: number }).page_start as number)
+              : null,
+        }))
+        .filter((it) => it.title.length > 0)
+    : [];
+
   const serie = (book.serie as { name: string; slug: string } | null) ?? null;
   const subscription =
     (book.subscription as { id: string; name: string } | null) ?? null;
@@ -144,6 +214,9 @@ export default async function Page({
           borrowed_from: book.borrowed_from,
           lent_to: book.lent_to,
           subscription,
+          bundled,
+          table_of_contents: tableOfContents,
+          purchase_group: purchaseGroup,
         }}
         authors={authors}
         categories={categories}

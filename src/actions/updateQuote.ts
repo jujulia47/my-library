@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
@@ -19,7 +18,7 @@ type QuoteUpdate = Database["public"]["Tables"]["quote"]["Update"];
  */
 export default async function updateQuote(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -95,15 +94,17 @@ export default async function updateQuote(
   // detail page desta mesma quote (`/quote/{algumSlug}`), o slug antigo já
   // não existe — força o slug novo.
   const rawFrom = formData.get("from");
+  let redirectTo = `/quote/${newSlug}`;
   if (
     typeof rawFrom === "string" &&
     rawFrom.startsWith("/") &&
     !rawFrom.startsWith("//")
   ) {
     if (rawFrom.startsWith("/quote/") && rawFrom !== "/quote") {
-      redirect(`/quote/${newSlug}`);
+      redirectTo = `/quote/${newSlug}`;
+    } else {
+      redirectTo = rawFrom;
     }
-    redirect(rawFrom);
   }
-  redirect(`/quote/${newSlug}`);
+  return { ok: true, data: { redirectTo } };
 }

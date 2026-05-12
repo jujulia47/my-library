@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
@@ -31,7 +30,7 @@ const allowedLanguages: BookLanguage[] = [
  */
 export async function createBookMinimal(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -72,11 +71,14 @@ export async function createBookMinimal(
   // (book_user_slug_key) e vira erro inline no campo "title".
   const slug = formateTitleToSlug(title);
 
-  // acquired_at default = hoje. Garante que livros novos contam pra "Aquisições
-  // do ano" mesmo sem o user preencher campos de aquisição (sessão 15.1).
-  // O user pode editar depois via BookFull se a data real foi outra.
-  const today = new Date();
-  const acquiredAt = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  // Sessão atual: NÃO seta acquired_at automaticamente. Livros novos ficam
+  // sem data até o user explicitamente preencher via BookFull. Sem isso, a
+  // timeline de histórico mostraria a data de criação do registro (que não é
+  // realmente quando o livro foi adquirido) — feedback do user: "se eu não
+  // coloquei a data, não deveria aparecer nada".
+  //
+  // Trade-off: livros novos não contam pra "Aquisições do ano" até o user
+  // preencher. Aceitável — o app deixa claro que `acquired_at` é uma escolha.
 
   const { data: bookData, error: bookError } = await supabase
     .from("book")
@@ -90,7 +92,7 @@ export async function createBookMinimal(
       volume,
       user_id: user.id,
       ownership_status: "owned",
-      acquired_at: acquiredAt,
+      acquired_at: null,
     })
     .select("id, slug")
     .single();
@@ -99,16 +101,9 @@ export async function createBookMinimal(
     return { ok: false, ...translateSupabaseError(bookError) };
   }
 
-  // Sessão 17.2.6: trigger automático foi dropado, action insere a entry
-  // inicial do histórico. `changed_at = acquiredAt` (data que o user
-  // efetivamente "adquiriu" — hoje pra livros recém-cadastrados via Minimal).
-  await supabase.from("book_status_history").insert({
-    book_id: bookData.id,
-    user_id: user.id,
-    status: "owned",
-    changed_at: `${acquiredAt}T12:00:00Z`,
-    notes: "criado",
-  });
+  // History entry só é inserida quando o user explicitamente seta acquired_at
+  // (acontece no `updateBookFull`). Sem data, sem entry — a timeline fica
+  // vazia, mostrando "Sem eventos registrados.".
 
   if (authorIds.length > 0) {
     const rows = authorIds.map((author_id) => ({
@@ -168,17 +163,18 @@ export async function createBookMinimal(
 
   const andRegisterReading = formData.get("and_register_reading");
   if (andRegisterReading) {
-    // Mesmo com ?from=, o "Cadastrar e registrar leitura" sempre vai pra
-    // detail do livro novo — o usuário escolheu a ação que abre o modal de
-    // leitura ali. Honrar `from` aqui pularia a leitura.
-    redirect(`/book/${bookData.slug}?action=new-reading`);
+    return {
+      ok: true,
+      data: { redirectTo: `/book/${bookData.slug}?action=new-reading` },
+    };
   }
 
   // Em sucesso, se veio com ?from= seguro, volta pra origem; senão, vai
   // pra detail do livro recém-criado (comportamento antigo).
   const rawFrom = formData.get("from");
+  let redirectTo = `/book/${bookData.slug}`;
   if (typeof rawFrom === "string" && rawFrom.startsWith("/") && !rawFrom.startsWith("//")) {
-    redirect(rawFrom);
+    redirectTo = rawFrom;
   }
-  redirect(`/book/${bookData.slug}`);
+  return { ok: true, data: { redirectTo } };
 }

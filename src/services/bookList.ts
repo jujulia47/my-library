@@ -10,6 +10,7 @@ type BookFormat = Database["public"]["Enums"]["book_format"];
 export type LegacyStatus = ReadingStatus | "tbr";
 
 export type BookListSort =
+  | "reading_first"
   | "title_asc"
   | "title_desc"
   | "created_desc"
@@ -116,7 +117,7 @@ export async function bookListQuery(
   params: BookListParams = {},
 ): Promise<BookListItem[]> {
   const supabase = await createClient();
-  const sort = params.sort ?? "title_asc";
+  const sort = params.sort ?? "reading_first";
 
   let query = supabase
     .from("book")
@@ -205,6 +206,36 @@ export async function bookListQuery(
       const ad = a.latest_reading?.finish_date ?? "";
       const bd = b.latest_reading?.finish_date ?? "";
       return bd.localeCompare(ad);
+    });
+  } else if (sort === "reading_first") {
+    // Livros sendo lidos agora no topo (ordenados por start_date desc — leitura
+    // mais recentemente iniciada primeiro); depois pausados; depois os que já
+    // foram terminados/abandonados (por finish_date desc — "última leitura");
+    // por fim os tbr (sem reading) e demais. Dentro de cada grupo, tie-break
+    // por título.
+    const rank = (b: BookListItem): number => {
+      const s = b.latest_reading?.status;
+      if (s === "reading") return 0;
+      if (s === "paused") return 1;
+      if (s === "finished" || s === "abandoned") return 2;
+      return 3; // sem reading (tbr) ou outros
+    };
+    books = books.slice().sort((a, b) => {
+      const ra = rank(a);
+      const rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra === 0 || ra === 1) {
+        // Em curso: por start_date desc (quem começou mais recente primeiro).
+        const ad = a.latest_reading?.start_date ?? "";
+        const bd = b.latest_reading?.start_date ?? "";
+        if (ad !== bd) return bd.localeCompare(ad);
+      } else if (ra === 2) {
+        // Concluídos: por finish_date desc (último que terminei primeiro).
+        const ad = a.latest_reading?.finish_date ?? "";
+        const bd = b.latest_reading?.finish_date ?? "";
+        if (ad !== bd) return bd.localeCompare(ad);
+      }
+      return a.title.localeCompare(b.title);
     });
   }
 

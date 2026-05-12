@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
@@ -67,9 +66,65 @@ function pickEnum<T extends string>(value: unknown, allowed: T[]): T | null {
     : null;
 }
 
+/**
+ * Recomputa `purchase_price` de todos os livros vinculados a um grupo de
+ * compra, dividindo `purchase_group.total_price` igualmente. O último livro
+ * (ordem por id) recebe o resto pra evitar drift por arredondamento
+ * (ex.: 300/7 = 42,857... → 6 recebem 42,86 e 1 recebe 42,84, somando 300,00).
+ *
+ * Se o grupo ficar sem livros (último foi desvinculado), nada acontece.
+ * Se o grupo deixa de existir/foi nullado, também é noop. Falhas são logadas
+ * mas não bloqueiam o fluxo principal.
+ */
+async function redistributePurchaseGroup(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  groupId: string | null,
+  userId: string,
+): Promise<void> {
+  if (!groupId) return;
+
+  const { data: group, error: groupErr } = await supabase
+    .from("purchase_group")
+    .select("id, total_price")
+    .eq("id", groupId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (groupErr || !group) return;
+
+  const { data: books, error: booksErr } = await supabase
+    .from("book")
+    .select("id")
+    .eq("purchase_group_id", groupId)
+    .order("id", { ascending: true });
+  if (booksErr || !books || books.length === 0) return;
+
+  const total = Number(group.total_price);
+  const count = books.length;
+  // Cada um recebe o valor arredondado a 2 casas; o último absorve o resto
+  // pra preservar o total exato.
+  const per = Math.round((total / count) * 100) / 100;
+  const remainder = Math.round((total - per * (count - 1)) * 100) / 100;
+
+  // Aplica por book pra evitar update em batch com expressões aritméticas
+  // (Supabase não suporta isso sem RPC).
+  for (let i = 0; i < books.length; i += 1) {
+    const value = i === books.length - 1 ? remainder : per;
+    const { error } = await supabase
+      .from("book")
+      .update({ purchase_price: value })
+      .eq("id", books[i].id);
+    if (error) {
+      console.warn(
+        `[redistributePurchaseGroup] update book ${books[i].id} falhou:`,
+        error,
+      );
+    }
+  }
+}
+
 export async function updateBookFull(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -98,6 +153,39 @@ export async function updateBookFull(
   const serie_id = (formData.get("serie_id") as string) || null;
   const volumeRaw = formData.get("volume") as string | null;
   const volume = volumeRaw ? Number(volumeRaw) || null : null;
+
+  // bundled_with vem como CSV de IDs do BookMultiSelect.
+  const bundledRaw = (formData.get("bundled_with") as string) ?? "";
+  const bundled_with = bundledRaw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s !== id); // safety: nunca incluir self
+
+  // table_of_contents vem como JSON serializado do TableOfContentsEditor.
+  // Parse defensivo: aceita só objetos com `title` string não-vazio.
+  type TocItem = { title: string; page_start: number | null };
+  const tocRaw = (formData.get("table_of_contents") as string) ?? "[]";
+  let table_of_contents: TocItem[] = [];
+  try {
+    const parsed = JSON.parse(tocRaw);
+    if (Array.isArray(parsed)) {
+      table_of_contents = parsed
+        .filter(
+          (it): it is { title: unknown; page_start?: unknown } =>
+            !!it && typeof it === "object",
+        )
+        .map((it) => ({
+          title: typeof it.title === "string" ? it.title.trim() : "",
+          page_start:
+            typeof it.page_start === "number" && it.page_start > 0
+              ? it.page_start
+              : null,
+        }))
+        .filter((it) => it.title.length > 0);
+    }
+  } catch {
+    table_of_contents = [];
+  }
 
   // === Posse / Aquisição (sessão 17.2 + datas de evento na 17.2.6) ===
   // Estado físico controla quais campos são persistidos. Campos fora do
@@ -136,6 +224,15 @@ export async function updateBookFull(
     (formData.get("subscription_id") as string)?.trim() || null;
   const subscription_id =
     purchase_origin === "assinatura" ? rawSubscriptionId : null;
+
+  // purchase_group_id: só faz sentido quando origem é "compra". Em qualquer
+  // outro estado/origem, força null (livro sai do grupo). Quando vinculado
+  // a um grupo, a divisão automática define `purchase_price` (sobrescreve
+  // qualquer valor manual digitado).
+  const rawPurchaseGroupId =
+    (formData.get("purchase_group_id") as string)?.trim() || null;
+  const purchase_group_id =
+    purchase_origin === "compra" ? rawPurchaseGroupId : null;
 
   // Helper pra ler campo date e validar formato YYYY-MM-DD.
   function readDate(name: string): string | null {
@@ -238,13 +335,6 @@ export async function updateBookFull(
       field: "returned_to_acervo_at",
     };
   }
-  if (purchase_origin === "compra" && purchase_price === null) {
-    return {
-      ok: false,
-      message: "Informe o preço pago.",
-      field: "purchase_price",
-    };
-  }
   if (purchase_origin === "assinatura" && !subscription_id) {
     return {
       ok: false,
@@ -284,10 +374,12 @@ export async function updateBookFull(
   // sem shelf, atribui à primeira estante disponível.
   const { data: currentBook } = await supabase
     .from("book")
-    .select("shelf_id, formats_owned")
+    .select("shelf_id, formats_owned, bundled_with, purchase_group_id")
     .eq("id", id)
     .maybeSingle();
   const currentShelfId = currentBook?.shelf_id ?? null;
+  const previousBundled = (currentBook?.bundled_with ?? []) as string[];
+  const previousGroupId = currentBook?.purchase_group_id ?? null;
   const isPhysical = (
     formats.length ? formats : currentBook?.formats_owned ?? []
   ).includes("physical");
@@ -318,11 +410,14 @@ export async function updateBookFull(
     language,
     serie_id,
     volume,
+    bundled_with,
+    table_of_contents,
     ownership_status,
     disposed_date,
     formats_owned: formats.length ? formats : null,
     purchase_origin,
     purchase_price,
+    purchase_group_id,
     lent_out_at,
     borrowed_at,
     returned_at,
@@ -346,24 +441,137 @@ export async function updateBookFull(
     .eq("id", id);
   if (updateError) return { ok: false, ...translateSupabaseError(updateError) };
 
-  // === Sincroniza entry 'criado' do histórico (sessão 17.7, idempotente
-  // na 17.9) ===
-  // SEMPRE atualiza a entry 'criado' pra refletir o `acquired_at` atual.
-  // A comparação anterior (`previousAcquiredAt !== form.acquired_at`)
-  // falhava em casos sutis de tipo/timezone — a versão idempotente sempre
-  // grava a data correta, sem depender de comparação. Ignora falha
-  // silenciosa (auditoria não bloqueia o save principal).
+  // === Redistribuição de preço em grupos de compra ===
+  // Sempre que o livro entra ou sai de um grupo, todos os livros do grupo
+  // afetado precisam ter `purchase_price` recalculado. Cobre 3 cenários:
+  //   - Novo vínculo: livro entrou no grupo X → recompute X.
+  //   - Mudança de grupo: livro saiu de X e entrou em Y → recompute X e Y.
+  //   - Desvínculo: livro saiu de X → recompute X (sem ele).
+  // Quando previousGroupId === purchase_group_id e nada mudou, ainda
+  // recomputamos (idempotente) pra cobrir caso de o total do grupo ter
+  // mudado em paralelo. Custo: alguns updates a mais — aceitável.
+  if (previousGroupId && previousGroupId !== purchase_group_id) {
+    await redistributePurchaseGroup(supabase, previousGroupId, user.id);
+  }
+  if (purchase_group_id) {
+    await redistributePurchaseGroup(supabase, purchase_group_id, user.id);
+  }
+
+  // === Sincronização simétrica de bundled_with ===
+  // Quando o usuário adiciona o livro Y na lista de bundled_with do livro X,
+  // também precisamos adicionar X ao bundled_with de Y (e remover quando
+  // desmarcar). Sem isso, a relação fica unidirecional e a UX vira ruim.
+  // Falha silenciosa: se atualizar o livro vizinho der erro, o save principal
+  // já foi efetivado — só logamos.
+  const added = bundled_with.filter((bid) => !previousBundled.includes(bid));
+  const removed = previousBundled.filter((bid) => !bundled_with.includes(bid));
+
+  for (const otherId of added) {
+    const { data: other } = await supabase
+      .from("book")
+      .select("bundled_with")
+      .eq("id", otherId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const otherBundled = (other?.bundled_with ?? []) as string[];
+    if (!otherBundled.includes(id)) {
+      const next = [...otherBundled, id];
+      const { error: syncErr } = await supabase
+        .from("book")
+        .update({ bundled_with: next })
+        .eq("id", otherId);
+      if (syncErr) {
+        console.warn(
+          `[updateBookFull] sync bundled_with (add ${otherId}) falhou:`,
+          syncErr,
+        );
+      }
+    }
+  }
+
+  for (const otherId of removed) {
+    const { data: other } = await supabase
+      .from("book")
+      .select("bundled_with")
+      .eq("id", otherId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const otherBundled = (other?.bundled_with ?? []) as string[];
+    if (otherBundled.includes(id)) {
+      const next = otherBundled.filter((bid) => bid !== id);
+      const { error: syncErr } = await supabase
+        .from("book")
+        .update({ bundled_with: next })
+        .eq("id", otherId);
+      if (syncErr) {
+        console.warn(
+          `[updateBookFull] sync bundled_with (remove ${otherId}) falhou:`,
+          syncErr,
+        );
+      }
+    }
+  }
+
+  // === Sincroniza a entry inicial do histórico com book.acquired_at ===
+  // Regra atual:
+  //   - acquired_at setado + entry existe → atualiza changed_at da MAIS ANTIGA
+  //   - acquired_at setado + sem entry    → INSERE a entry agora (primeiro
+  //     registro do "entrou no acervo")
+  //   - acquired_at null + entry existe   → DELETA a entry (user removeu a
+  //     data, então o "entrou no acervo" também sai do histórico)
+  //   - acquired_at null + sem entry      → noop
+  // Esse contrato deixa o histórico inteiramente dependente da escolha do
+  // user — sem fallback pra data de criação. Falha silenciosa em todos os
+  // sub-casos (auditoria não bloqueia o save principal).
+  const { data: firstEntry } = await supabase
+    .from("book_status_history")
+    .select("id")
+    .eq("book_id", id)
+    .order("changed_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
   if (acquiredAtForm) {
-    const { error: historyError } = await supabase
+    if (firstEntry) {
+      const { error: historyError } = await supabase
+        .from("book_status_history")
+        .update({ changed_at: `${acquiredAtForm}T12:00:00Z` })
+        .eq("id", firstEntry.id);
+      if (historyError) {
+        console.warn(
+          "[updateBookFull] sync entry inicial falhou:",
+          historyError,
+        );
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("book_status_history")
+        .insert({
+          book_id: id,
+          user_id: user.id,
+          status: ownership_status,
+          changed_at: `${acquiredAtForm}T12:00:00Z`,
+          notes: "criado",
+        });
+      if (insertError) {
+        console.warn(
+          "[updateBookFull] criação de entry inicial falhou:",
+          insertError,
+        );
+      }
+    }
+  } else if (firstEntry) {
+    // User removeu acquired_at → remove a entry inicial também. Se houver
+    // outras entries (status changes posteriores), elas ficam — só a primeira
+    // "entrou no acervo" some.
+    const { error: deleteError } = await supabase
       .from("book_status_history")
-      .update({ changed_at: `${acquiredAtForm}T12:00:00Z` })
-      .eq("book_id", id)
-      .eq("notes", "criado")
-      .eq("status", "owned");
-    if (historyError) {
+      .delete()
+      .eq("id", firstEntry.id);
+    if (deleteError) {
       console.warn(
-        "[updateBookFull] sync histórico 'criado' falhou:",
-        historyError,
+        "[updateBookFull] delete de entry inicial falhou:",
+        deleteError,
       );
     }
   }
@@ -498,16 +706,23 @@ export async function updateBookFull(
   revalidatePath(`/book/${newSlug}`);
   revalidatePath("/library");
 
+  // Calcula destino de pós-save SEM chamar redirect() server-side.
+  // O cliente faz `router.replace(redirectTo)` — replace evita que o
+  // /book/edit/[id] fique no history stack, então o botão "Voltar" no
+  // detail page pula direto pra origem real (/book, /library, etc.) em
+  // vez de cair de volta no edit (UX confusa reportada pelo user).
   const rawFrom = formData.get("from");
+  let redirectTo = `/book/${newSlug}`;
   if (
     typeof rawFrom === "string" &&
     rawFrom.startsWith("/") &&
     !rawFrom.startsWith("//")
   ) {
     if (rawFrom.startsWith("/book/") && rawFrom !== "/book") {
-      redirect(`/book/${newSlug}`);
+      redirectTo = `/book/${newSlug}`;
+    } else {
+      redirectTo = rawFrom;
     }
-    redirect(rawFrom);
   }
-  redirect(`/book/${newSlug}`);
+  return { ok: true, data: { redirectTo } };
 }

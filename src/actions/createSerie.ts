@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
@@ -17,7 +16,7 @@ import {
  */
 export default async function createSerie(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -69,18 +68,22 @@ export default async function createSerie(
       serie_id: data.id,
       from: `/serie/${data.slug}`,
     });
-    redirect(`/book/new?${params.toString()}`);
+    return {
+      ok: true,
+      data: { redirectTo: `/book/new?${params.toString()}` },
+    };
   }
 
   // Em sucesso, se veio com ?from= seguro, volta pra origem; senão, vai pra
   // detail da série recém-criada.
   const rawFrom = formData.get("from");
+  let redirectTo = `/serie/${data.slug}`;
   if (
     typeof rawFrom === "string" &&
     rawFrom.startsWith("/") &&
     !rawFrom.startsWith("//")
   ) {
-    redirect(rawFrom);
+    redirectTo = rawFrom;
   }
-  redirect(`/serie/${data.slug}`);
+  return { ok: true, data: { redirectTo } };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Input,
   Select,
@@ -28,6 +28,7 @@ export type BookOption = {
 
 type QuoteInitial = {
   id: string;
+  slug: string;
   text: string;
   type: "linked" | "standalone";
   book_id: string | null;
@@ -49,6 +50,7 @@ type Props =
   | { mode: "edit"; books: BookOption[]; initial: QuoteInitial };
 
 export default function QuoteForm(props: Props) {
+  const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
   const cancelHref = from ?? (props.mode === "edit" ? `/quote/${""}` : "/quote");
@@ -102,21 +104,38 @@ export default function QuoteForm(props: Props) {
     if (from) fd.set("from", from);
     setFieldErrors({});
     setGenericError(null);
+    const isEditMode = props.mode === "edit";
+    const originalSlug = isEditMode ? props.initial.slug : null;
     startTransition(async () => {
       try {
-        const action = props.mode === "create" ? createQuote : updateQuote;
+        const action = isEditMode ? updateQuote : createQuote;
         const result = await action(fd);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) {
             setFieldErrors({ [result.field]: result.message });
           } else {
             setGenericError(result.message);
           }
+          return;
         }
+        const target = result.data?.redirectTo ?? cancelHref;
+        const slugFromTarget =
+          target.split("?")[0]?.split("/").pop() ?? "";
+        const slugChanged =
+          isEditMode && !!originalSlug && slugFromTarget !== originalSlug;
+        if (
+          isEditMode &&
+          !slugChanged &&
+          typeof window !== "undefined" &&
+          window.history.length > 1
+        ) {
+          router.back();
+        } else {
+          router.replace(target);
+        }
+        router.refresh();
       } catch (err: unknown) {
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
-          setGenericError(err.message);
-        }
+        if (err instanceof Error) setGenericError(err.message);
       }
     });
   };

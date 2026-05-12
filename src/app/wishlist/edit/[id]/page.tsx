@@ -24,6 +24,7 @@ export default async function EditWishlistPage({
         mode="edit"
         initial={{
           id: item.id,
+          slug: item.slug,
           title: item.title,
           author_name: item.author_name,
           purchase_link: item.purchase_link,

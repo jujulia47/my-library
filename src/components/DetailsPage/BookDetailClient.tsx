@@ -81,6 +81,17 @@ export type BookDetail = {
   borrowed_from: string | null;
   lent_to: string | null;
   subscription: { id: string; name: string } | null;
+  /** Outros livros que vieram no mesmo exemplar físico (omnibus). */
+  bundled: { id: string; slug: string; title: string }[];
+  /** Sumário (contos / capítulos), pra coletâneas e edições com TOC custom. */
+  table_of_contents: { title: string; page_start: number | null }[];
+  /** Grupo de compra (box/kit) quando o livro veio em um conjunto. */
+  purchase_group: {
+    id: string;
+    name: string;
+    total_price: number;
+    book_count: number;
+  } | null;
 };
 
 export type ReadingEventItem = {
@@ -249,7 +260,16 @@ function PosseStateContext({ book }: { book: BookDetail }) {
     });
   }
   if (book.purchase_price !== null) {
-    lines.push({ label: "Preço", value: formatBRL(book.purchase_price) });
+    const priceLabel = book.purchase_group
+      ? `${formatBRL(book.purchase_price)} (parte de ${book.purchase_group.name})`
+      : formatBRL(book.purchase_price);
+    lines.push({ label: "Preço", value: priceLabel });
+  }
+  if (book.purchase_group) {
+    lines.push({
+      label: "Box / kit",
+      value: `${book.purchase_group.name} — ${formatBRL(book.purchase_group.total_price)} entre ${book.purchase_group.book_count} ${book.purchase_group.book_count === 1 ? "livro" : "livros"}`,
+    });
   }
   if (book.subscription) {
     lines.push({ label: "Assinatura", value: book.subscription.name });
@@ -267,11 +287,23 @@ function PosseStateContext({ book }: { book: BookDetail }) {
   if (lines.length === 0) return null;
 
   return (
-    <dl className="mt-4 space-y-1.5 text-sm">
+    <dl className="mt-4 space-y-2 text-sm">
       {lines.map((l, i) => (
-        <div key={i} className="flex gap-2">
-          <dt className="text-ink-fade italic min-w-[6.5rem]">{l.label}:</dt>
-          <dd className="text-ink-deep">{l.value}</dd>
+        <div key={i} className="flex items-start gap-5">
+          <dt className="text-ink-fade italic whitespace-nowrap flex-shrink-0">
+            {l.label}
+          </dt>
+          {/* Spacer pontilhado: usa `height: 1em` (≈ baseline da primeira
+              linha do texto sm) pra que o border-bottom alinhe com a primeira
+              linha de dt/dd, e não com a última linha em valores multilinha. */}
+          <span
+            aria-hidden
+            className="flex-1 border-b border-dotted border-ink-fade/35 min-w-[24px]"
+            style={{ height: "0.95em" }}
+          />
+          <dd className="text-ink-deep text-right max-w-[60%] min-w-0">
+            {l.value}
+          </dd>
         </div>
       ))}
     </dl>
@@ -846,6 +878,52 @@ export default function BookDetailClient({
             </div>
           )}
         </dl>
+
+        {book.bundled.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-border">
+            <p className="text-xs uppercase tracking-wider text-ink-fade mb-2">
+              Mesmo exemplar
+            </p>
+            <ul className="space-y-1">
+              {book.bundled.map((b) => (
+                <li key={b.id}>
+                  <Link
+                    href={`/book/${b.slug}`}
+                    className="text-sm text-gold-deep hover:text-ink-deep underline-offset-2 hover:underline transition-colors"
+                  >
+                    {b.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs italic text-ink-fade mt-1.5">
+              Esta edição física inclui {book.bundled.length === 1 ? "também" : "também os livros acima"}.
+            </p>
+          </div>
+        )}
+
+        {book.table_of_contents.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-border">
+            <p className="text-xs uppercase tracking-wider text-ink-fade mb-2">
+              Sumário
+            </p>
+            <ol className="space-y-1 text-sm text-ink-deep">
+              {book.table_of_contents.map((item, idx) => (
+                <li key={idx} className="flex items-baseline gap-2">
+                  <span className="text-ink-fade text-xs w-5 flex-shrink-0 text-right">
+                    {idx + 1}.
+                  </span>
+                  <span className="flex-1">{item.title}</span>
+                  {item.page_start != null && (
+                    <span className="text-xs italic text-ink-fade">
+                      p. {item.page_start}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </Card>
 
       {/* Posse — unifica estado físico atual + timeline de eventos (17.2).
@@ -1217,7 +1295,7 @@ export default function BookDetailClient({
                     {q.page && <span>p. {q.page}</span>}
                   </div>
                   {q.note && (
-                    <p className="mt-2 text-xs italic text-ink-soft border-l-2 border-border pl-3 not-italic">
+                    <p className="mt-2 text-xs text-ink-soft border-l-2 border-border pl-3 not-italic">
                       <span className="italic">{q.note}</span>
                     </p>
                   )}

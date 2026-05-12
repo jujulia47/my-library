@@ -13,6 +13,7 @@ import {
   TagIcon,
   UserCircleIcon,
   CalendarDaysIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
 import { BookOpenIcon as BookOpenSolid } from "@heroicons/react/24/solid";
 
@@ -42,6 +43,7 @@ const items: NavItem[] = [
   },
   { href: "/year", label: "Resumo do ano", Icon: CalendarDaysIcon },
   { href: "/category", label: "Categorias", Icon: TagIcon },
+  { href: "/box", label: "Boxes / kits", Icon: CubeIcon },
 ];
 
 function isActive(pathname: string, href: string) {

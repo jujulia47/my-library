@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import {
   Input,
@@ -37,6 +37,7 @@ export type AuthorFormProps =
   | { mode: "edit"; author: AuthorRow };
 
 export default function AuthorForm(props: AuthorFormProps) {
+  const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
   const isEdit = props.mode === "edit";
@@ -80,14 +81,31 @@ export default function AuthorForm(props: AuthorFormProps) {
         const result = isEdit
           ? await updateAuthor(fd)
           : await createAuthorFull(fd);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) setFieldErrors({ [result.field]: result.message });
           else setGenericError(result.message);
+          return;
         }
+        const target = result.data?.redirectTo ?? cancelHref;
+        // Edit + slug NÃO mudou → back() (preserva navegação natural).
+        // Edit + slug mudou OU create → replace() pra evitar 404 (back
+        // levaria pra URL com slug antigo, inexistente agora).
+        const slugFromTarget =
+          target.split("?")[0]?.split("/").pop() ?? "";
+        const slugChanged = isEdit && slugFromTarget !== author?.slug;
+        if (
+          isEdit &&
+          !slugChanged &&
+          typeof window !== "undefined" &&
+          window.history.length > 1
+        ) {
+          router.back();
+        } else {
+          router.replace(target);
+        }
+        router.refresh();
       } catch (err: unknown) {
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
-          setGenericError(err.message);
-        }
+        if (err instanceof Error) setGenericError(err.message);
       }
     });
   };

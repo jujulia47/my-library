@@ -17,6 +17,7 @@ import {
 } from "@/utils/typings/pagination";
 
 const VALID_SORTS = new Set<SerieListSort>([
+  "reading_first",
   "name_asc",
   "name_desc",
   "last_activity_desc",
@@ -44,9 +45,9 @@ export default async function SeriePage({
 
   const statuses = parseList(sp.status);
   const progress = parseList(sp.progress);
-  const sortRaw = pickFirst(sp.sort) ?? "name_asc";
+  const sortRaw = pickFirst(sp.sort) ?? "reading_first";
   const sort = (
-    VALID_SORTS.has(sortRaw as SerieListSort) ? sortRaw : "name_asc"
+    VALID_SORTS.has(sortRaw as SerieListSort) ? sortRaw : "reading_first"
   ) as SerieListSort;
 
   const [series, counts] = await Promise.all([

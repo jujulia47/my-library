@@ -156,14 +156,27 @@ export default function CollectionFull({ collection, itemCount }: Props) {
     startTransition(async () => {
       try {
         const result = await updateCollection(fd);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) setFieldErrors({ [result.field]: result.message });
           else setGenericError(result.message);
+          return;
         }
+        const target = result.data?.redirectTo ?? `/collection/${collection.slug}`;
+        const slugFromTarget =
+          target.split("?")[0]?.split("/").pop() ?? "";
+        const slugChanged = slugFromTarget !== collection.slug;
+        if (
+          !slugChanged &&
+          typeof window !== "undefined" &&
+          window.history.length > 1
+        ) {
+          router.back();
+        } else {
+          router.replace(target);
+        }
+        router.refresh();
       } catch (err: unknown) {
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
-          setGenericError(err.message);
-        }
+        if (err instanceof Error) setGenericError(err.message);
       }
     });
   };

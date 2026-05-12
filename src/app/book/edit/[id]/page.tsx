@@ -24,12 +24,17 @@ export default async function EditBookPage({
 
   if (!book) notFound();
 
+  const bundledIds = (book.bundled_with ?? []) as string[];
+
   const [
     { data: bookAuthors },
     { data: bookCategories },
     { data: allCats },
     { data: allSeries },
     { data: subscriptions },
+    { data: bundledBooksRaw },
+    { data: groupRaw },
+    { data: groupBookCountRaw },
   ] = await Promise.all([
     supabase
       .from("book_author")
@@ -49,6 +54,25 @@ export default async function EditBookPage({
       .select("id, name")
       .eq("active", true)
       .order("name", { ascending: true }),
+    bundledIds.length > 0
+      ? supabase
+          .from("book")
+          .select("id, title, slug")
+          .in("id", bundledIds)
+      : Promise.resolve({ data: [] }),
+    book.purchase_group_id
+      ? supabase
+          .from("purchase_group")
+          .select("id, name, total_price, acquired_at")
+          .eq("id", book.purchase_group_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    book.purchase_group_id
+      ? supabase
+          .from("book")
+          .select("id")
+          .eq("purchase_group_id", book.purchase_group_id)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const initialAuthors = (bookAuthors ?? [])
@@ -57,6 +81,28 @@ export default async function EditBookPage({
   const initialCategories = (bookCategories ?? [])
     .map((row) => row.category)
     .filter((c): c is { id: string; name: string } => !!c);
+  const initialBundled = (bundledBooksRaw ?? []) as {
+    id: string;
+    title: string;
+    slug: string;
+  }[];
+
+  const groupRow = groupRaw as {
+    id: string;
+    name: string;
+    total_price: number;
+    acquired_at: string | null;
+  } | null;
+  const groupBookCount = (groupBookCountRaw ?? []).length;
+  const initialPurchaseGroup = groupRow
+    ? {
+        id: groupRow.id,
+        name: groupRow.name,
+        total_price: Number(groupRow.total_price),
+        acquired_at: groupRow.acquired_at,
+        book_count: groupBookCount,
+      }
+    : null;
 
   return (
     <AppShell>
@@ -77,6 +123,8 @@ export default async function EditBookPage({
         book={book}
         initialAuthors={initialAuthors}
         initialCategories={initialCategories}
+        initialBundled={initialBundled}
+        initialPurchaseGroup={initialPurchaseGroup}
         allCategories={allCats ?? []}
         allSeries={(allSeries ?? []).filter(
           (s): s is { id: string; name: string } => !!s.name,

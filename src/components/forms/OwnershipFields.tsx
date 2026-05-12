@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Select, Input } from "@/components/ui";
+import {
+  Select,
+  Input,
+  PurchaseGroupSelect,
+  type PurchaseGroupOption,
+} from "@/components/ui";
 import {
   OWNERSHIP_STATUS_OPTIONS_PHYSICAL,
   PURCHASE_ORIGIN_OPTIONS,
@@ -35,6 +40,7 @@ export type OwnershipInitialValues = {
   borrowed_from: string | null;
   lent_to: string | null;
   subscription_id: string | null;
+  purchase_group: PurchaseGroupOption | null;
 };
 
 export type FormatsState = {
@@ -172,15 +178,36 @@ export function OwnershipFields({
   const [subscriptionId, setSubscriptionId] = useState<string | null>(
     initial.subscription_id,
   );
+  const [purchaseGroup, setPurchaseGroup] =
+    useState<PurchaseGroupOption | null>(initial.purchase_group);
+
+  // Quando o user seleciona/cria um grupo com `acquired_at` definido, o
+  // campo "Data de aquisição" do livro herda essa data — todos os livros
+  // de um box vieram no mesmo dia por definição. Mantém-se editável caso
+  // o usuário queira diferenciar; mas o default elimina retrabalho.
+  const handlePurchaseGroupChange = (
+    group: PurchaseGroupOption | null,
+  ) => {
+    setPurchaseGroup(group);
+    if (group?.acquired_at) {
+      setAcquiredAt(toDateInput(group.acquired_at));
+    }
+  };
 
   // === Visibilidade derivada do estado efetivo ===
   const showOrigin = STATUSES_WITH_PURCHASE_ORIGIN.includes(effectiveStatus);
   const showBorrowedFrom = STATUSES_WITH_BORROWED_FROM.includes(effectiveStatus);
   const showLentTo = STATUSES_WITH_LENT_TO.includes(effectiveStatus);
   const showSubscription = showOrigin && origin === "assinatura";
-  const showPriceRequired = showOrigin && origin === "compra";
-  const showPriceOptional = showOrigin && origin === "assinatura";
-  const showPrice = showPriceRequired || showPriceOptional;
+  const showPurchaseGroup = showOrigin && origin === "compra";
+  // Preço é sempre opcional (compra ou assinatura) — usuário pode não
+  // lembrar/querer registrar o valor, e o sistema não depende dele.
+  // Quando o livro está vinculado a um grupo de compra (box), o preço é
+  // calculado automaticamente pela divisão do total — o campo manual some.
+  const showPrice =
+    showOrigin &&
+    (origin === "compra" || origin === "assinatura") &&
+    !purchaseGroup;
 
   const showAcquiredAt = STATUSES_WITH_ACQUIRED_AT.includes(effectiveStatus);
   const showLentOutAt = effectiveStatus === "lent_out";
@@ -308,17 +335,35 @@ export function OwnershipFields({
             ))}
           </Select>
 
+          {showPurchaseGroup && (
+            <PurchaseGroupSelect
+              label="Box / kit (opcional)"
+              value={purchaseGroup}
+              onChange={handlePurchaseGroupChange}
+              hiddenFieldName="purchase_group_id"
+              helperText="Se esse livro veio em um box, vincule aqui. O preço individual será calculado dividindo o total pelos livros do grupo; a data de aquisição vai herdar a data do box."
+            />
+          )}
+
+          {purchaseGroup && (
+            <div className="rounded-md border border-gold/30 bg-gold/5 px-3 py-2 text-sm">
+              <p className="text-ink-deep">
+                Preço calculado pela divisão do total do box{" "}
+                <span className="italic font-medium">{purchaseGroup.name}</span>
+                {" "}entre os livros vinculados. Para alterar o total, edite o
+                grupo diretamente.
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {showPrice && (
               <Input
-                label={
-                  showPriceRequired ? "Preço (R$)" : "Preço (opcional, R$)"
-                }
+                label="Preço (opcional, R$)"
                 name="purchase_price"
                 type="number"
                 step="0.01"
                 min="0"
-                required={showPriceRequired}
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="Ex.: 45.90"

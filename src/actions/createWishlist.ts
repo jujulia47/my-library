@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
@@ -23,7 +22,7 @@ function pickPriority(v: unknown): WishlistPriority | null {
 
 export default async function createWishlist(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -74,5 +73,5 @@ export default async function createWishlist(
   if (error) return { ok: false, ...translateSupabaseError(error) };
 
   revalidatePath("/wishlist");
-  redirect(`/wishlist/${slug}`);
+  return { ok: true, data: { redirectTo: `/wishlist/${slug}` } };
 }

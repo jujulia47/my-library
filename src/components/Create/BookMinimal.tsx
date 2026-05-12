@@ -169,18 +169,22 @@ export default function BookMinimal({
     startTransition(async () => {
       try {
         const result = await createBookMinimal(formData);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) {
             setFieldErrors({ [result.field]: result.message });
           } else {
             setGenericError(result.message);
           }
+          return;
         }
+        // Create flow: usa `replace` pra que o detail da nova entidade
+        // substitua o /book/new no history stack — Voltar do detail vai
+        // direto pra origem (lista) em vez de cair no form em branco.
+        const target = result.data?.redirectTo ?? "/book";
+        router.replace(target);
+        router.refresh();
       } catch (err: unknown) {
-        // redirect() lança NEXT_REDIRECT em sucesso — Next intercepta. Filtra.
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
-          setGenericError(err.message);
-        }
+        if (err instanceof Error) setGenericError(err.message);
       }
     });
   };

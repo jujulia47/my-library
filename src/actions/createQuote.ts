@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
@@ -22,7 +21,7 @@ type QuoteInsert = Database["public"]["Tables"]["quote"]["Insert"];
  */
 export default async function createQuote(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -86,5 +85,5 @@ export default async function createQuote(
       .maybeSingle();
     if (book?.slug) revalidatePath(`/book/${book.slug}`);
   }
-  redirect(`/quote/${slug}`);
+  return { ok: true, data: { redirectTo: `/quote/${slug}` } };
 }

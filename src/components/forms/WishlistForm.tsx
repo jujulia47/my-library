@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Input,
   Textarea,
@@ -51,6 +51,7 @@ const PRIORITY_OPTIONS: {
 
 type WishlistInitial = {
   id: string;
+  slug: string;
   title: string;
   author_name: string | null;
   purchase_link: string | null;
@@ -64,6 +65,7 @@ type Props =
   | { mode: "edit"; initial: WishlistInitial };
 
 export default function WishlistForm(props: Props) {
+  const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
   const cancelHref = from ?? "/wishlist";
@@ -104,22 +106,38 @@ export default function WishlistForm(props: Props) {
     if (priority === "none") fd.delete("priority");
     else fd.set("priority", priority);
 
+    const isEditMode = props.mode === "edit";
+    const originalSlug = isEditMode ? props.initial.slug : null;
     startTransition(async () => {
       try {
-        const action =
-          props.mode === "create" ? createWishlist : updateWishlist;
+        const action = isEditMode ? updateWishlist : createWishlist;
         const result = await action(fd);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) {
             setFieldErrors({ [result.field]: result.message });
           } else {
             setGenericError(result.message);
           }
+          return;
         }
+        const target = result.data?.redirectTo ?? cancelHref;
+        const slugFromTarget =
+          target.split("?")[0]?.split("/").pop() ?? "";
+        const slugChanged =
+          isEditMode && !!originalSlug && slugFromTarget !== originalSlug;
+        if (
+          isEditMode &&
+          !slugChanged &&
+          typeof window !== "undefined" &&
+          window.history.length > 1
+        ) {
+          router.back();
+        } else {
+          router.replace(target);
+        }
+        router.refresh();
       } catch (err: unknown) {
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
-          setGenericError(err.message);
-        }
+        if (err instanceof Error) setGenericError(err.message);
       }
     });
   };

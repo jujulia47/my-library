@@ -54,10 +54,11 @@ const MONTHS = [
 ];
 
 const SORT_OPTIONS = [
+  { value: "reading_first", label: "Lendo" },
+  { value: "last_reading_desc", label: "Última leitura" },
   { value: "title_asc", label: "Título (A-Z)" },
   { value: "title_desc", label: "Título (Z-A)" },
   { value: "created_desc", label: "Mais recente cadastrado" },
-  { value: "last_reading_desc", label: "Última leitura" },
   { value: "acquired_asc", label: "Mais antigo na estante" },
 ];
 
@@ -80,7 +81,7 @@ export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
   const formats = parseList(sp.get("format"));
   const year = sp.get("year") ? Number(sp.get("year")) : null;
   const month = sp.get("month") ? Number(sp.get("month")) : null;
-  const sort = sp.get("sort") ?? "last_reading_desc";
+  const sort = sp.get("sort") ?? "reading_first";
 
   const [panelOpen, setPanelOpen] = useState(false);
 

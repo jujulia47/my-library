@@ -63,3 +63,18 @@ export type { SerieSelectProps, SerieOption } from "./SerieSelect";
 
 export { default as BackButton } from "./BackButton";
 export type { BackButtonProps } from "./BackButton";
+
+export { default as BookMultiSelect } from "./BookMultiSelect";
+export type { BookMultiSelectProps, BookOption } from "./BookMultiSelect";
+
+export { default as TableOfContentsEditor } from "./TableOfContentsEditor";
+export type {
+  TableOfContentsEditorProps,
+  TocItem,
+} from "./TableOfContentsEditor";
+
+export { default as PurchaseGroupSelect } from "./PurchaseGroupSelect";
+export type {
+  PurchaseGroupSelectProps,
+  PurchaseGroupOption,
+} from "./PurchaseGroupSelect";

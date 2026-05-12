@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
@@ -23,7 +22,7 @@ function pickPriority(v: unknown): WishlistPriority | null {
 
 export default async function updateWishlist(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -85,15 +84,17 @@ export default async function updateWishlist(
   // antigo já não existe — força redirect pro slug novo, evitando 404
   // (mesma lógica do livro/série, sessão 7).
   const rawFrom = formData.get("from");
+  let redirectTo = `/wishlist/${newSlug}`;
   if (
     typeof rawFrom === "string" &&
     rawFrom.startsWith("/") &&
     !rawFrom.startsWith("//")
   ) {
     if (rawFrom.startsWith("/wishlist/") && rawFrom !== "/wishlist") {
-      redirect(`/wishlist/${newSlug}`);
+      redirectTo = `/wishlist/${newSlug}`;
+    } else {
+      redirectTo = rawFrom;
     }
-    redirect(rawFrom);
   }
-  redirect(`/wishlist/${newSlug}`);
+  return { ok: true, data: { redirectTo } };
 }

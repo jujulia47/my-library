@@ -35,6 +35,13 @@ type Props = {
   data: GenreDistribution[];
 };
 
+// Arredonda pra 4 casas decimais. Math.cos/sin podem variar no último bit
+// entre Node (server-render) e V8 (cliente), o que quebra hidratação do
+// SVG `d`. 4 casas = 0.0001 unidade SVG = sub-pixel num viewBox de 160.
+function round4(n: number): number {
+  return Math.round(n * 10000) / 10000;
+}
+
 function buildSlicePath(startAngle: number, endAngle: number): string {
   // Caso especial: 1 fatia única ocupa o círculo todo. SVG arc não desenha
   // arco completo (start === end), então usamos dois arcos de 180°.
@@ -43,10 +50,10 @@ function buildSlicePath(startAngle: number, endAngle: number): string {
     const bottom = `${CENTER} ${CENTER + RADIUS}`;
     return `M ${top} A ${RADIUS} ${RADIUS} 0 1 1 ${bottom} A ${RADIUS} ${RADIUS} 0 1 1 ${top} Z`;
   }
-  const x1 = CENTER + RADIUS * Math.cos(startAngle);
-  const y1 = CENTER + RADIUS * Math.sin(startAngle);
-  const x2 = CENTER + RADIUS * Math.cos(endAngle);
-  const y2 = CENTER + RADIUS * Math.sin(endAngle);
+  const x1 = round4(CENTER + RADIUS * Math.cos(startAngle));
+  const y1 = round4(CENTER + RADIUS * Math.sin(startAngle));
+  const x2 = round4(CENTER + RADIUS * Math.cos(endAngle));
+  const y2 = round4(CENTER + RADIUS * Math.sin(endAngle));
   const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
   return `M ${CENTER} ${CENTER} L ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 }
@@ -99,17 +106,18 @@ export function GenrePie({ data }: Props) {
       color: colorForIndex(idx),
       visible: idx < revealedCount,
       // Ancoragem do tooltip — ponto logo fora da fatia no eixo radial.
-      tipX: CENTER + (RADIUS + TOOLTIP_OFFSET) * cosA,
-      tipY: CENTER + (RADIUS + TOOLTIP_OFFSET) * sinA,
+      // round4 estabiliza precisão pra evitar mismatch entre Node/V8.
+      tipX: round4(CENTER + (RADIUS + TOOLTIP_OFFSET) * cosA),
+      tipY: round4(CENTER + (RADIUS + TOOLTIP_OFFSET) * sinA),
       // Translate em porcentagem da própria largura/altura do tooltip pra
       // ele crescer "pra fora": cos=1 (direita) → translateX=0% (anchor na
       // borda esquerda); cos=-1 → -100% (anchor na borda direita); cos=0
       // → -50% (centralizado horizontalmente). Idem pro Y.
-      tipTranslateX: -((1 - cosA) / 2) * 100,
-      tipTranslateY: -((1 - sinA) / 2) * 100,
+      tipTranslateX: round4(-((1 - cosA) / 2) * 100),
+      tipTranslateY: round4(-((1 - sinA) / 2) * 100),
       // Vetor unitário no sentido radial pra "puxar a fatia pra fora".
-      pushDx: HOVER_PUSH * cosA,
-      pushDy: HOVER_PUSH * sinA,
+      pushDx: round4(HOVER_PUSH * cosA),
+      pushDy: round4(HOVER_PUSH * sinA),
     };
   });
 

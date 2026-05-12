@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Input,
   Textarea,
@@ -65,6 +65,7 @@ export default function SerieFull({
   serie,
   derivedDates,
 }: SerieFullProps) {
+  const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
   const cancelHref = from ?? `/serie/${serie.slug}`;
@@ -86,17 +87,30 @@ export default function SerieFull({
     startTransition(async () => {
       try {
         const result = await updateSerie(fd);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) {
             setFieldErrors({ [result.field]: result.message });
           } else {
             setGenericError(result.message);
           }
+          return;
         }
+        const target = result.data?.redirectTo ?? cancelHref;
+        const slugFromTarget =
+          target.split("?")[0]?.split("/").pop() ?? "";
+        const slugChanged = slugFromTarget !== serie.slug;
+        if (
+          !slugChanged &&
+          typeof window !== "undefined" &&
+          window.history.length > 1
+        ) {
+          router.back();
+        } else {
+          router.replace(target);
+        }
+        router.refresh();
       } catch (err: unknown) {
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
-          setGenericError(err.message);
-        }
+        if (err instanceof Error) setGenericError(err.message);
       }
     });
   };

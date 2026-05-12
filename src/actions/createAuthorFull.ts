@@ -3,7 +3,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import {
   translateSupabaseError,
   type ActionResult,
@@ -52,7 +51,7 @@ function pickYear(raw: string | null): { ok: true; value: number | null } | { ok
  */
 export async function createAuthorFull(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -125,5 +124,5 @@ export async function createAuthorFull(
   }
 
   revalidatePath("/author/[slug]", "page");
-  redirect(`/author/${data.slug}`);
+  return { ok: true, data: { redirectTo: `/author/${data.slug}` } };
 }

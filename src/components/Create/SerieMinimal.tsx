@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input, Textarea, Button, Card, BackButton } from "@/components/ui";
 import createSerie from "@/actions/createSerie";
 
@@ -13,6 +13,7 @@ function safeFrom(value: string | null): string | null {
 }
 
 export default function SerieMinimal() {
+  const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
   const cancelHref = from ?? "/serie";
@@ -29,18 +30,19 @@ export default function SerieMinimal() {
     startTransition(async () => {
       try {
         const result = await createSerie(formData);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) {
             setFieldErrors({ [result.field]: result.message });
           } else {
             setGenericError(result.message);
           }
+          return;
         }
+        const target = result.data?.redirectTo ?? "/serie";
+        router.replace(target);
+        router.refresh();
       } catch (err: unknown) {
-        // redirect() lança NEXT_REDIRECT em sucesso — Next intercepta. Filtra.
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
-          setGenericError(err.message);
-        }
+        if (err instanceof Error) setGenericError(err.message);
       }
     });
   };

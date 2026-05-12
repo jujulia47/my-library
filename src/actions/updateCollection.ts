@@ -3,7 +3,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import {
   translateSupabaseError,
   type ActionResult,
@@ -48,7 +47,7 @@ function pickEnum<T extends string>(value: unknown, allowed: T[]): T | null {
 
 export default async function updateCollection(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -179,5 +178,5 @@ export default async function updateCollection(
 
   revalidatePath("/collection");
   revalidatePath(`/collection/${newSlug}`);
-  redirect(`/collection/${newSlug}`);
+  return { ok: true, data: { redirectTo: `/collection/${newSlug}` } };
 }

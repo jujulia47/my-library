@@ -3,7 +3,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { formateTitleToSlug } from "@/utils/formateTitleToSlug";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import {
   translateSupabaseError,
   type ActionResult,
@@ -40,7 +39,7 @@ function pickYear(raw: string | null): { ok: true; value: number | null } | { ok
 
 export async function updateAuthor(
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -143,5 +142,5 @@ export async function updateAuthor(
 
   revalidatePath("/author/[slug]", "page");
   if (oldSlug !== newSlug) revalidatePath(`/author/${oldSlug}`);
-  redirect(`/author/${newSlug}`);
+  return { ok: true, data: { redirectTo: `/author/${newSlug}` } };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Input,
   Textarea,
@@ -13,14 +13,20 @@ import {
   CategoryMultiSelect,
   CoverUpload,
   SerieSelect,
+  BookMultiSelect,
+  TableOfContentsEditor,
   type AuthorOption,
   type CategoryOption,
   type SerieOption,
+  type BookOption,
+  type TocItem,
+  type PurchaseGroupOption,
 } from "@/components/ui";
 import {
   BookOpenIcon,
   TagIcon,
   ArchiveBoxIcon,
+  ListBulletIcon,
 } from "@heroicons/react/24/outline";
 import { OwnershipFields } from "@/components/forms/OwnershipFields";
 import type { SubscriptionOption } from "@/components/forms/SubscriptionSelect";
@@ -54,6 +60,8 @@ export type BookFullProps = {
   book: BookRow;
   initialAuthors: AuthorOption[];
   initialCategories: CategoryOption[];
+  initialBundled: BookOption[];
+  initialPurchaseGroup: PurchaseGroupOption | null;
   allCategories: CategoryOption[];
   allSeries: Pick<SerieRow, "id" | "name">[];
   subscriptions: SubscriptionOption[];
@@ -63,10 +71,13 @@ export default function BookFull({
   book,
   initialAuthors,
   initialCategories,
+  initialBundled,
+  initialPurchaseGroup,
   allCategories,
   allSeries,
   subscriptions,
 }: BookFullProps) {
+  const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
   const cancelHref = from ?? `/book/${book.slug}`;
@@ -74,10 +85,22 @@ export default function BookFull({
   const [authors, setAuthors] = useState<AuthorOption[]>(initialAuthors);
   const [categories, setCategories] =
     useState<CategoryOption[]>(initialCategories);
+  const [bundled, setBundled] = useState<BookOption[]>(initialBundled);
   const [categoriesValid, setCategoriesValid] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [genericError, setGenericError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Sumário inicial vem do banco como jsonb. Parse defensivo — se vier
+  // formato inesperado, começa vazio.
+  const initialToc: TocItem[] = Array.isArray(book.table_of_contents)
+    ? (book.table_of_contents as unknown as TocItem[]).filter(
+        (it) =>
+          it &&
+          typeof it === "object" &&
+          typeof (it as TocItem).title === "string",
+      )
+    : [];
 
   const initialUrl = book.cover ? imagesUrl(book.cover) : null;
   const formatsOwned = (book.formats_owned ?? []) as BookFormat[];
@@ -113,16 +136,35 @@ export default function BookFull({
     startTransition(async () => {
       try {
         const result = await updateBookFull(fd);
-        if (result && !result.ok) {
+        if (!result.ok) {
           if (result.field) {
             setFieldErrors({ [result.field]: result.message });
           } else {
             setGenericError(result.message);
           }
+          return;
         }
+        // Sucesso. Estratégia de navegação:
+        //   - Slug NÃO mudou → `router.back()` (volta natural pra detail,
+        //     edit some do stack, Voltar do detail vai pra origem real).
+        //   - Slug MUDOU → `router.replace(target)`. `back()` daria 404
+        //     porque a URL anterior usa o slug antigo que não existe mais.
+        const target = result.data?.redirectTo ?? `/book/${book.slug}`;
+        const slugFromTarget =
+          target.split("?")[0]?.split("/").pop() ?? "";
+        const slugChanged = slugFromTarget !== book.slug;
+        if (
+          !slugChanged &&
+          typeof window !== "undefined" &&
+          window.history.length > 1
+        ) {
+          router.back();
+        } else {
+          router.replace(target);
+        }
+        router.refresh();
       } catch (err: unknown) {
-        // redirect() lança NEXT_REDIRECT em sucesso — Next intercepta. Filtra.
-        if (err instanceof Error && !err.message.includes("NEXT_REDIRECT")) {
+        if (err instanceof Error) {
           setGenericError(err.message);
         }
       }
@@ -263,7 +305,36 @@ export default function BookFull({
           />
         </Card>
 
-        {/* Card 3 — Posse (sessão 17.2 — unificou Posse + Aquisição).
+        {/* Card 3 — Conteúdo extra: omnibus (bundled_with) + sumário de
+            contos/capítulos. Opcional, escondido pra livros normais (single
+            obra sem itens internos). Border-l burgundy + ListBullet. */}
+        <Card className="border-l-[3px] border-l-burgundy">
+          <h2 className="font-display text-xl font-medium text-ink-deep mb-5 pb-3 border-b border-border flex items-center gap-2">
+            <ListBulletIcon className="w-5 h-5 text-burgundy" aria-hidden />
+            Conteúdo extra
+          </h2>
+
+          <div className="space-y-6">
+            <BookMultiSelect
+              label="Mesmo exemplar"
+              value={bundled}
+              onChange={setBundled}
+              excludeId={book.id}
+              hiddenFieldName="bundled_with"
+              placeholder="Buscar livro pra vincular como omnibus"
+              helperText="Se esse livro físico inclui outros romances completos (edição omnibus), selecione-os aqui. Cada obra continua sendo um cadastro separado — só registra que vieram juntas."
+            />
+
+            <TableOfContentsEditor
+              label="Sumário (contos / capítulos)"
+              initial={initialToc}
+              hiddenFieldName="table_of_contents"
+              helperText="Use pra coletâneas de contos ou listas de capítulos. Página é opcional."
+            />
+          </div>
+        </Card>
+
+        {/* Card 4 — Posse (sessão 17.2 — unificou Posse + Aquisição).
             Estado físico (8 valores granulares) controla quais campos extra
             aparecem; <OwnershipFields> cuida do condicional. Formatos físicos
             ficam aqui também porque conceitualmente fazem parte de "posse".
@@ -316,6 +387,7 @@ export default function BookFull({
               borrowed_from: book.borrowed_from,
               lent_to: book.lent_to,
               subscription_id: book.subscription_id,
+              purchase_group: initialPurchaseGroup,
             }}
             subscriptions={subscriptions}
             fieldErrors={fieldErrors}

@@ -38,6 +38,7 @@ export default async function EditQuotePage({
         books={bookOptions}
         initial={{
           id: quote.id,
+          slug: quote.slug,
           text: quote.text,
           type: quote.book_id ? "linked" : "standalone",
           book_id: quote.book_id,
