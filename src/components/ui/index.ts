@@ -78,3 +78,6 @@ export type {
   PurchaseGroupSelectProps,
   PurchaseGroupOption,
 } from "./PurchaseGroupSelect";
+
+export { default as RatingStars } from "./RatingStars";
+export type { RatingStarsProps } from "./RatingStars";

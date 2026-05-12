@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
-import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
-import { BookCoverFallback } from "@/components/ui";
+import { BookCoverFallback, RatingStars } from "@/components/ui";
 import type { TopBookOfYear } from "@/services/yearData";
 
 type Props = {
@@ -47,18 +46,8 @@ export function TopBooksOfYear({ books }: Props) {
               </p>
             )}
             {book.rating !== null && book.rating > 0 && (
-              <div
-                className="flex items-center gap-0.5 mt-1.5"
-                aria-label={`${book.rating} de 5 estrelas`}
-              >
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <StarSolidIcon
-                    key={i}
-                    className={`w-3 h-3 ${
-                      i < (book.rating ?? 0) ? "text-gold" : "text-ink-fade/25"
-                    }`}
-                  />
-                ))}
+              <div className="mt-1.5">
+                <RatingStars value={book.rating} size="text-xs" />
               </div>
             )}
           </div>

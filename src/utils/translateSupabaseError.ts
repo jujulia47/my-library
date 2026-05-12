@@ -60,8 +60,16 @@ const ERROR_MAP: Record<string, { message: string; field?: string }> = {
   reading_check: {
     message: "A data de fim não pode ser anterior à data de início.",
   },
+  reading_rating_check: {
+    message: "Avaliação inválida. Use valores entre 0 e 5 em passos de meia estrela.",
+    field: "rating",
+  },
   serie_check: {
     message: "A data de fim não pode ser anterior à data de início.",
+  },
+  serie_rating_check: {
+    message: "Avaliação inválida. Use valores entre 0 e 5 em passos de meia estrela.",
+    field: "rating",
   },
   collection_check: {
     message: "A data de fim não pode ser anterior à data de início.",

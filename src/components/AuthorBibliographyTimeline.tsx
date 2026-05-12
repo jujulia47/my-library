@@ -23,7 +23,7 @@ import {
   PencilSquareIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { Button, ConfirmDialog } from "@/components/ui";
+import { Button, ConfirmDialog, RatingStars } from "@/components/ui";
 import BibliographyEntryModal, {
   type BibliographyEntryInitial,
 } from "@/components/forms/BibliographyEntryModal";
@@ -551,12 +551,7 @@ function ExpandedCard({ entry }: { entry: BibliographyEntry }) {
               {entry.finished_at && ` em ${formatMonthYear(entry.finished_at)}`}
             </p>
             {entry.rating !== null && entry.rating > 0 && (
-              <p className="text-gold-deep">
-                {"★".repeat(entry.rating)}
-                <span className="text-ink-fade/40">
-                  {"★".repeat(Math.max(0, 5 - entry.rating))}
-                </span>
-              </p>
+              <RatingStars value={entry.rating} size="text-sm" />
             )}
           </>
         )}

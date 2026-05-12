@@ -12,6 +12,7 @@ import {
   BackButton,
   StatusBadge,
   ConfirmDialog,
+  RatingStars,
 } from "@/components/ui";
 import LinkBookToSerieModal from "@/components/forms/LinkBookToSerieModal";
 import { deleteSerie } from "@/actions/deleteSerie";
@@ -552,19 +553,9 @@ function RatingCard({ rating }: { rating: number | null }) {
         Avaliação geral
       </p>
       {rating ? (
-        <p
-          className="mt-1 text-lg leading-none"
-          aria-label={`${rating} de 5 estrelas`}
-        >
-          {[1, 2, 3, 4, 5].map((n) => (
-            <span
-              key={n}
-              className={n <= rating ? "text-gold" : "text-border"}
-            >
-              ★
-            </span>
-          ))}
-        </p>
+        <div className="mt-1">
+          <RatingStars value={rating} size="text-lg" />
+        </div>
       ) : (
         <p className="font-display text-lg text-ink-fade italic mt-0.5">—</p>
       )}

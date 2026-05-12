@@ -13,6 +13,7 @@ import {
   ConfirmDialog,
   BookCoverFallback,
   pickBookCoverColor,
+  RatingStars,
 } from "@/components/ui";
 import BookshelfDecoration from "@/components/ui/BookshelfDecoration";
 import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
@@ -1145,23 +1146,7 @@ export default function BookDetailClient({
 
                     <div className="flex flex-col items-end gap-2 sm:flex-shrink-0">
                       {r.rating != null && r.status === "finished" && (
-                        <span
-                          className="inline-flex items-center gap-0.5 text-lg"
-                          aria-label={`Avaliação ${r.rating.toFixed(1)} de 5`}
-                        >
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <span
-                              key={n}
-                              className={
-                                (r.rating ?? 0) >= n
-                                  ? "text-gold"
-                                  : "text-border"
-                              }
-                            >
-                              ★
-                            </span>
-                          ))}
-                        </span>
+                        <RatingStars value={r.rating} size="text-lg" />
                       )}
 
                       <div className="flex items-center gap-1 flex-wrap justify-end">

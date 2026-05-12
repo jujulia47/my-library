@@ -10,7 +10,7 @@ import {
   HeartIcon as HeartSolidIcon,
   StarIcon as StarSolidIcon,
 } from "@heroicons/react/24/solid";
-import { BookCoverFallback, StatusBadge } from "@/components/ui";
+import { BookCoverFallback, RatingStars, StatusBadge } from "@/components/ui";
 import { ShelfBackgroundDecoration } from "./ShelfBackgroundDecoration";
 import {
   PageOrnamentBottomLeft,
@@ -914,14 +914,7 @@ function PageRating({ book }: { book: BookForOpenView }) {
     <div>
       <PageHeading>Avaliação</PageHeading>
       <div className="flex items-center gap-1 mb-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <StarSolidIcon
-            key={i}
-            className={`w-7 h-7 ${
-              rating !== null && i < rating ? "text-gold" : "text-ink-fade/25"
-            }`}
-          />
-        ))}
+        <RatingStars value={rating} size="text-3xl" />
         {rating === null && (
           <span className="text-xs italic text-ink-fade ml-2">sem nota</span>
         )}

@@ -89,8 +89,10 @@ export default async function BookPage({
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {paged.rows.map((b) => (
-              <BookCard key={b.id} book={b} />
+            {paged.rows.map((b, i) => (
+              // Primeiras 5 imagens viram `priority` (LCP). Próximas ficam
+              // com lazy-load padrão do Next/Image.
+              <BookCard key={b.id} book={b} priority={i < 5} />
             ))}
           </div>
           <Pagination

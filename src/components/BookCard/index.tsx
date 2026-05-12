@@ -25,9 +25,12 @@ import { toggleBookFavorite } from "@/actions/toggleBookFavorite";
 
 type Props = {
   book: BookListItem;
+  /** Marca a imagem como prioritária (LCP). Use nas primeiras N posições da
+   *  grid pra acelerar o paint da primeira tela. */
+  priority?: boolean;
 };
 
-export default function BookCard({ book }: Props) {
+export default function BookCard({ book, priority = false }: Props) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -57,6 +60,10 @@ export default function BookCard({ book }: Props) {
   // Estado otimista do coração — mesmo pattern do CollectionCard star.
   const [favorite, setFavorite] = useState(book.is_favorite);
   const [favPending, setFavPending] = useState(false);
+  // Hover do coração — controlado via state pra fazer swap outline → solid
+  // confiável (CSS-only com `group-hover/btn:hidden` estava sendo silencioso
+  // em algumas combinações do Tailwind v4).
+  const [heartHover, setHeartHover] = useState(false);
 
   const handleFavoriteToggle = async () => {
     const previous = favorite;
@@ -114,6 +121,8 @@ export default function BookCard({ book }: Props) {
                 fill
                 className="object-cover"
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 220px"
+                quality={70}
+                priority={priority}
               />
             ) : (
               <BookCoverFallback
@@ -150,64 +159,73 @@ export default function BookCard({ book }: Props) {
           </div>
         )}
 
-        {/* Coração de favorito: sempre visível quando favorito; só hover quando
-            não. Burgundy filled pra não conflitar com o gold do rating em
-            estrelas (decisão de design da sessão 15.1). */}
-        <button
-          type="button"
-          aria-label={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-          title={favorite ? "Favorito" : "Marcar como favorito"}
-          aria-pressed={favorite}
-          disabled={favPending}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleFavoriteToggle();
-          }}
-          className={clsx(
-            "absolute top-4 right-4 z-10 p-1.5 rounded-md transition-all",
-            "bg-ivory-light/95 backdrop-blur-sm border border-border",
-            favorite
-              ? "text-burgundy hover:bg-burgundy/10"
-              : "text-ink-fade/60 opacity-0 group-hover:opacity-100 hover:text-ink-soft",
-            favPending && "opacity-60 cursor-wait",
-          )}
-        >
-          {favorite ? (
-            <HeartSolidIcon className="w-4 h-4" />
-          ) : (
-            <HeartOutlineIcon className="w-4 h-4" />
-          )}
-        </button>
-
-        {/* Hover actions (edit/delete) — deslocados pra esquerda pra não
-            colidir com o coração. */}
-        <div
-          className={clsx(
-            "absolute top-4 right-14 flex items-center gap-1 z-10",
-            "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-            "transition-opacity duration-150",
-          )}
-        >
+        {/* Ações do card: Editar, Excluir, Favoritar — todos no mesmo
+            container pra ter espaçamento uniforme. Editar e Excluir só
+            aparecem no hover do card; Favoritar fica sempre visível quando
+            já está marcado. Cada botão usa `book-card-icon-btn` (CSS em
+            globals.css) que escala SÓ o SVG interno no hover, não o
+            quadrado. */}
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5">
           <Link
             href={`/book/edit/${book.id}?from=/book`}
             aria-label={`Editar ${book.title}`}
-            className="rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-ink-soft hover:text-ink-deep hover:bg-ivory-light transition-colors"
             onClick={(e) => e.stopPropagation()}
+            className={clsx(
+              "book-card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-ink-soft",
+              "hover:text-ink-deep",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150",
+            )}
           >
             <PencilSquareIcon className="w-4 h-4" />
           </Link>
           <button
             type="button"
             aria-label={`Excluir ${book.title}`}
-            className="rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-burgundy hover:bg-burgundy/10 transition-colors"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               setConfirmOpen(true);
             }}
+            className={clsx(
+              "book-card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-burgundy",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150",
+            )}
           >
             <TrashIcon className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            aria-label={
+              favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"
+            }
+            title={favorite ? "Favorito" : "Marcar como favorito"}
+            aria-pressed={favorite}
+            disabled={favPending}
+            onMouseEnter={() => setHeartHover(true)}
+            onMouseLeave={() => setHeartHover(false)}
+            onFocus={() => setHeartHover(true)}
+            onBlur={() => setHeartHover(false)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleFavoriteToggle();
+            }}
+            className={clsx(
+              "book-card-icon-btn cursor-pointer rounded-md p-1.5",
+              "bg-ivory-light/95 backdrop-blur-sm border border-border",
+              favorite || heartHover
+                ? "text-burgundy"
+                : "text-ink-fade/60",
+              !favorite &&
+                "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+              favPending && "opacity-60 cursor-wait",
+            )}
+          >
+            {favorite || heartHover ? (
+              <HeartSolidIcon className="w-4 h-4" />
+            ) : (
+              <HeartOutlineIcon className="w-4 h-4" />
+            )}
           </button>
         </div>
       </div>
