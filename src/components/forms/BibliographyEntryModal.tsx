@@ -107,7 +107,7 @@ export default function BibliographyEntryModal({
           autoFocus
         />
         <Input
-          label="Ano de publicação (opcional)"
+          label="Ano de publicação original (opcional)"
           type="number"
           min={1}
           max={9999}
@@ -115,6 +115,7 @@ export default function BibliographyEntryModal({
           value={year}
           onChange={(e) => setYear(e.target.value)}
           errorText={fieldErrors.publication_year}
+          helperText="Quando a obra foi publicada pela primeira vez."
         />
         <Textarea
           label="Notas (opcional)"

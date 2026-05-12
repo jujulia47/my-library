@@ -245,10 +245,11 @@ export default function BookFull({
                   defaultValue={book.publisher ?? ""}
                 />
                 <Input
-                  label="Ano de publicação"
+                  label="Ano de publicação original"
                   name="publication_year"
                   type="number"
                   defaultValue={book.publication_year ?? ""}
+                  helperText="Quando a obra foi publicada pela primeira vez."
                 />
                 <Input
                   label="Páginas"
