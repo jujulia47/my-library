@@ -1,6 +1,9 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import type { Database } from "@/utils/typings/supabase";
+
+type PurchaseGroupUpdate = Database["public"]["Tables"]["purchase_group"]["Update"];
 
 export type UpdatePurchaseGroupResult =
   | {
@@ -33,7 +36,7 @@ export async function updatePurchaseGroup(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Não autenticado." };
 
-  const update: Record<string, unknown> = {};
+  const update: PurchaseGroupUpdate = {};
   if (patch.name !== undefined) {
     const trimmed = patch.name.trim();
     if (!trimmed) return { ok: false, message: "Nome obrigatório." };
