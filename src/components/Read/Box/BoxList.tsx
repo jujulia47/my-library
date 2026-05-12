@@ -38,7 +38,7 @@ export default function BoxList({ initialRows }: { initialRows: BoxRow[] }) {
   const [rows, setRows] = useState(initialRows);
 
   return (
-    <ul className="space-y-3">
+    <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {rows.map((row) => (
         <BoxItem
           key={row.id}
@@ -240,9 +240,9 @@ function BoxItem({
           {error && <p className="text-xs text-burgundy">{error}</p>}
 
           {row.books.length > 0 && (
-            <ul className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+            <ul className="columns-2 sm:columns-3 gap-x-4 mt-2">
               {row.books.map((b) => (
-                <li key={b.id}>
+                <li key={b.id} className="break-inside-avoid leading-snug">
                   <Link
                     href={`/book/${b.slug}`}
                     className="text-sm italic text-ink-soft hover:text-gold-deep transition-colors"

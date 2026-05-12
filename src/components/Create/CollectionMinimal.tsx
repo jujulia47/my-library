@@ -57,6 +57,13 @@ function formatShortDate(iso: string): string {
 
 export default function CollectionMinimal() {
   const router = useRouter();
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace("/collection");
+    }
+  };
   const [type, setType] = useState<CollectionType>("shelf");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -339,12 +346,7 @@ export default function CollectionMinimal() {
         )}
 
         <div className="border-t border-border pt-5 flex justify-end gap-2">
-          <Button
-            as="Link"
-            href="/collection"
-            variant="ghost"
-            type="button"
-          >
+          <Button type="button" variant="ghost" onClick={handleCancel}>
             Cancelar
           </Button>
           <Button

@@ -833,6 +833,7 @@ export type Database = {
           active: boolean
           created_at: string
           id: string
+          monthly_price: number | null
           name: string
           notes: string | null
           user_id: string
@@ -841,6 +842,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          monthly_price?: number | null
           name: string
           notes?: string | null
           user_id: string
@@ -849,6 +851,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          monthly_price?: number | null
           name?: string
           notes?: string | null
           user_id?: string

@@ -152,8 +152,12 @@ export function OwnershipFields({
   //     interatividade real além do label.
   //   - 2+ opções: select normal.
   const showStatusSelect = available.length > 0;
-  const [origin, setOrigin] = useState<PurchaseOrigin | "">(
-    initial.purchase_origin ?? "",
+  // Default "nao_informado" quando o livro não tem origin definido — antes
+  // existia uma opção placeholder "— Não definir —" + valor "Não informado",
+  // o que era redundante. Hoje, o select sempre tem um valor; a única forma
+  // do user "não definir" é deixar como "Não informado".
+  const [origin, setOrigin] = useState<PurchaseOrigin>(
+    initial.purchase_origin ?? "nao_informado",
   );
   const [price, setPrice] = useState<string>(
     initial.purchase_price !== null ? String(initial.purchase_price) : "",
@@ -180,6 +184,23 @@ export function OwnershipFields({
   );
   const [purchaseGroup, setPurchaseGroup] =
     useState<PurchaseGroupOption | null>(initial.purchase_group);
+
+  // Quando o user troca de assinatura (ou define/edita o valor mensal de uma
+  // já selecionada), o campo "Preço" é auto-preenchido com o `monthly_price`
+  // da assinatura. Snapshot por livro — mudar o valor da assinatura depois
+  // NÃO afeta livros já salvos, só novas seleções.
+  const handleSubscriptionChange = (
+    id: string | null,
+    _name: string | null,
+    monthlyPrice: number | null,
+  ) => {
+    setSubscriptionId(id);
+    if (id && monthlyPrice !== null) {
+      setPrice(String(monthlyPrice));
+    } else if (!id) {
+      setPrice("");
+    }
+  };
 
   // Quando o user seleciona/cria um grupo com `acquired_at` definido, o
   // campo "Data de aquisição" do livro herda essa data — todos os livros
@@ -324,16 +345,30 @@ export function OwnershipFields({
             label="Origem da aquisição"
             name="purchase_origin"
             value={origin}
-            onChange={(e) => setOrigin(e.target.value as PurchaseOrigin | "")}
+            onChange={(e) => setOrigin(e.target.value as PurchaseOrigin)}
             helperText="Como o livro entrou no acervo."
           >
-            <option value="">— Não definir —</option>
             {PURCHASE_ORIGIN_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
           </Select>
+
+          {/* Assinatura/Box vêm ANTES de preço+data porque selecionar essas
+              opções auto-preenche os campos abaixo (monthly_price → preço,
+              box.acquired_at → data). Faz mais sentido o user definir esses
+              campos contextuais primeiro e ver o preenchimento automático. */}
+          {showSubscription && (
+            <SubscriptionSelect
+              value={subscriptionId}
+              onChange={handleSubscriptionChange}
+              initialOptions={subscriptions}
+              helperText="Qual assinatura trouxe esse livro. O valor mensal preenche o preço automaticamente."
+              required
+              errorText={fieldErrors.subscription_id}
+            />
+          )}
 
           {showPurchaseGroup && (
             <PurchaseGroupSelect
@@ -425,17 +460,6 @@ export function OwnershipFields({
               onChange={(e) => setReturnedToAcervoAt(e.target.value)}
               errorText={fieldErrors.returned_to_acervo_at}
               helperText="Captura quando o livro emprestado voltou — não regrava acquired_at."
-            />
-          )}
-
-          {showSubscription && (
-            <SubscriptionSelect
-              value={subscriptionId}
-              onChange={(id) => setSubscriptionId(id)}
-              initialOptions={subscriptions}
-              helperText="Qual assinatura trouxe esse livro."
-              required
-              errorText={fieldErrors.subscription_id}
             />
           )}
         </div>

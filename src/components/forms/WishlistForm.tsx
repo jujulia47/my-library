@@ -70,6 +70,14 @@ export default function WishlistForm(props: Props) {
   const from = safeFrom(sp.get("from"));
   const cancelHref = from ?? "/wishlist";
 
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace(cancelHref);
+    }
+  };
+
   const initialPriority: WishlistPriority | "none" =
     props.mode === "edit" ? (props.initial.priority ?? "none") : "none";
 
@@ -262,12 +270,7 @@ export default function WishlistForm(props: Props) {
           )}
 
           <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button
-              as="Link"
-              href={cancelHref}
-              variant="ghost"
-              type="button"
-            >
+            <Button type="button" variant="ghost" onClick={handleCancel}>
               Cancelar
             </Button>
             <Button type="submit" variant="primary" loading={isPending}>

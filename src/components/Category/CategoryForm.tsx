@@ -16,6 +16,16 @@ export default function CategoryForm(props: Props) {
   const [genericError, setGenericError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const isEditMode = props.mode === "edit";
+
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace("/category");
+    }
+  };
+
   const onSubmit = (formData: FormData) => {
     setFieldErrors({});
     setGenericError(null);
@@ -31,7 +41,18 @@ export default function CategoryForm(props: Props) {
         }
         return;
       }
-      router.push("/category");
+      // Edit: back() pra origem natural (a lista, sem o /edit no stack).
+      // Create: replace pra que o /new suma do history e o user veja a lista
+      // atualizada.
+      if (
+        isEditMode &&
+        typeof window !== "undefined" &&
+        window.history.length > 1
+      ) {
+        router.back();
+      } else {
+        router.replace("/category");
+      }
       router.refresh();
     });
   };
@@ -57,11 +78,10 @@ export default function CategoryForm(props: Props) {
         )}
         <div className="flex justify-end gap-2">
           <Button
-            as="Link"
-            href="/category"
+            type="button"
             variant="ghost"
             size="sm"
-            type="button"
+            onClick={handleCancel}
           >
             Cancelar
           </Button>

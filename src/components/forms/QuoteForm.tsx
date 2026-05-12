@@ -53,7 +53,15 @@ export default function QuoteForm(props: Props) {
   const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
-  const cancelHref = from ?? (props.mode === "edit" ? `/quote/${""}` : "/quote");
+  const cancelHref = from ?? "/quote";
+
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace(cancelHref);
+    }
+  };
 
   // Quando o create vem de uma toolbar de autor, default é standalone
   // (citação sem livro vinculado, mas com autor preenchido).
@@ -320,12 +328,7 @@ export default function QuoteForm(props: Props) {
           )}
 
           <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button
-              as="Link"
-              href={cancelHref}
-              variant="ghost"
-              type="button"
-            >
+            <Button type="button" variant="ghost" onClick={handleCancel}>
               Cancelar
             </Button>
             <Button type="submit" variant="primary" loading={isPending}>

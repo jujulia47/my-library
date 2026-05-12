@@ -102,7 +102,15 @@ export default function CollectionFull({ collection, itemCount }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
-  const cancelHref = from ?? `/collection/${collection.slug}`;
+  const cancelHref = from ?? "/collection";
+
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace(cancelHref);
+    }
+  };
 
   const [type, setType] = useState<CollectionType>(collection.type);
   const [pendingTypeChange, setPendingTypeChange] =
@@ -468,7 +476,7 @@ export default function CollectionFull({ collection, itemCount }: Props) {
             >
               {isArchived ? "Desarquivar" : "Arquivar"}
             </Button>
-            <Button as="Link" href={cancelHref} variant="ghost" type="button">
+            <Button type="button" variant="ghost" onClick={handleCancel}>
               Cancelar
             </Button>
             <Button

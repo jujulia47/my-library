@@ -80,7 +80,21 @@ export default function BookFull({
   const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
-  const cancelHref = from ?? `/book/${book.slug}`;
+  // Cancelar padrão vai pra LISTA da entidade — não pra detail page (que é
+  // por onde o user chegou aqui via clique de "Editar"). Voltar pra detail e
+  // depois ter que clicar Voltar de novo era a UX confusa reportada.
+  const cancelFallback = "/book";
+  const cancelHref = from ?? cancelFallback;
+
+  const handleCancel = () => {
+    // Mesma estratégia do save: back() quando há histórico (caminho natural,
+    // some o /edit do stack); replace quando não há (chegou direto via URL).
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace(cancelHref);
+    }
+  };
 
   const [authors, setAuthors] = useState<AuthorOption[]>(initialAuthors);
   const [categories, setCategories] =
@@ -416,10 +430,9 @@ export default function BookFull({
         <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-ivory/95 backdrop-blur-sm border-t border-border z-30">
           <div className="max-w-4xl mx-auto px-6 py-4 flex justify-end gap-2">
             <Button
-              as="Link"
-              href={cancelHref}
-              variant="ghost"
               type="button"
+              variant="ghost"
+              onClick={handleCancel}
             >
               Cancelar
             </Button>

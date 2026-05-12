@@ -18,6 +18,14 @@ export default function SerieMinimal() {
   const from = safeFrom(sp.get("from"));
   const cancelHref = from ?? "/serie";
 
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace(cancelHref);
+    }
+  };
+
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [genericError, setGenericError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -107,11 +115,10 @@ export default function SerieMinimal() {
 
           <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-5 mt-2 border-t border-border">
             <Button
-              as="Link"
-              href={cancelHref}
+              type="button"
               variant="ghost"
               size="md"
-              type="button"
+              onClick={handleCancel}
             >
               Cancelar
             </Button>

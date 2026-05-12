@@ -513,16 +513,10 @@ export async function updateBookFull(
   }
 
   // === Sincroniza a entry inicial do histórico com book.acquired_at ===
-  // Regra atual:
-  //   - acquired_at setado + entry existe → atualiza changed_at da MAIS ANTIGA
-  //   - acquired_at setado + sem entry    → INSERE a entry agora (primeiro
-  //     registro do "entrou no acervo")
-  //   - acquired_at null + entry existe   → DELETA a entry (user removeu a
-  //     data, então o "entrou no acervo" também sai do histórico)
-  //   - acquired_at null + sem entry      → noop
-  // Esse contrato deixa o histórico inteiramente dependente da escolha do
-  // user — sem fallback pra data de criação. Falha silenciosa em todos os
-  // sub-casos (auditoria não bloqueia o save principal).
+  // A entry inicial sempre existe (criada no createBookMinimal). Aqui só
+  // atualizamos o changed_at quando o user setou acquired_at; quando está
+  // null, o UI ignora o changed_at e mostra "sem data informada".
+  // Falha silenciosa — auditoria não bloqueia o save principal.
   const { data: firstEntry } = await supabase
     .from("book_status_history")
     .select("id")
@@ -544,6 +538,8 @@ export async function updateBookFull(
         );
       }
     } else {
+      // Defesa: se a entry não existe (livro pré-feature ou criado de outra
+      // forma), insere agora.
       const { error: insertError } = await supabase
         .from("book_status_history")
         .insert({
@@ -560,21 +556,9 @@ export async function updateBookFull(
         );
       }
     }
-  } else if (firstEntry) {
-    // User removeu acquired_at → remove a entry inicial também. Se houver
-    // outras entries (status changes posteriores), elas ficam — só a primeira
-    // "entrou no acervo" some.
-    const { error: deleteError } = await supabase
-      .from("book_status_history")
-      .delete()
-      .eq("id", firstEntry.id);
-    if (deleteError) {
-      console.warn(
-        "[updateBookFull] delete de entry inicial falhou:",
-        deleteError,
-      );
-    }
   }
+  // Se acquiredAtForm é null: noop. A entry continua existindo com whatever
+  // changed_at tem; UI detecta book.acquired_at=null e renderiza "sem data".
 
   // === Insert manual em book_status_history (sessão 17.2.6) ===
   // Trigger automático foi dropado; action assume. Só insere se status mudou.

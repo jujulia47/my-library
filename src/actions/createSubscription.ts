@@ -15,7 +15,10 @@ import {
 export async function createSubscription(params: {
   name: string;
   notes?: string | null;
-}): Promise<ActionResult<{ id: string; name: string }>> {
+  monthly_price?: number | null;
+}): Promise<
+  ActionResult<{ id: string; name: string; monthly_price: number | null }>
+> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,6 +28,24 @@ export async function createSubscription(params: {
   const trimmed = params.name.trim();
   if (!trimmed) {
     return { ok: false, message: "Nome obrigatório.", field: "name" };
+  }
+
+  let monthlyPrice: number | null = null;
+  if (
+    params.monthly_price !== undefined &&
+    params.monthly_price !== null
+  ) {
+    if (
+      !Number.isFinite(params.monthly_price) ||
+      params.monthly_price < 0
+    ) {
+      return {
+        ok: false,
+        message: "Valor mensal inválido.",
+        field: "monthly_price",
+      };
+    }
+    monthlyPrice = params.monthly_price;
   }
 
   // Defesa em profundidade: detecta duplicata case-insensitive antes de
@@ -49,12 +70,21 @@ export async function createSubscription(params: {
       user_id: user.id,
       name: trimmed,
       notes: params.notes?.trim() || null,
+      monthly_price: monthlyPrice,
     })
-    .select("id, name")
+    .select("id, name, monthly_price")
     .single();
 
   if (error || !data) return { ok: false, ...translateSupabaseError(error) };
 
   revalidatePath("/book");
-  return { ok: true, data: { id: data.id, name: data.name } };
+  return {
+    ok: true,
+    data: {
+      id: data.id,
+      name: data.name,
+      monthly_price:
+        data.monthly_price !== null ? Number(data.monthly_price) : null,
+    },
+  };
 }

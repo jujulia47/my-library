@@ -323,6 +323,11 @@ function PosseTimeline({
       {history.map((h, idx) => {
         const previous = idx > 0 ? history[idx - 1] : null;
         const desc = describeHistoryEvent(h, previous, book);
+        // Quando é a primeira entry (entrou no acervo) e o user não setou
+        // `acquired_at`, esconde a data armazenada (que é apenas placeholder
+        // tipo created_at) e mostra "sem data informada" no lugar.
+        const isFirstEntry = idx === 0;
+        const showNoDate = isFirstEntry && !book.acquired_at;
         return (
           <li key={h.id} className="relative">
             <span
@@ -330,7 +335,9 @@ function PosseTimeline({
               className="absolute -left-[1.4rem] top-1.5 w-2.5 h-2.5 rounded-full bg-cappuccino border-2 border-paper"
             />
             <p className="font-mono text-[11px] text-ink-fade">
-              {formatDate(h.changed_at) ?? h.changed_at.slice(0, 10)}
+              {showNoDate
+                ? "sem data informada"
+                : formatDate(h.changed_at) ?? h.changed_at.slice(0, 10)}
             </p>
             <p className="text-sm text-ink-deep">{desc}</p>
           </li>
@@ -1001,6 +1008,39 @@ export default function BookDetailClient({
               const sortedEvents = [...r.events].sort((a, b) =>
                 a.event_date.localeCompare(b.event_date),
               );
+              // Fallback sintético: quando a reading foi cadastrada com
+              // `start_date`/`finish_date` direto (sem passar pelo fluxo de
+              // "iniciar/terminar" que insere events), `reading_event` fica
+              // vazio e a linha do tempo somia. Sintetiza events só pra
+              // exibição — não persiste no banco.
+              const timelineEvents =
+                sortedEvents.length > 0
+                  ? sortedEvents
+                  : [
+                      ...(r.start_date
+                        ? [
+                            {
+                              id: `synthetic-start-${r.id}`,
+                              event_type: "started" as ReadingEventType,
+                              event_date: r.start_date,
+                              notes: null,
+                            },
+                          ]
+                        : []),
+                      ...(r.finish_date &&
+                      (r.status === "finished" || r.status === "abandoned")
+                        ? [
+                            {
+                              id: `synthetic-end-${r.id}`,
+                              event_type: (r.status === "abandoned"
+                                ? "abandoned"
+                                : "finished") as ReadingEventType,
+                              event_date: r.finish_date,
+                              notes: null,
+                            },
+                          ]
+                        : []),
+                    ];
               const moreActionsOpen = readingActionsOpen === r.id;
 
               return (
@@ -1076,7 +1116,7 @@ export default function BookDetailClient({
                         </details>
                       )}
 
-                      {sortedEvents.length > 0 && (
+                      {timelineEvents.length > 0 && (
                         <details className="text-sm group/timeline">
                           <summary className="cursor-pointer text-ink-fade italic hover:text-ink-deep list-none inline-flex items-center gap-1">
                             <span>Ver linha do tempo</span>
@@ -1085,7 +1125,7 @@ export default function BookDetailClient({
                             </span>
                           </summary>
                           <ul className="mt-2 space-y-1 pl-3 border-l border-border">
-                            {sortedEvents.map((ev) => (
+                            {timelineEvents.map((ev) => (
                               <li
                                 key={ev.id}
                                 className="flex gap-2 text-ink-soft"

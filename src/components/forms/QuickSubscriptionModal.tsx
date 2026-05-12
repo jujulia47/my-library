@@ -5,7 +5,11 @@ import Modal from "./Modal";
 import { Input, Textarea, Button } from "@/components/ui";
 import { createSubscription } from "@/actions/createSubscription";
 
-export type QuickSubscription = { id: string; name: string };
+export type QuickSubscription = {
+  id: string;
+  name: string;
+  monthly_price: number | null;
+};
 
 export type QuickSubscriptionModalProps = {
   open: boolean;
@@ -28,7 +32,9 @@ export default function QuickSubscriptionModal({
 }: QuickSubscriptionModalProps) {
   const [name, setName] = useState(initialName);
   const [notes, setNotes] = useState("");
+  const [monthlyPrice, setMonthlyPrice] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [genericError, setGenericError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -39,14 +45,28 @@ export default function QuickSubscriptionModal({
       return;
     }
     setNameError(null);
+    setPriceError(null);
     setGenericError(null);
+
+    let priceValue: number | null = null;
+    if (monthlyPrice.trim() !== "") {
+      const n = Number(monthlyPrice);
+      if (!Number.isFinite(n) || n < 0) {
+        setPriceError("Valor inválido.");
+        return;
+      }
+      priceValue = n;
+    }
+
     startTransition(async () => {
       const result = await createSubscription({
         name: trimmed,
         notes: notes.trim() || null,
+        monthly_price: priceValue,
       });
       if (!result.ok) {
         if (result.field === "name") setNameError(result.message);
+        else if (result.field === "monthly_price") setPriceError(result.message);
         else setGenericError(result.message);
         return;
       }
@@ -57,6 +77,7 @@ export default function QuickSubscriptionModal({
       onCreated(result.data);
       setName("");
       setNotes("");
+      setMonthlyPrice("");
       onClose();
     });
   };
@@ -80,12 +101,24 @@ export default function QuickSubscriptionModal({
           autoFocus
           errorText={nameError ?? undefined}
         />
+        <Input
+          label="Valor mensal (R$, opcional)"
+          name="monthly_price"
+          type="number"
+          step="0.01"
+          min="0"
+          value={monthlyPrice}
+          onChange={(e) => setMonthlyPrice(e.target.value)}
+          placeholder="Ex.: 89.90"
+          helperText="Preenche automaticamente o preço dos livros vinculados a essa assinatura."
+          errorText={priceError ?? undefined}
+        />
         <Textarea
           label="Notas"
           name="notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Opcional: link da assinatura, valor mensal, etc."
+          placeholder="Opcional: link, observações, etc."
           rows={3}
         />
         {genericError && (

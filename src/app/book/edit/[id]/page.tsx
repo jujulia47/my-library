@@ -51,7 +51,7 @@ export default async function EditBookPage({
     supabase.from("serie").select("id, name").order("name", { ascending: true }),
     supabase
       .from("subscription")
-      .select("id, name")
+      .select("id, name, monthly_price")
       .eq("active", true)
       .order("name", { ascending: true }),
     bundledIds.length > 0
@@ -129,7 +129,12 @@ export default async function EditBookPage({
         allSeries={(allSeries ?? []).filter(
           (s): s is { id: string; name: string } => !!s.name,
         )}
-        subscriptions={subscriptions ?? []}
+        subscriptions={(subscriptions ?? []).map((s) => ({
+          id: s.id,
+          name: s.name,
+          monthly_price:
+            s.monthly_price !== null ? Number(s.monthly_price) : null,
+        }))}
       />
     </AppShell>
   );

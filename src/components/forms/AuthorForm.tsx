@@ -42,7 +42,15 @@ export default function AuthorForm(props: AuthorFormProps) {
   const from = safeFrom(sp.get("from"));
   const isEdit = props.mode === "edit";
   const author = isEdit ? props.author : null;
-  const cancelHref = from ?? (author ? `/author/${author.slug}` : "/");
+  const cancelHref = from ?? "/author";
+
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace(cancelHref);
+    }
+  };
 
   const [name, setName] = useState(author?.name ?? "");
   const [country, setCountry] = useState<string>(author?.country ?? "");
@@ -224,7 +232,7 @@ export default function AuthorForm(props: AuthorFormProps) {
         )}
 
         <div className="border-t border-border pt-5 flex justify-end gap-2">
-          <Button as="Link" href={cancelHref} variant="ghost" type="button">
+          <Button type="button" variant="ghost" onClick={handleCancel}>
             Cancelar
           </Button>
           <Button

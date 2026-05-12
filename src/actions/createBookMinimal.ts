@@ -71,14 +71,11 @@ export async function createBookMinimal(
   // (book_user_slug_key) e vira erro inline no campo "title".
   const slug = formateTitleToSlug(title);
 
-  // Sessão atual: NÃO seta acquired_at automaticamente. Livros novos ficam
-  // sem data até o user explicitamente preencher via BookFull. Sem isso, a
-  // timeline de histórico mostraria a data de criação do registro (que não é
-  // realmente quando o livro foi adquirido) — feedback do user: "se eu não
-  // coloquei a data, não deveria aparecer nada".
-  //
-  // Trade-off: livros novos não contam pra "Aquisições do ano" até o user
-  // preencher. Aceitável — o app deixa claro que `acquired_at` é uma escolha.
+  // Sessão atual: NÃO seta acquired_at automaticamente — fica null até o
+  // user preencher via BookFull. Mas inserimos a entry inicial do histórico
+  // com `changed_at = NOW` como placeholder. O UI esconde essa data e mostra
+  // "sem data informada" quando book.acquired_at é null — sem fallback pra
+  // data real de cadastro vazar na timeline.
 
   const { data: bookData, error: bookError } = await supabase
     .from("book")
@@ -101,9 +98,15 @@ export async function createBookMinimal(
     return { ok: false, ...translateSupabaseError(bookError) };
   }
 
-  // History entry só é inserida quando o user explicitamente seta acquired_at
-  // (acontece no `updateBookFull`). Sem data, sem entry — a timeline fica
-  // vazia, mostrando "Sem eventos registrados.".
+  // Insere entry inicial do histórico. changed_at é placeholder (NOW); o UI
+  // detecta acquired_at=null e renderiza "sem data informada".
+  await supabase.from("book_status_history").insert({
+    book_id: bookData.id,
+    user_id: user.id,
+    status: "owned",
+    changed_at: new Date().toISOString(),
+    notes: "criado",
+  });
 
   if (authorIds.length > 0) {
     const rows = authorIds.map((author_id) => ({

@@ -66,6 +66,14 @@ export default function BookMinimal({
   const from = safeFrom(sp.get("from"));
   const cancelHref = from ?? "/book";
 
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace(cancelHref);
+    }
+  };
+
   const [authors, setAuthors] = useState<AuthorOption[]>(
     initialAuthors ?? [],
   );
@@ -389,11 +397,10 @@ export default function BookMinimal({
 
           <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-5 mt-6 border-t border-border">
             <Button
-              as="Link"
-              href={cancelHref}
+              type="button"
               variant="ghost"
               size="md"
-              type="button"
+              onClick={handleCancel}
             >
               Cancelar
             </Button>

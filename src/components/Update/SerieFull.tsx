@@ -68,7 +68,15 @@ export default function SerieFull({
   const router = useRouter();
   const sp = useSearchParams();
   const from = safeFrom(sp.get("from"));
-  const cancelHref = from ?? `/serie/${serie.slug}`;
+  const cancelHref = from ?? "/serie";
+
+  const handleCancel = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace(cancelHref);
+    }
+  };
 
   const [status, setStatus] = useState<SerieStatus>(serie.status);
   const [rating, setRating] = useState<number>(serie.rating ?? 0);
@@ -279,12 +287,7 @@ export default function SerieFull({
         {/* Footer fixo */}
         <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-ivory/95 backdrop-blur-sm border-t border-border z-30">
           <div className="max-w-4xl mx-auto px-6 py-4 flex justify-end gap-2">
-            <Button
-              as="Link"
-              href={cancelHref}
-              variant="ghost"
-              type="button"
-            >
+            <Button type="button" variant="ghost" onClick={handleCancel}>
               Cancelar
             </Button>
             <Button type="submit" variant="primary" loading={isPending}>
