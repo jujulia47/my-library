@@ -63,7 +63,10 @@ export function BookSpineTilted({
     <span
       style={{
         display: "inline-block",
-        height: "100%",
+        // Altura alinhada com `.book-spine` wall (160). Antes era 100% pra
+        // herdar do shelf-content (~182), mas isso fazia o livro inclinado
+        // estourar até a prateleira de cima sem folga.
+        height: 160,
         alignSelf: "flex-end",
         marginLeft,
         marginRight,

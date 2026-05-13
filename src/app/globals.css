@@ -539,17 +539,12 @@
   gap: 2px;
   padding: 0 16px 0 60px;
   position: relative;
-  /* Sessão 17.10: overflow-y: visible pra que o tooltip de hover
-     (`.book-hover-label`) possa transbordar pra cima da prateleira.
-     Spec do CSS força overflow-y: auto quando overflow-x: auto, então
-     usamos `clip` no eixo X via clip-path em vez de overflow-x. */
-  overflow-x: auto;
+  /* `overflow-x: clip` elimina o scroll horizontal e ainda permite
+     overflow-y visible (`auto`/`hidden` no X forçariam o Y também).
+     Conteúdo que passar da borda direita é cortado sem barra; o tooltip
+     de hover (`.book-hover-label`) continua transbordando pra cima. */
+  overflow-x: clip;
   overflow-y: visible;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-.shelf-content::-webkit-scrollbar {
-  display: none;
 }
 /* Mobile: cada sub-prateleira tem altura fixa de 160px (já controlado por
    .shelf-sub-row). Não precisa de wrap dentro do .shelf-content — o
@@ -801,11 +796,11 @@
 }
 
 .empty-slot-standing {
-  width: 32px;
+  width: 36px;
   height: 160px;
 }
 .empty-slot-tilted {
-  width: 36px;
+  width: 40px;
   height: 152px;
   transform-origin: bottom center;
 }

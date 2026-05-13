@@ -118,32 +118,105 @@ export async function updateReading(formData: FormData): Promise<ActionResult> {
     }
   }
 
-  // Emite event apenas se houve mudança de status.
+  // Emite event apenas se houve mudança de status. Pra finished/abandoned
+  // só cria event se o user forneceu finish_date (não inventa "hoje"). Pra
+  // demais transições (pausar/retomar), "hoje" faz sentido como momento da
+  // ação. start_date NÃO é usado aqui — representa o "início desde sempre"
+  // da reading, sincronizado abaixo via sync de events.
   if (previousStatus && previousStatus !== status) {
     const eventType = eventTypeForTransition(previousStatus, status);
     if (eventType) {
-      // Data do evento: pra finished/abandoned usa finish_date (a data que o
-      // usuário escolheu pro fim); pra demais transições, hoje. start_date
-      // não é usado aqui — esse campo na reading representa o "início desde
-      // sempre", não a data desta transição específica.
-      const eventDate =
-        (status === "finished" || status === "abandoned"
-          ? finish_date
-          : null) ?? todayISO();
-      const evResult = await createReadingEvent(supabase, {
-        user_id: user.id,
-        reading_id: id,
-        event_type: eventType,
-        event_date: eventDate,
-      });
-      if (!evResult.ok) {
-        // Não dá pra fazer rollback do update sem snapshot do estado anterior.
-        // Reportamos o erro do event; reading.status já foi atualizado mas
-        // sem o event correspondente. O usuário vê a mensagem e pode editar
-        // de novo. (Decisão: aceitar essa janela em vez de complicar com
-        // snapshot/transação manual.)
-        return evResult;
+      const isClosing = status === "finished" || status === "abandoned";
+      const eventDate = isClosing ? finish_date : todayISO();
+      if (eventDate) {
+        const evResult = await createReadingEvent(supabase, {
+          user_id: user.id,
+          reading_id: id,
+          event_type: eventType,
+          event_date: eventDate,
+        });
+        if (!evResult.ok) {
+          // Não dá pra fazer rollback do update sem snapshot do estado anterior.
+          // Reportamos o erro do event; reading.status já foi atualizado mas
+          // sem o event correspondente. O user vê a mensagem e pode editar
+          // de novo. (Decisão: aceitar essa janela em vez de complicar com
+          // snapshot/transação manual.)
+          return evResult;
+        }
       }
+    }
+  }
+
+  // Sync de start_date com o event "started" mais antigo. Cobre dois casos:
+  //  1) Bug antigo: events foram criados com "hoje" porque o user não tinha
+  //     fornecido data. Agora ele edita e informa a real → atualizamos.
+  //  2) User só editou a data (sem mudar status) → o event precisa refletir.
+  // Se há múltiplos started events (re-opens), sincroniza só o primeiro —
+  // os demais são re-aberturas legítimas que não devem ser mexidas.
+  {
+    const { data: startedEvents } = await supabase
+      .from("reading_event")
+      .select("id, event_date")
+      .eq("reading_id", id)
+      .eq("event_type", "started")
+      .order("event_date", { ascending: true });
+
+    if (start_date) {
+      if (!startedEvents || startedEvents.length === 0) {
+        await createReadingEvent(supabase, {
+          user_id: user.id,
+          reading_id: id,
+          event_type: "started",
+          event_date: start_date,
+        });
+      } else if (startedEvents[0].event_date !== start_date) {
+        await supabase
+          .from("reading_event")
+          .update({ event_date: start_date })
+          .eq("id", startedEvents[0].id);
+      }
+    } else if (startedEvents && startedEvents.length === 1) {
+      // User limpou a data e só há um started event — deleta pra remover
+      // a data fake. Se houver múltiplos, não tocamos (são re-opens reais).
+      await supabase
+        .from("reading_event")
+        .delete()
+        .eq("id", startedEvents[0].id);
+    }
+  }
+
+  // Sync de finish_date com o event de fechamento (finished/abandoned) mais
+  // recente quando o status atual é fechado. Mesma lógica do started: se
+  // há vários (re-fechamentos), só sincroniza o mais recente.
+  if (status === "finished" || status === "abandoned") {
+    const closingType: Database["public"]["Enums"]["reading_event_type"] =
+      status === "finished" ? "finished" : "abandoned";
+    const { data: closingEvents } = await supabase
+      .from("reading_event")
+      .select("id, event_date")
+      .eq("reading_id", id)
+      .eq("event_type", closingType)
+      .order("event_date", { ascending: false });
+
+    if (finish_date) {
+      if (!closingEvents || closingEvents.length === 0) {
+        await createReadingEvent(supabase, {
+          user_id: user.id,
+          reading_id: id,
+          event_type: closingType,
+          event_date: finish_date,
+        });
+      } else if (closingEvents[0].event_date !== finish_date) {
+        await supabase
+          .from("reading_event")
+          .update({ event_date: finish_date })
+          .eq("id", closingEvents[0].id);
+      }
+    } else if (closingEvents && closingEvents.length === 1) {
+      await supabase
+        .from("reading_event")
+        .delete()
+        .eq("id", closingEvents[0].id);
     }
   }
 

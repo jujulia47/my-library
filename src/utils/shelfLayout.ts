@@ -36,8 +36,8 @@ export type DecorationVariant =
   | "planta"
   | "globo"
   | "quadro"
-  | "busto"
-  | "vaso";
+  | "tinteiro"
+  | "estante";
 
 export type LeanDirection = "left" | "right";
 
@@ -68,8 +68,8 @@ const DECORATION_VARIANTS: DecorationVariant[] = [
   "planta",
   "globo",
   "quadro",
-  "busto",
-  "vaso",
+  "tinteiro",
+  "estante",
 ];
 
 const STACK_HEIGHT = 5;

@@ -1,7 +1,7 @@
 /**
  * Decorações da prateleira (sessões 17.4, ampliadas na 17.8).
  *
- * 11 variantes: 6 originais + 5 novas (planta, globo, quadro, busto, vaso).
+ * 11 variantes: 6 originais + 5 novas (planta, globo, quadro, busto, estante).
  * Cada uma é um SVG inline com escala bumped pra ~1.8-2x do 17.4 — detalhes
  * mais visíveis na parede vintage.
  *
@@ -17,8 +17,8 @@ import { LivroDeitado } from "./LivroDeitado";
 import { Planta } from "./Planta";
 import { Globo } from "./Globo";
 import { Quadro } from "./Quadro";
-import { Busto } from "./Busto";
-import { Vaso } from "./Vaso";
+import { Tinteiro } from "./Tinteiro";
+import { Estante } from "./Estante";
 
 export type DecorType =
   | "vela"
@@ -30,8 +30,8 @@ export type DecorType =
   | "planta"
   | "globo"
   | "quadro"
-  | "busto"
-  | "vaso";
+  | "tinteiro"
+  | "estante";
 
 /**
  * Renderiza uma decoração. `seed` é usado pra cor determinística em variantes
@@ -57,10 +57,10 @@ export function renderDecoration(decor: DecorType, seed: string) {
       return <Globo />;
     case "quadro":
       return <Quadro seed={seed} />;
-    case "busto":
-      return <Busto />;
-    case "vaso":
-      return <Vaso />;
+    case "tinteiro":
+      return <Tinteiro />;
+    case "estante":
+      return <Estante />;
   }
 }
 
@@ -74,6 +74,6 @@ export {
   Planta,
   Globo,
   Quadro,
-  Busto,
-  Vaso,
+  Tinteiro,
+  Estante,
 };

@@ -85,13 +85,13 @@ export function spineTextClassForBookId(id: string): string {
 }
 
 /**
- * Width da lombada em px. Proporcional a `pages` com clamp 24-44.
- * Livros sem pages → 32px (médio).
+ * Width da lombada em px. Proporcional a `pages` com clamp 20-38.
+ * Livros sem pages → 28px (médio).
  */
 export function spineWidthForPages(pages: number | null | undefined): number {
-  if (!pages || pages <= 0) return 32;
+  if (!pages || pages <= 0) return 36;
   const computed = Math.round(pages / 15);
-  return Math.max(24, Math.min(44, computed));
+  return Math.max(26, Math.min(46, computed));
 }
 
 /**

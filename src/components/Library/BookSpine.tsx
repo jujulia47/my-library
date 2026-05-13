@@ -183,10 +183,11 @@ export function BookSpine({
     clear: clearHover,
   } = useBookHover(hoverLabel);
 
-  // Wall mode usa classe `.book-spine` (CSS em globals.css) + height 100%
-  // herdado do `.shelf-content` pai. Outros modos: comportamento antigo.
+  // Wall mode usa classe `.book-spine` (CSS em globals.css) + altura fixa
+  // 160 (em vez de h-full) pra deixar uma folga acima da prateleira de cima
+  // (shelf-content tem ~182 disponível; books a 160 deixam ~22px de gap).
   const wallClassName =
-    "book-spine relative h-full flex flex-col items-center justify-center";
+    "book-spine relative h-[160px] flex flex-col items-center justify-center";
   const legacyClassName =
     "relative h-full rounded-[1px] shadow-spine flex flex-col items-center justify-between overflow-hidden hover:-translate-y-[3px] transition-transform";
   const baseClassName = isWall ? wallClassName : legacyClassName;
@@ -330,7 +331,7 @@ function DraggableSpine({
   });
 
   const wallClasses =
-    "book-spine relative h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none";
+    "book-spine relative h-[160px] flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none";
   const legacyClasses =
     "relative h-full rounded-[1px] shadow-spine flex flex-col items-center justify-between overflow-hidden cursor-grab active:cursor-grabbing hover:-translate-y-[3px] transition-transform touch-none";
 

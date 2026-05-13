@@ -30,10 +30,7 @@ import { deleteBook } from "@/actions/deleteBook";
 import { startReading } from "@/actions/startReading";
 import { formatDate } from "@/utils/formatDate";
 import { formatDuration, formatDurationLabel } from "@/utils/formatDuration";
-import {
-  labelForOwnershipStatus,
-  labelForPurchaseOrigin,
-} from "@/utils/labels";
+import { labelForPurchaseOrigin } from "@/utils/labels";
 import {
   EllipsisVerticalIcon,
   PencilSquareIcon,
@@ -236,79 +233,6 @@ function describeHistoryEvent(
       return `Disponível no ${platform}`;
     }
   }
-}
-
-function PosseStateContext({ book }: { book: BookDetail }) {
-  const lines: { label: string; value: string }[] = [];
-
-  if (book.ownership_status === "lent_out" && book.lent_to) {
-    lines.push({ label: "Para", value: book.lent_to });
-  }
-  if (
-    (book.ownership_status === "borrowed" ||
-      book.ownership_status === "returned") &&
-    book.borrowed_from
-  ) {
-    lines.push({ label: "De", value: book.borrowed_from });
-  }
-  if (book.acquired_at) {
-    lines.push({ label: "Adquirido em", value: formatLongDate(book.acquired_at) });
-  }
-  if (book.purchase_origin) {
-    lines.push({
-      label: "Origem",
-      value: labelForPurchaseOrigin(book.purchase_origin),
-    });
-  }
-  if (book.purchase_price !== null) {
-    const priceLabel = book.purchase_group
-      ? `${formatBRL(book.purchase_price)} (parte de ${book.purchase_group.name})`
-      : formatBRL(book.purchase_price);
-    lines.push({ label: "Preço", value: priceLabel });
-  }
-  if (book.purchase_group) {
-    lines.push({
-      label: "Box / kit",
-      value: `${book.purchase_group.name} — ${formatBRL(book.purchase_group.total_price)} entre ${book.purchase_group.book_count} ${book.purchase_group.book_count === 1 ? "livro" : "livros"}`,
-    });
-  }
-  if (book.subscription) {
-    lines.push({ label: "Assinatura", value: book.subscription.name });
-  }
-  if (
-    (book.ownership_status === "donated" ||
-      book.ownership_status === "sold" ||
-      book.ownership_status === "traded" ||
-      book.ownership_status === "lost") &&
-    book.disposed_date
-  ) {
-    lines.push({ label: "Saiu em", value: formatLongDate(book.disposed_date) });
-  }
-
-  if (lines.length === 0) return null;
-
-  return (
-    <dl className="mt-4 space-y-2 text-sm">
-      {lines.map((l, i) => (
-        <div key={i} className="flex items-start gap-5">
-          <dt className="text-ink-fade italic whitespace-nowrap flex-shrink-0">
-            {l.label}
-          </dt>
-          {/* Spacer pontilhado: usa `height: 1em` (≈ baseline da primeira
-              linha do texto sm) pra que o border-bottom alinhe com a primeira
-              linha de dt/dd, e não com a última linha em valores multilinha. */}
-          <span
-            aria-hidden
-            className="flex-1 border-b border-dotted border-ink-fade/35 min-w-[24px]"
-            style={{ height: "0.95em" }}
-          />
-          <dd className="text-ink-deep text-right max-w-[60%] min-w-0">
-            {l.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
 }
 
 function PosseTimeline({
@@ -823,17 +747,95 @@ export default function BookDetailClient({
               </div>
             )}
 
-            {/* Sinopse compacta: 4 linhas com line-clamp */}
-            {book.synopsis && (
-              <div className="mt-4">
-                <p className="text-xs uppercase tracking-wider text-ink-fade font-medium mb-1.5">
-                  Sinopse
-                </p>
-                <p className="text-sm text-ink-deep leading-relaxed line-clamp-4">
-                  {book.synopsis}
-                </p>
-              </div>
-            )}
+            {/* Informações de acervo: adquirido em, origem, preço, box,
+                assinatura, empréstimo. Substitui a sinopse no hero (que
+                agora aparece só no card "Sobre o livro" embaixo, sem
+                duplicação). Fallback pra sinopse compacta quando o livro
+                não tem nenhuma informação de acervo. */}
+            {(() => {
+              const items: { label: string; value: string }[] = [];
+              if (book.acquired_at) {
+                items.push({
+                  label: "Adquirido em",
+                  value: formatLongDate(book.acquired_at),
+                });
+              }
+              if (book.purchase_origin) {
+                items.push({
+                  label: "Origem",
+                  value: labelForPurchaseOrigin(book.purchase_origin),
+                });
+              }
+              if (book.purchase_price !== null) {
+                items.push({
+                  label: "Preço",
+                  value: formatBRL(book.purchase_price),
+                });
+              }
+              if (book.purchase_group) {
+                items.push({
+                  label: "Box / kit",
+                  value: book.purchase_group.name,
+                });
+              }
+              if (book.subscription) {
+                items.push({
+                  label: "Assinatura",
+                  value: book.subscription.name,
+                });
+              }
+              if (book.lent_to) {
+                items.push({ label: "Emprestado para", value: book.lent_to });
+              }
+              if (book.borrowed_from) {
+                items.push({
+                  label: "Emprestado de",
+                  value: book.borrowed_from,
+                });
+              }
+              if (
+                book.disposed_date &&
+                (book.ownership_status === "donated" ||
+                  book.ownership_status === "sold" ||
+                  book.ownership_status === "traded" ||
+                  book.ownership_status === "lost")
+              ) {
+                items.push({
+                  label: "Saiu em",
+                  value: formatLongDate(book.disposed_date),
+                });
+              }
+              if (items.length === 0) {
+                if (!book.synopsis) return null;
+                return (
+                  <div className="mt-4">
+                    <p className="text-xs uppercase tracking-wider text-ink-fade font-medium mb-1.5">
+                      Sinopse
+                    </p>
+                    <p className="text-sm text-ink-deep leading-relaxed line-clamp-4">
+                      {book.synopsis}
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div className="mt-4">
+                  <p className="text-xs uppercase tracking-wider text-ink-fade font-medium mb-1.5">
+                    Acervo
+                  </p>
+                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                    {items.map((it, i) => (
+                      <div key={i}>
+                        <dt className="text-xs uppercase tracking-wider text-ink-fade">
+                          {it.label}
+                        </dt>
+                        <dd className="text-ink-deep">{it.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </Card>
@@ -934,47 +936,26 @@ export default function BookDetailClient({
         )}
       </Card>
 
-      {/* Posse — unifica estado físico atual + timeline de eventos (17.2).
-          Layout 2 cols no md+: estado à esquerda, timeline à direita. Mobile
-          empilha. BookshelfDecoration mantida quando o livro está em casa. */}
+      {/* Histórico do acervo — timeline de eventos (compra, empréstimo,
+          devolução, doação, etc.). O estado atual + contexto (adquirido em,
+          origem, preço…) agora vivem no hero; aqui ficou só a história. */}
       <Card className="mt-6 relative overflow-hidden">
         {book.ownership_status === "owned" && (
           <BookshelfDecoration
-            className="hidden lg:block absolute right-5 bottom-5 opacity-25 pointer-events-none"
+            className="hidden lg:block absolute right-5 bottom-5 pointer-events-none"
           />
         )}
         <div className="relative z-10">
           <h2 className="font-display text-xl font-medium text-ink-deep mb-4 pb-3 border-b border-border">
-            Acervo
+            Histórico do acervo
           </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6">
-            {/* Coluna esquerda — estado atual + contexto */}
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-ink-fade mb-1.5">
-                Estado atual
-              </p>
-              <p className="font-display text-2xl text-ink-deep leading-tight">
-                {labelForOwnershipStatus(book.ownership_status)}
-              </p>
-
-              <PosseStateContext book={book} />
-            </div>
-
-            {/* Coluna direita — timeline vertical */}
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-ink-fade mb-3">
-                Histórico
-              </p>
-              {statusHistory.length === 0 ? (
-                <p className="text-xs italic text-ink-fade">
-                  Sem eventos registrados.
-                </p>
-              ) : (
-                <PosseTimeline history={statusHistory} book={book} />
-              )}
-            </div>
-          </div>
+          {statusHistory.length === 0 ? (
+            <p className="text-sm italic text-ink-fade">
+              Sem eventos registrados.
+            </p>
+          ) : (
+            <PosseTimeline history={statusHistory} book={book} />
+          )}
         </div>
       </Card>
 

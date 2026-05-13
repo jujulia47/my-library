@@ -79,41 +79,52 @@ export async function createReading(formData: FormData): Promise<ActionResult> {
     return { ok: false, ...translateSupabaseError(error) };
   }
 
-  // Eventos automáticos. Toda reading nasce com `started`. Se o status
-  // inicial já é `finished`/`abandoned`/`paused`, gera um segundo event no
-  // mesmo trigger pra refletir o estado final. Se algum event falhar,
-  // rollback da reading pra evitar histórico inconsistente.
-  const startedDate = start_date ?? todayISO();
-  const startedResult = await createReadingEvent(supabase, {
-    user_id: user.id,
-    reading_id: inserted.id,
-    event_type: "started",
-    event_date: startedDate,
-  });
-  if (!startedResult.ok) {
-    await supabase.from("reading").delete().eq("id", inserted.id);
-    return startedResult;
+  // Eventos automáticos. Só criamos events pras datas que o user
+  // efetivamente forneceu — se start_date veio null, NÃO inventamos hoje
+  // (UX: timeline vazia é melhor que data fake; o user pode adicionar
+  // depois). Mesmo princípio pro evento de fechamento finished/abandoned.
+  // Pra status "paused" sem campo de data, "hoje" faz sentido (é o estado
+  // atual: "estou pausando agora"). Se algum event falhar, rollback da
+  // reading pra evitar histórico inconsistente.
+  if (start_date) {
+    const startedResult = await createReadingEvent(supabase, {
+      user_id: user.id,
+      reading_id: inserted.id,
+      event_type: "started",
+      event_date: start_date,
+    });
+    if (!startedResult.ok) {
+      await supabase.from("reading").delete().eq("id", inserted.id);
+      return startedResult;
+    }
   }
 
-  if (status !== "reading") {
-    const closingType = eventTypeForTransition("reading", status);
-    if (closingType) {
-      // Pra paused/finished/abandoned criados de cara, usa finish_date como
-      // data do evento de fechamento. Se não veio, hoje.
-      const closingDate =
-        status === "finished" || status === "abandoned"
-          ? finish_date ?? todayISO()
-          : todayISO();
-      const closingResult = await createReadingEvent(supabase, {
-        user_id: user.id,
-        reading_id: inserted.id,
-        event_type: closingType,
-        event_date: closingDate,
-      });
-      if (!closingResult.ok) {
-        await supabase.from("reading").delete().eq("id", inserted.id);
-        return closingResult;
+  if (status === "finished" || status === "abandoned") {
+    if (finish_date) {
+      const closingType = eventTypeForTransition("reading", status);
+      if (closingType) {
+        const closingResult = await createReadingEvent(supabase, {
+          user_id: user.id,
+          reading_id: inserted.id,
+          event_type: closingType,
+          event_date: finish_date,
+        });
+        if (!closingResult.ok) {
+          await supabase.from("reading").delete().eq("id", inserted.id);
+          return closingResult;
+        }
       }
+    }
+  } else if (status === "paused") {
+    const closingResult = await createReadingEvent(supabase, {
+      user_id: user.id,
+      reading_id: inserted.id,
+      event_type: "paused",
+      event_date: todayISO(),
+    });
+    if (!closingResult.ok) {
+      await supabase.from("reading").delete().eq("id", inserted.id);
+      return closingResult;
     }
   }
 
