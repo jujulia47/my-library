@@ -90,6 +90,8 @@ export type BookListParams = {
   statuses?: string[];
   ownerships?: string[];
   formats?: string[];
+  /** Slugs dos autores a filtrar — livro precisa ter pelo menos um deles. */
+  author_slugs?: string[];
   year?: number;
   month?: number;
   sort?: BookListSort;
@@ -140,6 +142,31 @@ export async function bookListQuery(
   );
   if (validFormats.length > 0) {
     query = query.overlaps("formats_owned", validFormats);
+  }
+
+  // Filtro por autor: pré-consulta `book_author` pra obter book_ids dos
+  // autores selecionados. Aplica `query.in("id", bookIds)` em seguida.
+  // Vazio (nenhum livro daqueles autores) → garante resultado vazio
+  // imediatamente sem ir pro Postgres.
+  const authorSlugs = (params.author_slugs ?? []).filter(
+    (s): s is string => !!s,
+  );
+  if (authorSlugs.length > 0) {
+    const { data: authorRows } = await supabase
+      .from("author")
+      .select("id")
+      .in("slug", authorSlugs);
+    const authorIds = (authorRows ?? []).map((a) => a.id);
+    if (authorIds.length === 0) return [];
+    const { data: linkRows } = await supabase
+      .from("book_author")
+      .select("book_id")
+      .in("author_id", authorIds);
+    const matchingBookIds = [
+      ...new Set((linkRows ?? []).map((r) => r.book_id)),
+    ];
+    if (matchingBookIds.length === 0) return [];
+    query = query.in("id", matchingBookIds);
   }
 
   // Sort nativo. Default `title_asc` ganha favoritos no topo (mesmo pattern de

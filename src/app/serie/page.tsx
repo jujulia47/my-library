@@ -4,6 +4,7 @@ import {
   serieCounts,
   type SerieListSort,
 } from "@/services/serieList";
+import { createClient } from "@/utils/supabase/server";
 import { PageHeader, Button, Pagination } from "@/components/ui";
 import SerieFilters from "@/components/Read/Serie/SerieFilters";
 import SerieRow from "@/components/Read/Serie/SerieRow";
@@ -45,17 +46,37 @@ export default async function SeriePage({
 
   const statuses = parseList(sp.status);
   const progress = parseList(sp.progress);
+  const serieSlugs = parseList(sp.serie);
   const sortRaw = pickFirst(sp.sort) ?? "reading_first";
   const sort = (
     VALID_SORTS.has(sortRaw as SerieListSort) ? sortRaw : "reading_first"
   ) as SerieListSort;
 
+  // Lista de todas as séries do usuário pra alimentar o filtro "Por série".
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: rawAllSeries } = user
+    ? await supabase
+        .from("serie")
+        .select("id, slug, name")
+        .eq("user_id", user.id)
+        .order("name", { ascending: true })
+    : { data: [] };
+  const allSeries = (rawAllSeries ?? []) as {
+    id: string;
+    slug: string;
+    name: string;
+  }[];
+
   const [series, counts] = await Promise.all([
-    serieListQuery({ statuses, progress, sort }),
+    serieListQuery({ statuses, progress, serie_slugs: serieSlugs, sort }),
     serieCounts(),
   ]);
 
-  const hasActiveFilters = statuses.length + progress.length > 0;
+  const hasActiveFilters =
+    statuses.length + progress.length + serieSlugs.length > 0;
   const pagination = parsePagination(sp);
   const paged = paginateArray(series, pagination);
 
@@ -70,7 +91,7 @@ export default async function SeriePage({
         }
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            <SerieFilters />
+            <SerieFilters allSeries={allSeries} />
             <Button as="Link" href="/serie/new" variant="primary" size="sm">
               + Adicionar série
             </Button>

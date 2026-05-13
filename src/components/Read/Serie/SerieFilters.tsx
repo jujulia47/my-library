@@ -8,10 +8,12 @@ import {
   XMarkIcon,
   BookOpenIcon,
   ChartBarIcon,
+  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import type { ComponentType, SVGProps } from "react";
 import { Button, Select, Card, Badge } from "@/components/ui";
 import type { BadgeVariant } from "@/components/ui/Badge";
+import SearchableCheckboxList from "@/components/Read/_shared/SearchableCheckboxList";
 
 const STATUS_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] = [
   { value: "tbr", label: "Quero ler", variant: "fade" },
@@ -42,13 +44,19 @@ function parseList(v: string | null): string[] {
   return v.split(",").map((x) => x.trim()).filter(Boolean);
 }
 
-export default function SerieFilters() {
+export type SerieFiltersProps = {
+  /** Todas as séries do usuário pra alimentar o filtro "Por série". */
+  allSeries: { id: string; slug: string; name: string }[];
+};
+
+export default function SerieFilters({ allSeries }: SerieFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
 
   const statuses = parseList(sp.get("status"));
   const progress = parseList(sp.get("progress"));
+  const serieSlugs = parseList(sp.get("serie"));
   const sort = sp.get("sort") ?? "reading_first";
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -86,9 +94,10 @@ export default function SerieFilters() {
     setParam({ [key]: next || null });
   };
 
-  const clearAll = () => setParam({ status: null, progress: null });
+  const clearAll = () =>
+    setParam({ status: null, progress: null, serie: null });
 
-  const activeCount = statuses.length + progress.length;
+  const activeCount = statuses.length + progress.length + serieSlugs.length;
 
   const activeChips: {
     key: string;
@@ -115,6 +124,16 @@ export default function SerieFilters() {
         label: opt.label,
         variant: opt.variant,
         onRemove: () => removeListItem("progress", progress, p),
+      });
+  }
+  for (const slug of serieSlugs) {
+    const found = allSeries.find((s) => s.slug === slug);
+    if (found)
+      activeChips.push({
+        key: `serie:${slug}`,
+        label: found.name,
+        variant: "fade",
+        onRemove: () => removeListItem("serie", serieSlugs, slug),
       });
   }
 
@@ -235,6 +254,23 @@ export default function SerieFilters() {
                 options={PROGRESS_OPTIONS}
                 selected={progress}
                 onToggle={(v) => toggleListItem("progress", progress, v)}
+              />
+            </FilterGroup>
+
+            <FilterGroup
+              label="Por série"
+              icon={Squares2X2Icon}
+              iconColor="text-moss"
+            >
+              <SearchableCheckboxList
+                options={allSeries.map((s) => ({
+                  value: s.slug,
+                  label: s.name,
+                }))}
+                selected={serieSlugs}
+                onToggle={(v) => toggleListItem("serie", serieSlugs, v)}
+                searchPlaceholder="Buscar série…"
+                emptyText="Nenhuma série cadastrada ainda."
               />
             </FilterGroup>
           </div>

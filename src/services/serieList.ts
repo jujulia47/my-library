@@ -86,6 +86,8 @@ export type SerieListParams = {
   statuses?: string[];
   /** "not_started" | "in_progress" | "completed" — derivado de read_count vs qty_volumes */
   progress?: string[];
+  /** Filtro nominal — slugs das séries a manter. Vazio/undefined = todas. */
+  serie_slugs?: string[];
   sort?: SerieListSort;
 };
 
@@ -215,6 +217,16 @@ export async function serieListQuery(
     query = query.eq("status", validStatuses[0]);
   } else if (validStatuses.length > 1) {
     query = query.in("status", validStatuses);
+  }
+
+  // Filtro nominal por slug — quando setado, ignora todas as outras séries.
+  const serieSlugs = (params.serie_slugs ?? []).filter(
+    (s): s is string => !!s,
+  );
+  if (serieSlugs.length === 1) {
+    query = query.eq("slug", serieSlugs[0]);
+  } else if (serieSlugs.length > 1) {
+    query = query.in("slug", serieSlugs);
   }
 
   // Sort nativo só vale pra colunas. Os derivados ordenam em memória.

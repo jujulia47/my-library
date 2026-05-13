@@ -19,6 +19,8 @@ export type PurchaseGroupOption = {
    *  livros vinculados — a UX do form auto-preenche `acquired_at` ao
    *  selecionar/criar o grupo. */
   acquired_at: string | null;
+  /** ISBN do BOX (diferente do ISBN do livro individual). Opcional. */
+  isbn?: string | null;
   /** Quantos livros já estão no grupo (informacional). */
   book_count?: number;
 };
@@ -65,6 +67,7 @@ export default function PurchaseGroupSelect({
   const [createName, setCreateName] = useState("");
   const [createPrice, setCreatePrice] = useState("");
   const [createDate, setCreateDate] = useState("");
+  const [createIsbn, setCreateIsbn] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
 
   // Edição inline da data do box existente. Cobre o caso de boxes que foram
@@ -163,6 +166,7 @@ export default function PurchaseGroupSelect({
     setCreateName(query.trim());
     setCreatePrice("");
     setCreateDate("");
+    setCreateIsbn("");
     setCreateError(null);
   };
 
@@ -179,11 +183,13 @@ export default function PurchaseGroupSelect({
       return;
     }
     const acquiredAt = createDate.trim() || null;
+    const isbnValue = createIsbn.trim() || null;
     startTransition(async () => {
       const result = await createPurchaseGroup(
         trimmedName,
         priceNum,
         acquiredAt,
+        isbnValue,
       );
       if (result.ok) {
         select({
@@ -191,6 +197,7 @@ export default function PurchaseGroupSelect({
           name: result.name,
           total_price: result.total_price,
           acquired_at: result.acquired_at,
+          isbn: result.isbn,
           book_count: 0,
         });
       } else {
@@ -380,6 +387,21 @@ export default function PurchaseGroupSelect({
             />
             <p className="text-[11px] text-ink-fade italic mt-1">
               Preenchida automaticamente em cada livro vinculado ao box.
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs text-ink-soft mb-1">
+              ISBN do box (opcional)
+            </label>
+            <input
+              type="text"
+              value={createIsbn}
+              onChange={(e) => setCreateIsbn(e.target.value)}
+              placeholder="Ex.: 978-..."
+              className="w-full sm:max-w-[260px] rounded-md border border-border bg-ivory-light px-3 py-2 text-sm text-ink-deep placeholder:text-ink-fade focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none"
+            />
+            <p className="text-[11px] text-ink-fade italic mt-1">
+              ISBN da embalagem/caixa — diferente do ISBN dos livros individuais.
             </p>
           </div>
           {createError && (

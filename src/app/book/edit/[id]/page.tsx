@@ -63,7 +63,7 @@ export default async function EditBookPage({
     book.purchase_group_id
       ? supabase
           .from("purchase_group")
-          .select("id, name, total_price, acquired_at")
+          .select("id, name, total_price, acquired_at, isbn")
           .eq("id", book.purchase_group_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -92,6 +92,7 @@ export default async function EditBookPage({
     name: string;
     total_price: number;
     acquired_at: string | null;
+    isbn: string | null;
   } | null;
   const groupBookCount = (groupBookCountRaw ?? []).length;
   const initialPurchaseGroup = groupRow
@@ -100,6 +101,7 @@ export default async function EditBookPage({
         name: groupRow.name,
         total_price: Number(groupRow.total_price),
         acquired_at: groupRow.acquired_at,
+        isbn: groupRow.isbn,
         book_count: groupBookCount,
       }
     : null;

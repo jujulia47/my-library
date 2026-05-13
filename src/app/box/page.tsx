@@ -23,7 +23,7 @@ export default async function BoxPage() {
 
   const { data: groups } = await supabase
     .from("purchase_group")
-    .select("id, name, total_price, acquired_at, notes")
+    .select("id, name, total_price, acquired_at, notes, isbn")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -51,6 +51,7 @@ export default async function BoxPage() {
     name: g.name,
     total_price: Number(g.total_price),
     acquired_at: g.acquired_at ?? null,
+    isbn: g.isbn ?? null,
     notes: g.notes ?? null,
     books: booksByGroup.get(g.id) ?? [],
   }));

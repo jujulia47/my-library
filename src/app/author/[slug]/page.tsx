@@ -11,6 +11,7 @@ import AuthorActions from "@/components/DetailsPage/AuthorActions";
 import AuthorQuoteCarousel from "@/components/AuthorQuoteCarousel";
 import AuthorBibliographyTimeline from "@/components/AuthorBibliographyTimeline";
 import AuthorReadingHistory from "@/components/AuthorReadingHistory";
+import { AuthorInteractionProvider } from "@/components/AuthorInteractionContext";
 import { authorDetailBySlug } from "@/services/authorDetail";
 import { authorPhotoUrl } from "@/services/images";
 import { notFound } from "next/navigation";
@@ -49,7 +50,16 @@ export default async function AuthorPage({
   const data = await authorDetailBySlug(slug);
   if (!data) notFound();
 
-  const { author, series, quotes, stats, bibliography, readingHistory } = data;
+  const {
+    author,
+    series,
+    categories,
+    collections,
+    quotes,
+    stats,
+    bibliography,
+    readingHistory,
+  } = data;
   const period = buildPeriod(author.birth_year, author.death_year);
   const hasMeta = !!(period || author.country || author.bio);
   const photoSrc = author.photo_url ? authorPhotoUrl(author.photo_url) : null;
@@ -194,16 +204,17 @@ export default async function AuthorPage({
       {/* CARROSSEL DE CITAÇÕES MARCANTES */}
       {quotes.length > 0 && <AuthorQuoteCarousel quotes={quotes} />}
 
-      {/* BIBLIOGRAFIA ZIGZAG */}
-      <AuthorBibliographyTimeline
-        entries={bibliography}
-        authorId={author.id}
-      />
-
-      {/* HISTÓRICO DE LEITURA */}
-      {readingHistory.length > 0 && (
-        <AuthorReadingHistory entries={readingHistory} />
-      )}
+      {/* BIBLIOGRAFIA + HISTÓRICO — provider compartilha hoveredBookId entre
+          os dois pra hover na lista destacar o card na timeline. */}
+      <AuthorInteractionProvider>
+        <AuthorBibliographyTimeline
+          entries={bibliography}
+          authorId={author.id}
+        />
+        {readingHistory.length > 0 && (
+          <AuthorReadingHistory entries={readingHistory} />
+        )}
+      </AuthorInteractionProvider>
 
       {/* SÉRIES */}
       {series.length > 0 && (
@@ -231,8 +242,91 @@ export default async function AuthorPage({
         </section>
       )}
 
+      {/* COLEÇÕES — agrupamentos do tipo "Agatha Christie" com sub-divisões
+          via `section` em cada item. Cada section vira um card (no estilo
+          de série), agrupado pela coleção pai. Quando a coleção não usa
+          sections, mostra só um card com o nome da coleção. */}
+      {collections.length > 0 && (
+        <section className="my-10">
+          <h2 className="font-display text-xl font-medium text-ink-deep mb-4 pb-2 border-b border-border">
+            Coleções deste autor
+          </h2>
+          <div className="space-y-6">
+            {collections.map((coll) => {
+              const hasNamedSections = coll.sections.some(
+                (s) => s.name !== null,
+              );
+              return (
+                <div key={coll.id} className="space-y-3">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <Link
+                      href={`/collection/${coll.slug}`}
+                      className="font-display text-base font-medium text-ink-deep hover:text-gold-deep transition-colors"
+                    >
+                      {coll.name}
+                    </Link>
+                    <span className="text-xs italic text-ink-fade">
+                      {coll.book_count}{" "}
+                      {coll.book_count === 1 ? "livro" : "livros"}
+                    </span>
+                  </div>
+                  {hasNamedSections && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {coll.sections
+                        .filter((s) => s.name !== null)
+                        .map((s) => (
+                          <Link
+                            key={`${coll.id}-${s.name}`}
+                            href={`/collection/${coll.slug}#${encodeURIComponent(
+                              s.name ?? "",
+                            )}`}
+                            className="block p-4 rounded-md border border-border bg-ivory-light hover:border-gold transition-colors"
+                          >
+                            <p className="font-display text-base text-ink-deep">
+                              {s.name}
+                            </p>
+                            <p className="text-xs italic text-ink-fade mt-1">
+                              {s.book_count}{" "}
+                              {s.book_count === 1 ? "livro" : "livros"}
+                            </p>
+                          </Link>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* CATEGORIAS (gêneros) — info auxiliar sobre o que o autor escreve. */}
+      {categories.length > 0 && (
+        <section className="my-10">
+          <h2 className="font-display text-xl font-medium text-ink-deep mb-4 pb-2 border-b border-border">
+            Gêneros que este autor escreve
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((c) => (
+              <Link
+                key={c.id}
+                href={`/category/${c.slug}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-ivory-light text-sm text-ink-deep hover:border-gold transition-colors"
+              >
+                <span>{c.name}</span>
+                <span className="text-xs italic text-ink-fade">
+                  · {c.book_count}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {bibliography.length === 0 &&
         series.length === 0 &&
+        categories.length === 0 &&
+        collections.length === 0 &&
         quotes.length === 0 &&
         readingHistory.length === 0 && (
           <Card className="text-center py-12">

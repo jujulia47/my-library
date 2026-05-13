@@ -162,7 +162,7 @@ export default function BookCard({ book, priority = false }: Props) {
         {/* Ações do card: Editar, Excluir, Favoritar — todos no mesmo
             container pra ter espaçamento uniforme. Editar e Excluir só
             aparecem no hover do card; Favoritar fica sempre visível quando
-            já está marcado. Cada botão usa `book-card-icon-btn` (CSS em
+            já está marcado. Cada botão usa `card-icon-btn` (CSS em
             globals.css) que escala SÓ o SVG interno no hover, não o
             quadrado. */}
         <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5">
@@ -171,7 +171,7 @@ export default function BookCard({ book, priority = false }: Props) {
             aria-label={`Editar ${book.title}`}
             onClick={(e) => e.stopPropagation()}
             className={clsx(
-              "book-card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-ink-soft",
+              "card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-ink-soft",
               "hover:text-ink-deep",
               "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150",
             )}
@@ -187,7 +187,7 @@ export default function BookCard({ book, priority = false }: Props) {
               setConfirmOpen(true);
             }}
             className={clsx(
-              "book-card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-burgundy",
+              "card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-burgundy",
               "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150",
             )}
           >
@@ -211,7 +211,7 @@ export default function BookCard({ book, priority = false }: Props) {
               handleFavoriteToggle();
             }}
             className={clsx(
-              "book-card-icon-btn cursor-pointer rounded-md p-1.5",
+              "card-icon-btn cursor-pointer rounded-md p-1.5",
               "bg-ivory-light/95 backdrop-blur-sm border border-border",
               favorite || heartHover
                 ? "text-burgundy"

@@ -17,6 +17,7 @@ export type BoxRow = {
   name: string;
   total_price: number;
   acquired_at: string | null;
+  isbn: string | null;
   notes: string | null;
   books: { id: string; slug: string; title: string }[];
 };
@@ -62,21 +63,23 @@ function BoxItem({
   onUpdated: (patch: Partial<BoxRow> & { id: string }) => void;
 }) {
   const router = useRouter();
-  const [editing, setEditing] = useState<"date" | "name" | "total" | null>(
-    null,
-  );
+  const [editing, setEditing] = useState<
+    "date" | "name" | "total" | "isbn" | null
+  >(null);
   const [dateValue, setDateValue] = useState(row.acquired_at ?? "");
   const [nameValue, setNameValue] = useState(row.name);
   const [totalValue, setTotalValue] = useState(String(row.total_price));
+  const [isbnValue, setIsbnValue] = useState(row.isbn ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const openEdit = (field: "date" | "name" | "total") => {
+  const openEdit = (field: "date" | "name" | "total" | "isbn") => {
     setEditing(field);
     setError(null);
     if (field === "date") setDateValue(row.acquired_at ?? "");
     if (field === "name") setNameValue(row.name);
     if (field === "total") setTotalValue(String(row.total_price));
+    if (field === "isbn") setIsbnValue(row.isbn ?? "");
   };
 
   const submit = () => {
@@ -99,6 +102,9 @@ function BoxItem({
       }
       patch.total_price = n;
     }
+    if (editing === "isbn") {
+      patch.isbn = isbnValue.trim() || null;
+    }
     startTransition(async () => {
       const result = await updatePurchaseGroup(row.id, patch);
       if (result.ok) {
@@ -107,6 +113,7 @@ function BoxItem({
           name: result.name,
           total_price: result.total_price,
           acquired_at: result.acquired_at,
+          isbn: result.isbn,
         });
         setEditing(null);
         // Refresh do servidor pra que o `purchase_price` dos livros (se houver
@@ -234,6 +241,40 @@ function BoxItem({
               <span className="font-medium text-ink-deep">
                 {row.books.length}
               </span>
+            </div>
+
+            {/* ISBN do box */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs uppercase tracking-wider text-ink-fade">
+                ISBN:
+              </span>
+              {editing === "isbn" ? (
+                <InlineEdit
+                  value={isbnValue}
+                  onValueChange={setIsbnValue}
+                  onSubmit={submit}
+                  onCancel={cancel}
+                  isPending={isPending}
+                  type="text"
+                  ariaLabel="Editar ISBN do box"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openEdit("isbn")}
+                  className="group inline-flex items-center gap-1 text-ink-deep hover:text-gold-deep transition-colors"
+                  title="Editar ISBN do box"
+                >
+                  <span
+                    className={
+                      row.isbn ? "font-medium" : "italic text-ink-fade"
+                    }
+                  >
+                    {row.isbn ?? "sem ISBN"}
+                  </span>
+                  <PencilSquareIcon className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              )}
             </div>
           </div>
 

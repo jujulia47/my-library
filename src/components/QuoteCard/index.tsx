@@ -47,6 +47,7 @@ export default function QuoteCard({ quote }: { quote: QuoteListItem }) {
   // Estado otimista da estrela — mesmo pattern do BookCard/CollectionCard.
   const [favorite, setFavorite] = useState(quote.is_favorite);
   const [favPending, setFavPending] = useState(false);
+  const [starHover, setStarHover] = useState(false);
 
   const handleFavoriteToggle = async () => {
     const previous = favorite;
@@ -109,30 +110,36 @@ export default function QuoteCard({ quote }: { quote: QuoteListItem }) {
         </div>
       </Link>
 
-      {/* Estrela ⭐ gold — sempre visível quando favorito; só hover quando não. */}
+      {/* Estrela de favorito — padrão `.card-icon-btn`: bg fixo, ícone escala
+          (1.1) no hover, swap outline→solid pra preview. */}
       <button
         type="button"
         aria-label={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
         title={favorite ? "Favorita" : "Marcar como favorita"}
         aria-pressed={favorite}
         disabled={favPending}
+        onMouseEnter={() => setStarHover(true)}
+        onMouseLeave={() => setStarHover(false)}
+        onFocus={() => setStarHover(true)}
+        onBlur={() => setStarHover(false)}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           handleFavoriteToggle();
         }}
         className={clsx(
-          "absolute top-3 right-3 z-10 p-1.5 rounded-md transition-all",
-          favorite
-            ? "text-gold hover:text-gold-deep"
-            : "text-ink-fade/50 opacity-0 group-hover:opacity-100 hover:text-ink-soft",
+          "card-icon-btn cursor-pointer absolute top-3 right-3 z-10 p-1.5 rounded-md",
+          "bg-ivory-light/95 backdrop-blur-sm border border-border",
+          favorite || starHover ? "text-gold" : "text-ink-fade/60",
+          !favorite &&
+            "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
           favPending && "opacity-60 cursor-wait",
         )}
       >
-        {favorite ? (
-          <StarSolidIcon className="w-5 h-5" />
+        {favorite || starHover ? (
+          <StarSolidIcon className="w-4 h-4" />
         ) : (
-          <StarOutlineIcon className="w-5 h-5" />
+          <StarOutlineIcon className="w-4 h-4" />
         )}
       </button>
     </div>

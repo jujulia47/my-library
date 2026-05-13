@@ -10,10 +10,12 @@ import {
   ArchiveBoxIcon,
   CalendarDaysIcon,
   RectangleStackIcon,
+  UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import type { ComponentType, SVGProps } from "react";
 import { Button, Select, Card, Badge } from "@/components/ui";
 import type { BadgeVariant } from "@/components/ui/Badge";
+import SearchableCheckboxList from "@/components/Read/_shared/SearchableCheckboxList";
 
 const STATUS_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] = [
   { value: "reading", label: "Lendo", variant: "gold" },
@@ -69,9 +71,14 @@ function parseList(v: string | null): string[] {
 
 export type BookFiltersProps = {
   yearsAvailable: number[];
+  /** Todos os autores do usuário pra alimentar o filtro "Por autor". */
+  allAuthors: { id: string; slug: string; name: string }[];
 };
 
-export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
+export default function BookFilters({
+  yearsAvailable,
+  allAuthors,
+}: BookFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -79,6 +86,7 @@ export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
   const statuses = parseList(sp.get("status"));
   const ownerships = parseList(sp.get("ownership"));
   const formats = parseList(sp.get("format"));
+  const authorSlugs = parseList(sp.get("author"));
   const year = sp.get("year") ? Number(sp.get("year")) : null;
   const month = sp.get("month") ? Number(sp.get("month")) : null;
   const sort = sp.get("sort") ?? "reading_first";
@@ -129,6 +137,7 @@ export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
       format: null,
       year: null,
       month: null,
+      author: null,
     });
   };
 
@@ -136,6 +145,7 @@ export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
     statuses.length +
     ownerships.length +
     formats.length +
+    authorSlugs.length +
     (year ? 1 : 0);
 
   const activeChips: {
@@ -184,6 +194,16 @@ export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
         label: opt.label,
         variant: opt.variant,
         onRemove: () => removeListItem("format", formats, f),
+      });
+  }
+  for (const slug of authorSlugs) {
+    const found = allAuthors.find((a) => a.slug === slug);
+    if (found)
+      activeChips.push({
+        key: `author:${slug}`,
+        label: found.name,
+        variant: "fade",
+        onRemove: () => removeListItem("author", authorSlugs, slug),
       });
   }
 
@@ -375,6 +395,23 @@ export default function BookFilters({ yearsAvailable }: BookFiltersProps) {
                 options={FORMAT_OPTIONS}
                 selected={formats}
                 onToggle={(v) => toggleListItem("format", formats, v)}
+              />
+            </FilterGroup>
+
+            <FilterGroup
+              label="Por autor"
+              icon={UserCircleIcon}
+              iconColor="text-burgundy"
+            >
+              <SearchableCheckboxList
+                options={allAuthors.map((a) => ({
+                  value: a.slug,
+                  label: a.name,
+                }))}
+                selected={authorSlugs}
+                onToggle={(v) => toggleListItem("author", authorSlugs, v)}
+                searchPlaceholder="Buscar autor…"
+                emptyText="Nenhum autor cadastrado ainda."
               />
             </FilterGroup>
           </div>

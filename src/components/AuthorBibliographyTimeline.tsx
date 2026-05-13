@@ -29,13 +29,14 @@ import BibliographyEntryModal, {
 } from "@/components/forms/BibliographyEntryModal";
 import { deleteBibliographyEntry } from "@/actions/deleteBibliographyEntry";
 import type { BibliographyEntry } from "@/services/authorDetail";
+import { useAuthorInteraction } from "./AuthorInteractionContext";
 
 const ITEM_WIDTH = 110;
-const ROW_HEIGHT = 130;
+const ROW_HEIGHT = 170;
 const PADDING = 24;
 const CORNER_RADIUS = 30;
 const CARD_WIDTH = 100;
-const CARD_GAP = 8; // espaço entre card e linha do timeline
+const CARD_GAP = 12; // espaço entre card e linha do timeline
 
 function formatMonthYear(iso: string | null): string {
   if (!iso) return "";
@@ -56,7 +57,9 @@ function buildPath(numRows: number, totalWidth: number): string {
   for (let row = 0; row < numRows; row++) {
     const y = PADDING + row * ROW_HEIGHT + ROW_HEIGHT / 2;
     if (row % 2 === 0) {
-      segments.push(`${row === 0 ? "M" : "L"} ${leftX} ${y}`);
+      // Linha esquerda → direita. No row 0 começamos com M leftX y; nos
+      // demais a caneta já chegou em leftX+CR pela curva, então só seguimos.
+      if (row === 0) segments.push(`M ${leftX} ${y}`);
       segments.push(`L ${rightX - CORNER_RADIUS} ${y}`);
       if (row < numRows - 1) {
         segments.push(`Q ${rightX} ${y} ${rightX} ${y + CORNER_RADIUS}`);
@@ -66,7 +69,7 @@ function buildPath(numRows: number, totalWidth: number): string {
         );
       }
     } else {
-      segments.push(`L ${rightX} ${y}`);
+      // Linha direita → esquerda. Caneta já está em rightX-CR pela curva.
       segments.push(`L ${leftX + CORNER_RADIUS} ${y}`);
       if (row < numRows - 1) {
         segments.push(`Q ${leftX} ${y} ${leftX} ${y + CORNER_RADIUS}`);
@@ -110,6 +113,7 @@ export default function AuthorBibliographyTimeline({
   const [containerWidth, setContainerWidth] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<BibliographyEntry | null>(null);
+  const { hoveredBookId } = useAuthorInteraction();
 
   useEffect(() => {
     const el = containerRef.current;
@@ -192,8 +196,26 @@ export default function AuthorBibliographyTimeline({
               />
               {entries.map((entry, idx) => {
                 const { x, y } = positionFor(idx, itemsPerRow, totalWidth);
+                const isHovered =
+                  entry.book_id !== null && hoveredBookId === entry.book_id;
                 return entry.is_owned ? (
-                  <g key={`pt-${entry.id}`}>
+                  <g
+                    key={`pt-${entry.id}`}
+                    style={{
+                      transform: isHovered ? `scale(1.6)` : "scale(1)",
+                      transformOrigin: `${x}px ${y}px`,
+                      transition: "transform 180ms ease-out",
+                    }}
+                  >
+                    {isHovered && (
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={12}
+                        fill="var(--color-gold)"
+                        opacity={0.25}
+                      />
+                    )}
                     <circle cx={x} cy={y} r={7} fill="var(--color-gold)" />
                     <circle cx={x} cy={y} r={3} fill="var(--color-ivory-light)" />
                   </g>
@@ -217,6 +239,8 @@ export default function AuthorBibliographyTimeline({
                 itemsPerRow,
                 totalWidth,
               );
+              const isExternallyHovered =
+                entry.book_id !== null && hoveredBookId === entry.book_id;
               return (
                 <BibliographyTimelineCard
                   key={entry.id}
@@ -227,6 +251,7 @@ export default function AuthorBibliographyTimeline({
                   isAbove={isAbove}
                   containerHeight={totalHeight}
                   onEdit={() => setEditTarget(entry)}
+                  isExternallyHovered={isExternallyHovered}
                 />
               );
             })}
@@ -283,6 +308,7 @@ function BibliographyTimelineCard({
   isAbove,
   containerHeight,
   onEdit,
+  isExternallyHovered,
 }: {
   entry: BibliographyEntry;
   authorId: string;
@@ -291,14 +317,35 @@ function BibliographyTimelineCard({
   isAbove: boolean;
   containerHeight: number;
   onEdit: () => void;
+  isExternallyHovered: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   const isOwned = entry.is_owned;
+
+  // Quando o livro é destacado a partir do histórico (hover externo) e o card
+  // está fora da viewport, traz pra cena. `block: "center"` deixa visível sem
+  // grudar na borda; só dispara se realmente precisa (checamos rect antes pra
+  // evitar scroll desnecessário e jitter durante varreduras rápidas).
+  useEffect(() => {
+    if (!isExternallyHovered || !isOwned) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const fullyVisible = rect.top >= 0 && rect.bottom <= vh;
+    if (fullyVisible) return;
+    el.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+  }, [isExternallyHovered, isOwned]);
 
   const { refs, floatingStyles, context } = useFloating({
     open,
@@ -362,7 +409,10 @@ function BibliographyTimelineCard({
   return (
     <>
       <div
-        ref={refs.setReference}
+        ref={(el) => {
+          cardRef.current = el;
+          refs.setReference(el);
+        }}
         {...getReferenceProps()}
         className="group"
         style={cardPositionStyle}
@@ -373,23 +423,35 @@ function BibliographyTimelineCard({
           className={clsx(
             "block text-center transition-transform duration-150",
             isOwned ? "opacity-100 hover:scale-105" : "opacity-50 hover:opacity-80",
+            isExternallyHovered && isOwned && "scale-110",
           )}
         >
-          <p className="text-[10px] text-ink-fade tracking-wide">
+          <p
+            className={clsx(
+              "text-[10px] tracking-wide transition-colors",
+              isExternallyHovered && isOwned
+                ? "text-gold-deep font-medium"
+                : "text-ink-fade",
+            )}
+          >
             {entry.publication_year ?? "—"}
           </p>
           <div
             className={clsx(
-              "mt-1 px-2 py-1.5 rounded leading-tight transition-colors",
+              "mt-1 px-2 py-1.5 rounded leading-tight transition-all",
               isOwned
                 ? "border border-gold shadow-sm"
                 : "border border-dashed",
+              isExternallyHovered &&
+                isOwned &&
+                "ring-2 ring-gold ring-offset-2 ring-offset-ivory-light shadow-md",
             )}
             style={
               isOwned
                 ? {
-                    background:
-                      "linear-gradient(135deg, var(--color-ivory-light) 0%, rgba(240, 192, 64, 0.15) 100%)",
+                    background: isExternallyHovered
+                      ? "linear-gradient(135deg, var(--color-ivory-light) 0%, rgba(240, 192, 64, 0.35) 100%)"
+                      : "linear-gradient(135deg, var(--color-ivory-light) 0%, rgba(240, 192, 64, 0.15) 100%)",
                     borderWidth: "1.5px",
                   }
                 : {

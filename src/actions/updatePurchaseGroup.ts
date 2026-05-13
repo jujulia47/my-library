@@ -12,6 +12,7 @@ export type UpdatePurchaseGroupResult =
       name: string;
       total_price: number;
       acquired_at: string | null;
+      isbn: string | null;
     }
   | { ok: false; message: string };
 
@@ -28,6 +29,7 @@ export async function updatePurchaseGroup(
     name?: string;
     total_price?: number;
     acquired_at?: string | null;
+    isbn?: string | null;
   },
 ): Promise<UpdatePurchaseGroupResult> {
   const supabase = await createClient();
@@ -51,6 +53,9 @@ export async function updatePurchaseGroup(
   if (patch.acquired_at !== undefined) {
     update.acquired_at = patch.acquired_at;
   }
+  if (patch.isbn !== undefined) {
+    update.isbn = patch.isbn?.trim() || null;
+  }
 
   if (Object.keys(update).length === 0) {
     return { ok: false, message: "Nada pra atualizar." };
@@ -61,7 +66,7 @@ export async function updatePurchaseGroup(
     .update(update)
     .eq("id", id)
     .eq("user_id", user.id)
-    .select("id, name, total_price, acquired_at")
+    .select("id, name, total_price, acquired_at, isbn")
     .single();
   if (error || !data) {
     return { ok: false, message: error?.message ?? "Falha ao atualizar." };
@@ -103,5 +108,6 @@ export async function updatePurchaseGroup(
     name: data.name,
     total_price: Number(data.total_price),
     acquired_at: data.acquired_at ?? null,
+    isbn: data.isbn ?? null,
   };
 }

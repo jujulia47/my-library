@@ -24,6 +24,30 @@ export type AuthorDetailSerie = {
   qty_volumes: number | null;
 };
 
+export type AuthorDetailCategory = {
+  id: string;
+  slug: string;
+  name: string;
+  /** Quantos livros DESTE autor estão nessa categoria. */
+  book_count: number;
+};
+
+export type AuthorDetailCollectionSection = {
+  /** Nome literal da section (ex.: "Hercule Poirot"). null = sem section. */
+  name: string | null;
+  book_count: number;
+};
+
+export type AuthorDetailCollection = {
+  id: string;
+  slug: string;
+  name: string;
+  book_count: number;
+  /** Sections distintas usadas pelos livros DESTE autor dentro da coleção.
+   *  Vazio quando nenhum item desse autor tem section setada. */
+  sections: AuthorDetailCollectionSection[];
+};
+
 export type AuthorDetailQuote = {
   id: string;
   slug: string;
@@ -36,6 +60,8 @@ export type AuthorDetailData = {
   author: AuthorRow;
   books: AuthorDetailBook[];
   series: AuthorDetailSerie[];
+  categories: AuthorDetailCategory[];
+  collections: AuthorDetailCollection[];
   quotes: AuthorDetailQuote[];
   bibliography: BibliographyEntry[];
   readingHistory: ReadingHistoryEntry[];
@@ -72,6 +98,9 @@ export type ReadingHistoryEntry = {
   book_id: string;
   book_slug: string;
   title: string;
+  /** Ano de publicação original da obra. Pode ser null quando o user não
+   *  preencheu. Usado pra ordenação alternativa na UI (cronológica). */
+  publication_year: number | null;
   status: ReadingStatus;
   started_at: string | null;
   finished_at: string | null;
@@ -168,8 +197,117 @@ export async function authorDetailBySlug(
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }
 
-  // Citações: vinculadas via book_id OU com author_name = name. Dedup por id.
+  // IDs dos livros — usado pra categorias, citações, bibliografia e
+  // histórico de leitura.
   const bookIds = books.map((b) => b.id);
+
+  // Categorias usadas nos livros do autor, com contagem.
+  // Categoria semanticamente é gênero (Mistério, Fantasia, etc.) — vira
+  // info sobre o autor ("escreve em quais gêneros").
+  let categories: AuthorDetailCategory[] = [];
+  if (bookIds.length > 0) {
+    const { data: catLinks } = await supabase
+      .from("book_category")
+      .select("book_id, category:category_id(id, slug, name)")
+      .in("book_id", bookIds);
+    type CatLink = {
+      book_id: string;
+      category: { id: string; slug: string; name: string } | null;
+    };
+    const byCategoryId = new Map<string, AuthorDetailCategory>();
+    for (const link of (catLinks ?? []) as unknown as CatLink[]) {
+      if (!link.category) continue;
+      const existing = byCategoryId.get(link.category.id);
+      if (existing) {
+        existing.book_count += 1;
+      } else {
+        byCategoryId.set(link.category.id, {
+          id: link.category.id,
+          slug: link.category.slug,
+          name: link.category.name,
+          book_count: 1,
+        });
+      }
+    }
+    categories = [...byCategoryId.values()].sort((a, b) =>
+      a.name.localeCompare(b.name, "pt-BR"),
+    );
+  }
+
+  // Coleções deste autor + sub-divisões via `collection_item.section`.
+  // Caso de uso: usuário cria coleção "Agatha Christie" e usa section pra
+  // separar por detetive (Hercule Poirot, Miss Marple, etc.). A página do
+  // autor exibe cada section como card, como se fosse série.
+  let collections: AuthorDetailCollection[] = [];
+  if (bookIds.length > 0) {
+    const { data: collItems } = await supabase
+      .from("collection_item")
+      .select(
+        "book_id, section, collection:collection_id(id, slug, name, is_archived)",
+      )
+      .in("book_id", bookIds)
+      .not("book_id", "is", null);
+    type CollLink = {
+      book_id: string;
+      section: string | null;
+      collection: {
+        id: string;
+        slug: string;
+        name: string;
+        is_archived: boolean;
+      } | null;
+    };
+    type CollAgg = AuthorDetailCollection & {
+      _sectionMap: Map<string | null, number>;
+    };
+    const byCollectionId = new Map<string, CollAgg>();
+    for (const link of (collItems ?? []) as unknown as CollLink[]) {
+      if (!link.collection || link.collection.is_archived) continue;
+      const existing = byCollectionId.get(link.collection.id);
+      if (existing) {
+        existing.book_count += 1;
+        const sectionKey = link.section ?? null;
+        existing._sectionMap.set(
+          sectionKey,
+          (existing._sectionMap.get(sectionKey) ?? 0) + 1,
+        );
+      } else {
+        const sectionMap = new Map<string | null, number>();
+        sectionMap.set(link.section ?? null, 1);
+        byCollectionId.set(link.collection.id, {
+          id: link.collection.id,
+          slug: link.collection.slug,
+          name: link.collection.name,
+          book_count: 1,
+          sections: [],
+          _sectionMap: sectionMap,
+        });
+      }
+    }
+    collections = [...byCollectionId.values()]
+      .map((c) => {
+        const sections: AuthorDetailCollectionSection[] = [
+          ...c._sectionMap.entries(),
+        ]
+          .map(([name, book_count]) => ({ name, book_count }))
+          .sort((a, b) => {
+            // Sem-section por último; depois alfabético.
+            if (a.name === null && b.name !== null) return 1;
+            if (b.name === null && a.name !== null) return -1;
+            return (a.name ?? "").localeCompare(b.name ?? "", "pt-BR");
+          });
+        return {
+          id: c.id,
+          slug: c.slug,
+          name: c.name,
+          book_count: c.book_count,
+          sections,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }
+
+  // Citações: vinculadas via book_id OU com author_name = name. Dedup por id.
   const [{ data: directQuotes }, linkedRes] = await Promise.all([
     supabase
       .from("quote")
@@ -358,10 +496,14 @@ export async function authorDetailBySlug(
         r.status === "reading" || r.status === "paused"
           ? r.updated_at
           : r.finish_date ?? r.updated_at;
+      // Pega publication_year do `books` (já temos lookup feito acima por
+      // book_id) — usado pra sort cronológico no toggle do UI.
+      const bookEntry = books.find((x) => x.id === b.id);
       readingHistory.push({
         book_id: b.id,
         book_slug: b.slug,
         title: b.title,
+        publication_year: bookEntry?.publication_year ?? null,
         status: r.status,
         started_at: r.start_date,
         finished_at: r.finish_date,
@@ -385,6 +527,8 @@ export async function authorDetailBySlug(
     author,
     books,
     series,
+    categories,
+    collections,
     quotes,
     bibliography: bibliographyEntries,
     readingHistory,

@@ -863,6 +863,7 @@ export type Database = {
           acquired_at: string | null
           created_at: string
           id: string
+          isbn: string | null
           name: string
           notes: string | null
           total_price: number
@@ -873,6 +874,7 @@ export type Database = {
           acquired_at?: string | null
           created_at?: string
           id?: string
+          isbn?: string | null
           name: string
           notes?: string | null
           total_price: number
@@ -883,6 +885,7 @@ export type Database = {
           acquired_at?: string | null
           created_at?: string
           id?: string
+          isbn?: string | null
           name?: string
           notes?: string | null
           total_price?: number

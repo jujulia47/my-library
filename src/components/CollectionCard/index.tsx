@@ -132,6 +132,10 @@ export default function CollectionCard({ collection: c }: Props) {
   // de "deletando" (ambos usam isPending).
   const [favorite, setFavorite] = useState(c.is_favorite);
   const [favPending, setFavPending] = useState(false);
+  // Hover da estrela — preview outline → solid (mesmo pattern do BookCard
+  // heart). CSS-only com group-hover não funciona consistente no Tailwind v4
+  // com classes condicionais, então usa state explícito.
+  const [starHover, setStarHover] = useState(false);
 
   const handleFavoriteToggle = async () => {
     const previous = favorite;
@@ -343,62 +347,38 @@ export default function CollectionCard({ collection: c }: Props) {
           </div>
         </Link>
 
-        {/* Estrela de favorito: sempre visível quando favorito; só hover quando não */}
-        <button
-          type="button"
-          aria-label={
-            favorite ? "Desmarcar como favorita" : "Marcar como favorita"
-          }
-          title={favorite ? "Favorita" : "Marcar como favorita"}
-          aria-pressed={favorite}
-          disabled={favPending}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleFavoriteToggle();
-          }}
-          className={clsx(
-            "absolute top-3 right-3 z-10 p-1.5 rounded-md transition-all",
-            favorite
-              ? "text-gold hover:text-gold-deep"
-              : "text-ink-fade/50 opacity-0 group-hover:opacity-100 hover:text-ink-soft",
-            favPending && "opacity-60 cursor-wait",
-          )}
-        >
-          {favorite ? (
-            <StarSolidIcon className="w-5 h-5" />
-          ) : (
-            <StarOutlineIcon className="w-5 h-5" />
-          )}
-        </button>
-
-        {/* Hover actions (editar/arquivar/excluir) — desloca pra esquerda
-            pra não colidir com a estrela. */}
-        <div
-          className={clsx(
-            "absolute top-3 right-12 flex items-center gap-1",
-            "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-            "transition-opacity duration-150",
-          )}
-        >
+        {/* Ações do card: Editar, Arquivar, Excluir, Favoritar — todos no
+            mesmo container com gap-1.5 e o padrão `.card-icon-btn`. Edit/
+            arquivar/excluir só aparecem no hover; estrela fica sempre
+            visível quando marcada. Background dos botões NÃO muda no
+            hover; só o ícone escala (1.1) e a estrela troca outline→solid. */}
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
           <Link
             href={`/collection/edit/${c.id}?from=/collection`}
             aria-label={`Editar ${c.name}`}
-            className="rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-ink-soft hover:text-ink-deep hover:bg-ivory-light transition-colors"
             onClick={(e) => e.stopPropagation()}
+            className={clsx(
+              "card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-ink-soft",
+              "hover:text-ink-deep",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150",
+            )}
           >
             <PencilSquareIcon className="w-4 h-4" />
           </Link>
           <button
             type="button"
             aria-label={c.is_archived ? "Desarquivar" : "Arquivar"}
-            className="rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-ink-soft hover:text-ink-deep hover:bg-ivory-light transition-colors"
+            disabled={isPending}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               handleArchive();
             }}
-            disabled={isPending}
+            className={clsx(
+              "card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-ink-soft",
+              "hover:text-ink-deep",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150",
+            )}
           >
             {c.is_archived ? (
               <ArchiveBoxXMarkIcon className="w-4 h-4" />
@@ -409,14 +389,49 @@ export default function CollectionCard({ collection: c }: Props) {
           <button
             type="button"
             aria-label={`Excluir ${c.name}`}
-            className="rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-burgundy hover:bg-burgundy/10 transition-colors"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               setConfirmOpen(true);
             }}
+            className={clsx(
+              "card-icon-btn cursor-pointer rounded-md bg-ivory-light/95 backdrop-blur-sm border border-border p-1.5 text-burgundy",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150",
+            )}
           >
             <TrashIcon className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            aria-label={
+              favorite ? "Desmarcar como favorita" : "Marcar como favorita"
+            }
+            title={favorite ? "Favorita" : "Marcar como favorita"}
+            aria-pressed={favorite}
+            disabled={favPending}
+            onMouseEnter={() => setStarHover(true)}
+            onMouseLeave={() => setStarHover(false)}
+            onFocus={() => setStarHover(true)}
+            onBlur={() => setStarHover(false)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleFavoriteToggle();
+            }}
+            className={clsx(
+              "card-icon-btn cursor-pointer rounded-md p-1.5",
+              "bg-ivory-light/95 backdrop-blur-sm border border-border",
+              favorite || starHover ? "text-gold" : "text-ink-fade/60",
+              !favorite &&
+                "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+              favPending && "opacity-60 cursor-wait",
+            )}
+          >
+            {favorite || starHover ? (
+              <StarSolidIcon className="w-4 h-4" />
+            ) : (
+              <StarOutlineIcon className="w-4 h-4" />
+            )}
           </button>
         </div>
       </div>

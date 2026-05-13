@@ -8,6 +8,7 @@ import {
   yearsWithFinishedReadings,
   type BookListSort,
 } from "@/services/bookList";
+import { createClient } from "@/utils/supabase/server";
 import { PageHeader, Button, Pagination } from "@/components/ui";
 import {
   parsePagination,
@@ -43,6 +44,7 @@ export default async function BookPage({
   const statuses = parseList(sp.status);
   const ownerships = parseList(sp.ownership);
   const formats = parseList(sp.format);
+  const authorSlugs = parseList(sp.author);
   const yearStr = pickFirst(sp.year);
   const monthStr = pickFirst(sp.month);
   const year = yearStr ? Number(yearStr) || undefined : undefined;
@@ -52,8 +54,34 @@ export default async function BookPage({
     VALID_SORTS.has(sortRaw as BookListSort) ? sortRaw : "reading_first"
   ) as BookListSort;
 
+  // Lista de todos os autores do usuário pra alimentar o filtro "Por autor".
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: rawAllAuthors } = user
+    ? await supabase
+        .from("author")
+        .select("id, slug, name")
+        .eq("user_id", user.id)
+        .order("name", { ascending: true })
+    : { data: [] };
+  const allAuthors = (rawAllAuthors ?? []) as {
+    id: string;
+    slug: string;
+    name: string;
+  }[];
+
   const [books, counts, years] = await Promise.all([
-    bookListQuery({ statuses, ownerships, formats, year, month, sort }),
+    bookListQuery({
+      statuses,
+      ownerships,
+      formats,
+      author_slugs: authorSlugs,
+      year,
+      month,
+      sort,
+    }),
     bookCounts(),
     yearsWithFinishedReadings(),
   ]);
@@ -72,7 +100,7 @@ export default async function BookPage({
         }
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            <BookFilters yearsAvailable={years} />
+            <BookFilters yearsAvailable={years} allAuthors={allAuthors} />
             <Button as="Link" href="/book/new" variant="primary" size="sm">
               + Adicionar livro
             </Button>
