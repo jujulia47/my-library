@@ -1,10 +1,16 @@
 /**
- * Ornamento vintage do header da home (sessão 17.10) — substitui o varal de
- * luzes (que ficava deslocado fora do contexto biblioteca). Estilo divisor de
- * frontispício de livro antigo: filete dourado horizontal + fleuron central
- * (rosácea estilizada) + dois pontos decorativos em cada lado.
+ * Ornamento vintage do header da home — divisor de frontispício em estilo
+ * de livro antigo. Composição (esquerda → direita):
+ *   1) Filete triplo (linha grossa central + dois filetes finos paralelos)
+ *      com fade gradient nas pontas.
+ *   2) Diamantes nas extremidades como caps decorativos.
+ *   3) Clusters de beads (3 esferas dourada-creme-dourada).
+ *   4) Flourishes em S flanqueando o centro, com folha + bead final.
+ *   5) Fleuron central (rosácea de 8 pétalas) com aro concêntrico externo
+ *      e miolo em três anéis.
+ *   6) Folhas verticais (acima e abaixo da linha) em pontos selecionados.
  *
- * Pura decoração SVG, server component.
+ * Pure SVG, server component, decorativo (aria-hidden).
  */
 export function HomeOrnaments() {
   return (
@@ -12,7 +18,7 @@ export function HomeOrnaments() {
       aria-hidden
       style={{
         position: "absolute",
-        top: 8,
+        top: 6,
         left: 0,
         right: 0,
         display: "flex",
@@ -22,17 +28,17 @@ export function HomeOrnaments() {
       }}
     >
       <svg
-        width="320"
-        height="36"
-        viewBox="0 0 320 36"
-        style={{ overflow: "visible", opacity: 0.85 }}
+        width="720"
+        height="40"
+        viewBox="0 0 720 40"
+        style={{ overflow: "visible", opacity: 0.88, maxWidth: "92%" }}
       >
         <defs>
           <linearGradient id="home-orn-line" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="rgba(212, 176, 86, 0)" />
-            <stop offset="20%" stopColor="rgba(212, 176, 86, 0.7)" />
+            <stop offset="15%" stopColor="rgba(212, 176, 86, 0.7)" />
             <stop offset="50%" stopColor="rgba(212, 176, 86, 0.95)" />
-            <stop offset="80%" stopColor="rgba(212, 176, 86, 0.7)" />
+            <stop offset="85%" stopColor="rgba(212, 176, 86, 0.7)" />
             <stop offset="100%" stopColor="rgba(212, 176, 86, 0)" />
           </linearGradient>
           <radialGradient id="home-orn-petal" cx="50%" cy="50%" r="50%">
@@ -42,68 +48,77 @@ export function HomeOrnaments() {
           </radialGradient>
         </defs>
 
-        {/* Filete duplo (linha grossa + linha fina paralela) */}
-        <line x1="0" y1="18" x2="320" y2="18" stroke="url(#home-orn-line)" strokeWidth="1.2" />
-        <line x1="40" y1="22" x2="280" y2="22" stroke="url(#home-orn-line)" strokeWidth="0.4" />
+        {/* === FILETES === */}
+        {/* Linha principal espessa com gradient fade */}
+        <line x1="0" y1="20" x2="720" y2="20" stroke="url(#home-orn-line)" strokeWidth="1.2" />
+        {/* Filetes finos paralelos (mais curtos, opacidade reduzida) */}
+        <line x1="120" y1="16" x2="600" y2="16" stroke="url(#home-orn-line)" strokeWidth="0.35" opacity="0.6" />
+        <line x1="120" y1="24" x2="600" y2="24" stroke="url(#home-orn-line)" strokeWidth="0.35" opacity="0.6" />
 
-        {/* Pontos decorativos esquerda */}
-        <circle cx="100" cy="18" r="1.6" fill="#A0843E" />
-        <circle cx="100" cy="18" r="0.6" fill="#F0D080" />
-        <circle cx="118" cy="18" r="1" fill="#A0843E" />
+        {/* === END CAPS — diamantes nas extremidades === */}
+        <g transform="translate(110, 20)">
+          <polygon points="0,-4 4,0 0,4 -4,0" fill="#A0843E" />
+          <polygon points="0,-2 2,0 0,2 -2,0" fill="#F0D080" />
+        </g>
+        <g transform="translate(610, 20)">
+          <polygon points="0,-4 4,0 0,4 -4,0" fill="#A0843E" />
+          <polygon points="0,-2 2,0 0,2 -2,0" fill="#F0D080" />
+        </g>
 
-        {/* Pontos decorativos direita */}
-        <circle cx="220" cy="18" r="1" fill="#A0843E" />
-        <circle cx="202" cy="18" r="1.6" fill="#A0843E" />
-        <circle cx="202" cy="18" r="0.6" fill="#F0D080" />
+        {/* === BEADS — clusters de 3 esferas === */}
+        {/* Cluster esquerdo */}
+        <circle cx="170" cy="20" r="1" fill="#A0843E" />
+        <circle cx="190" cy="20" r="1.8" fill="#A0843E" />
+        <circle cx="190" cy="20" r="0.8" fill="#F0D080" />
+        <circle cx="210" cy="20" r="1" fill="#A0843E" />
+        {/* Cluster direito */}
+        <circle cx="510" cy="20" r="1" fill="#A0843E" />
+        <circle cx="530" cy="20" r="1.8" fill="#A0843E" />
+        <circle cx="530" cy="20" r="0.8" fill="#F0D080" />
+        <circle cx="550" cy="20" r="1" fill="#A0843E" />
 
-        {/* Fleuron central (rosácea de 4 pétalas + miolo) */}
-        <g style={{ transformOrigin: "160px 18px" }}>
-          {/* Pétalas (4 elipses rotacionadas) */}
-          <ellipse cx="160" cy="10" rx="2.6" ry="6" fill="url(#home-orn-petal)" />
-          <ellipse cx="160" cy="26" rx="2.6" ry="6" fill="url(#home-orn-petal)" />
-          <ellipse cx="152" cy="18" rx="6" ry="2.6" fill="url(#home-orn-petal)" />
-          <ellipse cx="168" cy="18" rx="6" ry="2.6" fill="url(#home-orn-petal)" />
-          {/* Pétalas diagonais (menores) */}
-          <ellipse
-            cx="154"
-            cy="12"
-            rx="1.6"
-            ry="4"
-            fill="url(#home-orn-petal)"
-            transform="rotate(-45 154 12)"
-            opacity="0.85"
-          />
-          <ellipse
-            cx="166"
-            cy="12"
-            rx="1.6"
-            ry="4"
-            fill="url(#home-orn-petal)"
-            transform="rotate(45 166 12)"
-            opacity="0.85"
-          />
-          <ellipse
-            cx="154"
-            cy="24"
-            rx="1.6"
-            ry="4"
-            fill="url(#home-orn-petal)"
-            transform="rotate(45 154 24)"
-            opacity="0.85"
-          />
-          <ellipse
-            cx="166"
-            cy="24"
-            rx="1.6"
-            ry="4"
-            fill="url(#home-orn-petal)"
-            transform="rotate(-45 166 24)"
-            opacity="0.85"
-          />
-          {/* Miolo */}
-          <circle cx="160" cy="18" r="2.4" fill="#3D2418" />
-          <circle cx="160" cy="18" r="1.4" fill="#A0843E" />
-          <circle cx="160" cy="18" r="0.5" fill="#F0D080" />
+        {/* === FLOURISHES — scrolls flanqueando o centro === */}
+        {/* Lado esquerdo */}
+        <g transform="translate(316, 20)" fill="none" stroke="#A0843E" strokeWidth="0.9" strokeLinecap="round">
+          <path d="M 0 0 Q -10 -6 -18 -2 Q -26 2 -22 8 Q -16 12 -10 6 Q -6 2 -2 4" />
+          <circle cx="-28" cy="6" r="1.4" fill="#A0843E" stroke="none" />
+          <path d="M -10 -3 Q -6 -10 -2 -3 Z" fill="#A0843E" stroke="none" opacity="0.6" />
+        </g>
+        {/* Lado direito (espelhado) */}
+        <g transform="translate(404, 20) scale(-1, 1)" fill="none" stroke="#A0843E" strokeWidth="0.9" strokeLinecap="round">
+          <path d="M 0 0 Q -10 -6 -18 -2 Q -26 2 -22 8 Q -16 12 -10 6 Q -6 2 -2 4" />
+          <circle cx="-28" cy="6" r="1.4" fill="#A0843E" stroke="none" />
+          <path d="M -10 -3 Q -6 -10 -2 -3 Z" fill="#A0843E" stroke="none" opacity="0.6" />
+        </g>
+
+        {/* === FLEURON CENTRAL — rosácea de 8 pétalas + miolo concêntrico === */}
+        <g transform="translate(360, 20)">
+          {/* Aro externo */}
+          <circle cx="0" cy="0" r="15" fill="none" stroke="#A0843E" strokeWidth="0.4" opacity="0.45" />
+          {/* Pétalas cardinais (4 elipses cruzadas) */}
+          <ellipse cx="0" cy="-9" rx="2.8" ry="7.5" fill="url(#home-orn-petal)" />
+          <ellipse cx="0" cy="9" rx="2.8" ry="7.5" fill="url(#home-orn-petal)" />
+          <ellipse cx="-9" cy="0" rx="7.5" ry="2.8" fill="url(#home-orn-petal)" />
+          <ellipse cx="9" cy="0" rx="7.5" ry="2.8" fill="url(#home-orn-petal)" />
+          {/* Pétalas diagonais (rotacionadas em torno do próprio centro) */}
+          <ellipse cx="-5.5" cy="-5.5" rx="1.7" ry="4.5" fill="url(#home-orn-petal)" transform="rotate(-45 -5.5 -5.5)" opacity="0.88" />
+          <ellipse cx="5.5" cy="-5.5" rx="1.7" ry="4.5" fill="url(#home-orn-petal)" transform="rotate(45 5.5 -5.5)" opacity="0.88" />
+          <ellipse cx="5.5" cy="5.5" rx="1.7" ry="4.5" fill="url(#home-orn-petal)" transform="rotate(-45 5.5 5.5)" opacity="0.88" />
+          <ellipse cx="-5.5" cy="5.5" rx="1.7" ry="4.5" fill="url(#home-orn-petal)" transform="rotate(45 -5.5 5.5)" opacity="0.88" />
+          {/* Miolo em três anéis */}
+          <circle cx="0" cy="0" r="3.2" fill="#3D2418" />
+          <circle cx="0" cy="0" r="2.1" fill="#A0843E" />
+          <circle cx="0" cy="0" r="0.9" fill="#F0D080" />
+        </g>
+
+        {/* === FOLHAS VERTICAIS — acima e abaixo da linha === */}
+        <g fill="#A0843E" opacity="0.55">
+          {/* Folhas acima */}
+          <path d="M 250 16 Q 254 6 258 16 Z" />
+          <path d="M 462 16 Q 466 6 470 16 Z" />
+          {/* Folhas abaixo (espelhadas) */}
+          <path d="M 250 24 Q 254 34 258 24 Z" />
+          <path d="M 462 24 Q 466 34 470 24 Z" />
         </g>
       </svg>
     </div>

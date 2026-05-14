@@ -46,7 +46,10 @@ export function RecentlyFinished({ data }: Props) {
                       alt={`Capa de ${book.title}`}
                       fill
                       className="object-cover rounded-sm border border-ink-deep/20"
-                      sizes="(max-width: 768px) 12vw, 60px"
+                      // 6 colunas em desktop → cada card ~180-200px no
+                      // container típico da home. Antes pedíamos 60px e o
+                      // browser esticava → capa embaçada.
+                      sizes="(max-width: 768px) 16vw, 200px"
                     />
                   ) : (
                     <BookCoverFallback

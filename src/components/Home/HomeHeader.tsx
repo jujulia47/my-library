@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { HomeOrnaments } from "./HomeOrnaments";
-import { MiniBookshelf } from "@/components/decorations/MiniBookshelf";
 import type { HomeData } from "@/services/homeData";
 
 const MONTHS = [
@@ -51,11 +50,14 @@ export function HomeHeader({
 
   return (
     <header
-      className="relative pb-5 mb-2 pt-12"
+      className="relative pb-5 mb-2 pt-12 px-4 sm:px-6 lg:px-8"
       style={{
         borderBottom: "1px solid transparent",
+        // Gradiente: transparente só nos cantos extremos (0-8% e 92-100%),
+        // colorido em quase toda a extensão da linha — antes os 30% laterais
+        // ficavam invisíveis, sumindo sob o texto "Bom dia" e "14 de maio".
         backgroundImage:
-          "linear-gradient(to bottom, transparent, transparent), linear-gradient(to right, transparent 0%, var(--color-border) 30%, var(--color-border) 70%, transparent 100%)",
+          "linear-gradient(to bottom, transparent, transparent), linear-gradient(to right, transparent 0%, var(--color-border) 20%, var(--color-border) 80%, transparent 100%)",
         backgroundOrigin: "border-box",
         backgroundClip: "padding-box, border-box",
       }}
@@ -65,22 +67,20 @@ export function HomeHeader({
       <HomeOrnaments />
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-[22px] font-medium text-ink-deep leading-tight">
+          <h1 className="font-display text-[22px] md:text-3xl font-medium text-ink-deep leading-tight">
             {greeting}
           </h1>
-          <p className="font-body text-xs italic text-ink-fade mt-0.5">
+          <p className="font-body text-xs md:text-sm italic text-ink-fade mt-0.5 md:mt-1">
             Resumo do seu ano · {currentYear}
           </p>
         </div>
 
-        <div className="relative flex flex-col items-end text-right pr-0 sm:pr-16">
-          <MiniBookshelf
-            className="hidden sm:block absolute -top-1 right-0 pointer-events-none"
-            style={{ opacity: 0.35 }}
-          />
-          <p className="font-body text-sm text-ink-soft">{dateLabel}</p>
+        <div className="flex flex-col items-end text-right">
+          <p className="font-body text-sm md:text-base text-ink-soft">
+            {dateLabel}
+          </p>
           {lastActivity && (
-            <p className="font-body text-xs text-ink-fade mt-0.5">
+            <p className="font-body text-xs md:text-sm text-ink-fade mt-0.5 md:mt-1">
               última atividade {lastActivity.relative_time} ·{" "}
               <Link
                 href={`/book/${lastActivity.book_slug}`}
