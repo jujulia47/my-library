@@ -17,7 +17,7 @@ const MONTHS = [
   "dezembro",
 ];
 
-function getGreeting(): string {
+function getGreeting(userName: string | null): string {
   const hour = new Date().getHours();
   const prefix =
     hour >= 5 && hour < 12
@@ -25,7 +25,7 @@ function getGreeting(): string {
       : hour >= 12 && hour < 18
         ? "Boa tarde"
         : "Boa noite";
-  return `${prefix}, Júlia`;
+  return userName ? `${prefix}, ${userName}` : prefix;
 }
 
 function formatDateBR(iso: string): string {
@@ -38,14 +38,16 @@ type Props = {
   currentYear: number;
   today: string;
   lastActivity: HomeData["last_activity"];
+  userName: string | null;
 };
 
 export function HomeHeader({
   currentYear,
   today,
   lastActivity,
+  userName,
 }: Props) {
-  const greeting = getGreeting();
+  const greeting = getGreeting(userName);
   const dateLabel = formatDateBR(today);
 
   return (

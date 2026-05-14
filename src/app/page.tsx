@@ -37,6 +37,7 @@ export default async function HomePage() {
           currentYear={data.current_year}
           today={data.today}
           lastActivity={data.last_activity}
+          userName={data.user_name}
         />
       </section>
 
