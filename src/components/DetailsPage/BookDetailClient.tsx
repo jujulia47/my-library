@@ -248,11 +248,20 @@ function PosseTimeline({
       {history.map((h, idx) => {
         const previous = idx > 0 ? history[idx - 1] : null;
         const desc = describeHistoryEvent(h, previous, book);
-        // Quando é a primeira entry (entrou no acervo) e o user não setou
-        // `acquired_at`, esconde a data armazenada (que é apenas placeholder
-        // tipo created_at) e mostra "sem data informada" no lugar.
+        // Mesma lógica do `acquired_at`: a action salva NOW() como
+        // placeholder quando o user deixa a data em branco, então a UI
+        // detecta o caso pelo campo source no book e mostra "sem data
+        // informada". Vale tanto pra entrada (acquired_at) quanto pra
+        // saída por disposal (disposed_date).
         const isFirstEntry = idx === 0;
-        const showNoDate = isFirstEntry && !book.acquired_at;
+        const isDisposalEvent =
+          h.status === "donated" ||
+          h.status === "sold" ||
+          h.status === "traded" ||
+          h.status === "lost";
+        const showNoDate =
+          (isFirstEntry && !book.acquired_at) ||
+          (isDisposalEvent && !book.disposed_date);
         return (
           <li key={h.id} className="relative">
             <span
