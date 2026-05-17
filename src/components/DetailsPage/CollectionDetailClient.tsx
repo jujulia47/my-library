@@ -1,10 +1,27 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Card,
   Button,
@@ -31,6 +48,7 @@ import { deleteCollection } from "@/actions/deleteCollection";
 import { archiveCollection } from "@/actions/archiveCollection";
 import { removeCollectionItem } from "@/actions/removeCollectionItem";
 import { toggleCollectionFavorite } from "@/actions/toggleCollectionFavorite";
+import { reorderCollectionItems } from "@/actions/reorderCollectionItems";
 import { imagesUrl } from "@/services/images";
 import AddCollectionItemModal from "@/components/forms/AddCollectionItemModal";
 import SectionEditModal from "@/components/forms/SectionEditModal";
@@ -150,7 +168,7 @@ type Props = {
 };
 
 export default function CollectionDetailClient({ data }: Props) {
-  const { collection: c, items, last_activity_at } = data;
+  const { collection: c, items: itemsFromServer, last_activity_at } = data;
   const router = useRouter();
   const [actionsOpen, setActionsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -167,6 +185,56 @@ export default function CollectionDetailClient({ data }: Props) {
   const [isPending, startTransition] = useTransition();
   const [favorite, setFavorite] = useState(c.is_favorite);
   const [favPending, setFavPending] = useState(false);
+
+  // Espelho local dos items pra suportar reorder otimista — drag-and-drop
+  // atualiza essa lista na hora, e a server action persiste em background.
+  // useEffect sincroniza quando o server retorna nova ordem (após refresh).
+  const [items, setItems] = useState(itemsFromServer);
+  useEffect(() => {
+    setItems(itemsFromServer);
+  }, [itemsFromServer]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  // Reorder dentro de uma seção. dnd-kit dá os ids `active` e `over`; a
+  // gente acha eles na lista da seção, troca de posição via `arrayMove`, e
+  // recompõe a lista global preservando os items das outras seções.
+  const handleDragEnd = (event: DragEndEvent, sectionKey: string) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const sectionItems = items.filter(
+      (i) => (i.section ?? UNSECTIONED) === sectionKey,
+    );
+    const oldIdx = sectionItems.findIndex((i) => i.item_id === active.id);
+    const newIdx = sectionItems.findIndex((i) => i.item_id === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    const reorderedSection = arrayMove(sectionItems, oldIdx, newIdx);
+    // Recompõe a lista global percorrendo `items` na ordem original e
+    // substituindo cada slot da seção alvo pelo item correspondente da
+    // nova ordem — assim outros items (de outras seções) ficam intactos.
+    let sectionCursor = 0;
+    const merged: CollectionItem[] = items.map((i) => {
+      if ((i.section ?? UNSECTIONED) === sectionKey) {
+        const replacement = reorderedSection[sectionCursor];
+        sectionCursor += 1;
+        return replacement;
+      }
+      return i;
+    });
+    setItems(merged);
+    startTransition(async () => {
+      await reorderCollectionItems({
+        collectionSlug: c.slug,
+        orderedItemIds: reorderedSection.map((i) => i.item_id),
+      });
+      router.refresh();
+    });
+  };
 
   const handleFavoriteToggle = async () => {
     const previous = favorite;
@@ -565,16 +633,27 @@ export default function CollectionDetailClient({ data }: Props) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {group.items.map((item) => (
-                    <ItemCard
-                      key={item.item_id}
-                      item={item}
-                      showMarkPurchased={isWishlistCollection}
-                      onRemove={() => setRemoveTarget(item)}
-                    />
-                  ))}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(e) => handleDragEnd(e, group.key)}
+                >
+                  <SortableContext
+                    items={group.items.map((i) => i.item_id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {group.items.map((item) => (
+                        <SortableItemCard
+                          key={item.item_id}
+                          item={item}
+                          showMarkPurchased={isWishlistCollection}
+                          onRemove={() => setRemoveTarget(item)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               </section>
             );
           })}
@@ -782,6 +861,79 @@ function buildStats(p: {
 // =====================================================================
 // Item Card (book or wishlist)
 // =====================================================================
+/**
+ * Wrapper sortable do ItemCard — registra o item no SortableContext da
+ * seção pra que o dnd-kit consiga mover entre posições.
+ *
+ * Conflito de click: depois do drag, o browser dispara um `click` na
+ * sequência mousedown→mousemove→mouseup. O `<Link>` dentro do card
+ * pegava esse click e navegava pra detail page logo após reorder.
+ * Solução: flag em ref que fica `true` durante o drag e por +60ms depois,
+ * usada num handler `onClickCapture` que preventDefault no clique fantasma.
+ */
+function SortableItemCard({
+  item,
+  onRemove,
+  showMarkPurchased,
+}: {
+  item: CollectionItem;
+  onRemove: () => void;
+  showMarkPurchased?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.item_id });
+  const wasDraggingRef = useRef(false);
+
+  useEffect(() => {
+    if (isDragging) {
+      wasDraggingRef.current = true;
+      return;
+    }
+    if (wasDraggingRef.current) {
+      const t = setTimeout(() => {
+        wasDraggingRef.current = false;
+      }, 60);
+      return () => clearTimeout(t);
+    }
+  }, [isDragging]);
+
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (wasDraggingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: isDragging ? "grabbing" : undefined,
+    zIndex: isDragging ? 50 : undefined,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClickCapture={handleClickCapture}
+    >
+      <ItemCard
+        item={item}
+        onRemove={onRemove}
+        showMarkPurchased={showMarkPurchased}
+      />
+    </div>
+  );
+}
+
 function ItemCard({
   item,
   onRemove,

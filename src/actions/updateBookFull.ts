@@ -315,19 +315,9 @@ export async function updateBookFull(
       field: "returned_at",
     };
   }
-  if (
-    ["donated", "sold", "traded", "lost"].includes(ownership_status) &&
-    !disposed_date
-  ) {
-    const stateConfig = eventDateForStatus(ownership_status);
-    return {
-      ok: false,
-      message: stateConfig
-        ? `Informe a ${stateConfig.label.toLowerCase()}.`
-        : "Informe a data do evento.",
-      field: "disposed_date",
-    };
-  }
+  // disposed_date é opcional: se o user não souber a data exata, deixa em
+  // branco. A história fica registrada com `changedAt = NOW()` (fallback
+  // mais abaixo na inserção em book_status_history).
   if (isLentToOwnedReturn && !returnedToAcervoAtForm) {
     return {
       ok: false,

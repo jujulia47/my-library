@@ -436,10 +436,9 @@ export function OwnershipFields({
               )}
               {showDisposedDate && disposedConfig && (
                 <Input
-                  label={disposedConfig.label}
+                  label={`${disposedConfig.label} (opcional)`}
                   name="disposed_date"
                   type="date"
-                  required
                   value={disposedDate}
                   onChange={(e) => setDisposedDate(e.target.value)}
                   errorText={fieldErrors.disposed_date}
