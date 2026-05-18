@@ -168,7 +168,11 @@ export type HomeData = {
 
   active_challenge: HomeActiveChallenge | null;
 
-  books_per_month_chart: { month: number; count: number }[];
+  books_per_month_chart: {
+    month: number;
+    count: number;
+    books: { id: string; slug: string; title: string; finish_date: string }[];
+  }[];
 
   heatmap: HomeHeatmap;
 
@@ -436,22 +440,48 @@ async function fetchMonthlyChart(
   supabase: SupabaseServer,
   userId: string,
   currentYear: number,
-): Promise<{ month: number; count: number }[]> {
+): Promise<
+  {
+    month: number;
+    count: number;
+    books: { id: string; slug: string; title: string; finish_date: string }[];
+  }[]
+> {
   const { data } = await supabase
     .from("reading")
-    .select("finish_date")
+    .select("finish_date, book:book_id(id, slug, title)")
     .eq("user_id", userId)
     .eq("status", "finished")
     .gte("finish_date", `${currentYear}-01-01`)
-    .lte("finish_date", `${currentYear}-12-31`);
+    .lte("finish_date", `${currentYear}-12-31`)
+    .order("finish_date", { ascending: false });
 
-  const counts = Array<number>(12).fill(0);
-  for (const r of data ?? []) {
-    if (!r.finish_date) continue;
-    const month = new Date(r.finish_date).getUTCMonth();
-    counts[month] += 1;
+  type Row = {
+    finish_date: string | null;
+    book: { id: string; slug: string; title: string } | null;
+  };
+  const buckets: {
+    month: number;
+    count: number;
+    books: { id: string; slug: string; title: string; finish_date: string }[];
+  }[] = Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    count: 0,
+    books: [],
+  }));
+
+  for (const r of (data as unknown as Row[]) ?? []) {
+    if (!r.finish_date || !r.book) continue;
+    const monthIdx = new Date(r.finish_date).getUTCMonth();
+    buckets[monthIdx].count += 1;
+    buckets[monthIdx].books.push({
+      id: r.book.id,
+      slug: r.book.slug,
+      title: r.book.title,
+      finish_date: r.finish_date,
+    });
   }
-  return counts.map((count, idx) => ({ month: idx + 1, count }));
+  return buckets;
 }
 
 /**

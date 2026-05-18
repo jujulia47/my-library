@@ -60,22 +60,33 @@ export default async function HomePage() {
         <SectionLabel>Resumo de {data.current_year}</SectionLabel>
         <StatsStrip stats={data.stats} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
+        {/* Grid 4 cols pra acomodar: challenge (opcional, 1/4) + chart (1/2)
+            + nextreads (1/4 ou 1/2). Em mobile, tudo empilha. */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-6">
           {data.active_challenge && (
-            <ChallengeArc
-              challenge={data.active_challenge}
-              currentYear={data.current_year}
-            />
+            <div className="md:col-span-1">
+              <ChallengeArc
+                challenge={data.active_challenge}
+                currentYear={data.current_year}
+              />
+            </div>
           )}
           <div
             className={
-              data.active_challenge ? "md:col-span-2" : "md:col-span-3"
+              data.active_challenge ? "md:col-span-2" : "md:col-span-2"
             }
           >
             <BooksPerMonthChart
               data={data.books_per_month_chart}
               currentMonth={currentMonth}
             />
+          </div>
+          <div
+            className={
+              data.active_challenge ? "md:col-span-1" : "md:col-span-2"
+            }
+          >
+            <NextReads data={data.next_reads} />
           </div>
         </div>
       </section>
@@ -114,9 +125,8 @@ export default async function HomePage() {
       </section>
 
       <section className="home-section">
-        <SectionLabel>Próximos passos</SectionLabel>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-          <NextReads data={data.next_reads} />
+        <SectionLabel>Coleções favoritas</SectionLabel>
+        <div className="mb-6">
           <FavoriteCollections data={data.favorite_collections} />
         </div>
       </section>
