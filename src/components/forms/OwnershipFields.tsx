@@ -315,10 +315,9 @@ export function OwnershipFields({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {showBorrowedAt && (
             <Input
-              label="Data de início do empréstimo"
+              label="Data de início do empréstimo (opcional)"
               name="borrowed_at"
               type="date"
-              required={status === "borrowed"}
               value={borrowedAt}
               onChange={(e) => setBorrowedAt(e.target.value)}
               errorText={fieldErrors.borrowed_at}
@@ -326,10 +325,9 @@ export function OwnershipFields({
           )}
           {showReturnedAt && (
             <Input
-              label="Data de devolução"
+              label="Data de devolução (opcional)"
               name="returned_at"
               type="date"
-              required
               value={returnedAt}
               onChange={(e) => setReturnedAt(e.target.value)}
               errorText={fieldErrors.returned_at}

@@ -301,20 +301,10 @@ export async function updateBookFull(
       field: "borrowed_from",
     };
   }
-  if (ownership_status === "borrowed" && !borrowed_at) {
-    return {
-      ok: false,
-      message: "Informe a data em que pegou emprestado.",
-      field: "borrowed_at",
-    };
-  }
-  if (ownership_status === "returned" && !returned_at) {
-    return {
-      ok: false,
-      message: "Informe a data de devolução.",
-      field: "returned_at",
-    };
-  }
+  // borrowed_at e returned_at também são opcionais — mesma lógica do
+  // disposed_date: o user pode não lembrar exatamente quando pegou ou
+  // devolveu. A history fica registrada com `changedAt = NOW()` no
+  // fallback de baixo.
   // disposed_date é opcional: se o user não souber a data exata, deixa em
   // branco. A história fica registrada com `changedAt = NOW()` (fallback
   // mais abaixo na inserção em book_status_history).

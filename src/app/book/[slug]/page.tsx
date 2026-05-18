@@ -212,6 +212,8 @@ export default async function Page({
             book.purchase_price !== null ? Number(book.purchase_price) : null,
           acquired_at: book.acquired_at,
           borrowed_from: book.borrowed_from,
+          borrowed_at: book.borrowed_at,
+          returned_at: book.returned_at,
           lent_to: book.lent_to,
           subscription,
           bundled,

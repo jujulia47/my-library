@@ -77,6 +77,8 @@ export type BookDetail = {
   purchase_price: number | null;
   acquired_at: string | null;
   borrowed_from: string | null;
+  borrowed_at: string | null;
+  returned_at: string | null;
   lent_to: string | null;
   subscription: { id: string; name: string } | null;
   /** Outros livros que vieram no mesmo exemplar físico (omnibus). */
@@ -251,8 +253,9 @@ function PosseTimeline({
         // Mesma lógica do `acquired_at`: a action salva NOW() como
         // placeholder quando o user deixa a data em branco, então a UI
         // detecta o caso pelo campo source no book e mostra "sem data
-        // informada". Vale tanto pra entrada (acquired_at) quanto pra
-        // saída por disposal (disposed_date).
+        // informada". Vale pra todos os eventos com datas opcionais:
+        // entrada (acquired_at), saída (disposed_date), pegou emprestado
+        // (borrowed_at) e devolveu (returned_at).
         const isFirstEntry = idx === 0;
         const isDisposalEvent =
           h.status === "donated" ||
@@ -261,7 +264,9 @@ function PosseTimeline({
           h.status === "lost";
         const showNoDate =
           (isFirstEntry && !book.acquired_at) ||
-          (isDisposalEvent && !book.disposed_date);
+          (isDisposalEvent && !book.disposed_date) ||
+          (h.status === "borrowed" && !book.borrowed_at) ||
+          (h.status === "returned" && !book.returned_at);
         return (
           <li key={h.id} className="relative">
             <span
