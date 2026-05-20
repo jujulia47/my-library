@@ -287,6 +287,9 @@ export default function BookFull({
                   label="Volume"
                   name="volume"
                   type="number"
+                  step="0.5"
+                  min={0}
+                  placeholder="Ex.: 1 ou 2.5"
                   defaultValue={book.volume ?? ""}
                 />
               </div>

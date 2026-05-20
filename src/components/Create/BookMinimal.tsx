@@ -303,7 +303,9 @@ export default function BookMinimal({
                     label="Volume"
                     name="volume"
                     type="number"
-                    placeholder="Ex.: 1"
+                    step="0.5"
+                    min={0}
+                    placeholder="Ex.: 1 ou 2.5"
                     defaultValue={initialVolume ?? undefined}
                   />
                   <button

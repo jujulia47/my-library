@@ -136,6 +136,13 @@ export async function bookListQuery(
     query = query.in("ownership_status", validOwnerships);
   }
 
+  // "Na estante" (owned) implica formato físico — um livro só ocupa estante
+  // se é físico. Kindle/audiobook que você possui são "em casa" mas não
+  // estão na estante. Mesma definição usada pela página /library.
+  if (validOwnerships.includes("owned")) {
+    query = query.overlaps("formats_owned", ["physical"]);
+  }
+
   // Formats: array overlap com `&&`. Postgrest exposes `overlaps`.
   const validFormats = (params.formats ?? []).filter(
     (f): f is BookFormat => FORMATS.includes(f as BookFormat),

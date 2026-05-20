@@ -215,7 +215,9 @@ export default function LinkBookToSerieModal({
               label="Volume"
               name="volume"
               type="number"
-              min={1}
+              step="0.5"
+              min={0}
+              placeholder="Ex.: 1 ou 2.5"
               value={volume}
               onChange={(e) => setVolume(e.target.value)}
               errorText={fieldErrors.volume}
