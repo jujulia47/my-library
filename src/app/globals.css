@@ -537,14 +537,22 @@
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  padding: 0 16px 0 60px;
+  /* padding-top 6px dá espaço pro `translateY(-4px)` do hover sem ser
+     clipado pelo overflow-y: hidden. */
+  padding: 6px 16px 0 60px;
   position: relative;
-  /* `overflow-x: clip` elimina o scroll horizontal e ainda permite
-     overflow-y visible (`auto`/`hidden` no X forçariam o Y também).
-     Conteúdo que passar da borda direita é cortado sem barra; o tooltip
-     de hover (`.book-hover-label`) continua transbordando pra cima. */
-  overflow-x: clip;
-  overflow-y: visible;
+  /* Scroll horizontal funcional, sem barra visível e SEM scroll vertical.
+     Tem que ser `overflow-y: hidden` (não `visible`) pra que `overflow-x:
+     auto` não force a promoção do Y pra auto também. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.shelf-content::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 /* Mobile: cada sub-prateleira tem altura fixa de 160px (já controlado por
    .shelf-sub-row). Não precisa de wrap dentro do .shelf-content — o
@@ -730,6 +738,10 @@
   width: 32px;
   height: 100%;
   flex-shrink: 0;
+  /* Empurra pro canto direito da prateleira — livros ficam à esquerda,
+     "+" no fim do shelf-content (mesmo quando há slots vazios depois dos
+     livros). Match visual com o `.add-shelf-slot` que ocupa o canto. */
+  margin-left: auto;
   border: 2px dashed rgba(212, 176, 86, 0.4);
   border-radius: 2px;
   display: flex;

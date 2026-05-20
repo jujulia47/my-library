@@ -9,7 +9,8 @@ import { AddBookSlot } from "./AddBookSlot";
 import { EmptyShelfCta } from "./EmptyShelfCta";
 import { DeleteShelfButton } from "./DeleteShelfButton";
 import { renderDecoration } from "./decorations";
-import { getShelfLayout, DEFAULT_SHELF_SLOTS } from "@/utils/shelfLayout";
+import { getShelfLayout } from "@/utils/shelfLayout";
+import { useResponsiveSlotCount } from "./useResponsiveSlotCount";
 import type { Shelf, ShelfBook } from "@/services/libraryData";
 
 type Props = {
@@ -32,9 +33,10 @@ export function ShelfZoomInline({ shelf, onClose }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  const slotCount = useResponsiveSlotCount();
   const layout = useMemo(
-    () => getShelfLayout(shelf.id, DEFAULT_SHELF_SLOTS),
-    [shelf.id],
+    () => getShelfLayout(shelf.id, slotCount),
+    [shelf.id, slotCount],
   );
 
   // Mapa position → book (mesma lógica simplificada do ShelfRow).
@@ -111,61 +113,75 @@ export function ShelfZoomInline({ shelf, onClose }: Props) {
 
           <div className="flex-1 flex flex-col justify-center px-12 overflow-x-auto">
             <div className="shelf-row" style={{ height: 480 }}>
-              <div className="shelf-wood-bottom" style={{ height: 32 }} aria-hidden />
-              <div className="shelf-content" style={{ paddingLeft: 16, gap: 10 }}>
-                {shelf.books.length === 0 ? (
-                  <EmptyShelfCta shelfId={shelf.id} large />
-                ) : (
-                  <>
-                    {layout.slots.map((slot) => {
-                      if (slot.type === "decoration" && slot.decorationVariant) {
+              {/* shelf-sub-row com column-reverse posiciona wood embaixo e
+                  content em cima — mesma estrutura do wall view. Sem isso,
+                  o flex column da shelf-row jogava wood pra cima e livros
+                  pra baixo. */}
+              <div className="shelf-sub-row">
+                <div
+                  className="shelf-wood-bottom"
+                  style={{ height: 32 }}
+                  aria-hidden
+                />
+                <div
+                  className="shelf-content"
+                  style={{ paddingLeft: 16, gap: 10 }}
+                >
+                  {shelf.books.length === 0 ? (
+                    <EmptyShelfCta shelfId={shelf.id} large />
+                  ) : (
+                    <>
+                      {layout.slots.map((slot) => {
+                        if (
+                          slot.type === "decoration" &&
+                          slot.decorationVariant
+                        ) {
+                          return (
+                            <span
+                              key={`d-${slot.position}`}
+                              className="self-end pb-2 z-[2]"
+                              style={{ transform: "scale(1.6)" }}
+                            >
+                              {renderDecoration(
+                                slot.decorationVariant,
+                                `${shelf.id}-d-${slot.position}`,
+                              )}
+                            </span>
+                          );
+                        }
+                        const book = booksByPosition.get(slot.position);
+                        if (!book) return null;
+                        // Em zoom, scale grande dá efeito "zoom". O BookSpine
+                        // tem altura fixa (160px) — o wrapper alinha pelo
+                        // bottom pra livro sentar logo acima da wood.
                         return (
-                          <span
-                            key={`d-${slot.position}`}
-                            className="self-end pb-2 z-[2]"
-                            style={{ transform: "scale(1.6)" }}
+                          <div
+                            key={book.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-end",
+                              marginRight: 14,
+                              marginLeft: 14,
+                              transform: "scale(1.6)",
+                              transformOrigin: "bottom center",
+                            }}
                           >
-                            {renderDecoration(
-                              slot.decorationVariant,
-                              `${shelf.id}-d-${slot.position}`,
-                            )}
-                          </span>
+                            <BookSpine
+                              book={book}
+                              mode="wall"
+                              draggable
+                              disableOpen
+                            />
+                          </div>
                         );
-                      }
-                      const book = booksByPosition.get(slot.position);
-                      if (!book) return null;
-                      // Em zoom, renderiza spine grande. O wrapper precisa
-                      // de height: 100% pra que `h-full` do BookSpine não
-                      // colapse — sem isso o livro vira só o tamanho dos
-                      // filhos (texto/ornamentos), super pequeno.
-                      // ScaleX uniforme pra alargar o spine proporcional
-                      // à altura maior (aspect ratio mais "wall-like").
-                      return (
-                        <div
-                          key={book.id}
-                          style={{
-                            height: "100%",
-                            marginRight: 14,
-                            marginLeft: 14,
-                            transform: "scaleX(1.6)",
-                            transformOrigin: "bottom center",
-                          }}
-                        >
-                          <BookSpine
-                            book={book}
-                            mode="wall"
-                            draggable
-                            disableOpen
-                          />
-                        </div>
-                      );
-                    })}
-                    <AddBookSlot
-                      shelfId={shelf.id}
-                      position={nextPosition}
-                    />
-                  </>
-                )}
+                      })}
+                      <AddBookSlot
+                        shelfId={shelf.id}
+                        position={nextPosition}
+                      />
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>

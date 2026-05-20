@@ -53,11 +53,17 @@ export function Globo({ width = 92 }: { width?: number }) {
           stroke="url(#gl-brass)"
           strokeWidth="2.4"
         />
-        {/* Marcas em graus no meridiano */}
+        {/* Marcas em graus no meridiano — arredondado pra 4 casas pra evitar
+            hydration mismatch (Math.cos/sin têm precisão diferente entre
+            Node SSR e V8 client). */}
         {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => {
           const r = 25;
-          const cx = 35 + Math.cos((deg * Math.PI) / 180) * r;
-          const cy = 38 + Math.sin((deg * Math.PI) / 180) * r;
+          const cx = Number(
+            (35 + Math.cos((deg * Math.PI) / 180) * r).toFixed(4),
+          );
+          const cy = Number(
+            (38 + Math.sin((deg * Math.PI) / 180) * r).toFixed(4),
+          );
           return <circle key={deg} cx={cx} cy={cy} r="0.5" fill="#3D2418" />;
         })}
 
@@ -73,13 +79,16 @@ export function Globo({ width = 92 }: { width?: number }) {
             strokeWidth="0.5"
           />
 
-          {/* Latitudes (paralelos) */}
+          {/* Latitudes (paralelos) — rx arredondado pra evitar hydration
+              mismatch (Math.sqrt diverge nos últimos dígitos entre Node/V8). */}
           {[18, 26, 38, 50, 58].map((y) => (
             <ellipse
               key={`lat-${y}`}
               cx="35"
               cy={y}
-              rx={Math.sqrt(22 * 22 - (y - 38) * (y - 38))}
+              rx={Number(
+                Math.sqrt(22 * 22 - (y - 38) * (y - 38)).toFixed(4),
+              )}
               ry="0.6"
               fill="none"
               stroke="rgba(212,176,86,0.22)"

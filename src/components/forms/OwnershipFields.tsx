@@ -449,10 +449,9 @@ export function OwnershipFields({
               pro acervo". `acquired_at` mantém valor antigo (acima). */}
           {showReturnedToAcervoAt && transition && (
             <Input
-              label={transition.label}
+              label={`${transition.label} (opcional)`}
               name="returned_to_acervo_at"
               type="date"
-              required
               value={returnedToAcervoAt}
               onChange={(e) => setReturnedToAcervoAt(e.target.value)}
               errorText={fieldErrors.returned_to_acervo_at}

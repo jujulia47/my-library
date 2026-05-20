@@ -21,8 +21,11 @@ import { DustMotes } from "./DustMotes";
 import { VaralLuzes } from "@/components/decorations/VaralLuzes";
 import { AddShelfSlot } from "./AddShelfSlot";
 import { BookOpenOverlay } from "./BookOpenOverlay";
+import { UnshelvedSection } from "./UnshelvedSection";
 import { moveBookBetweenShelves } from "@/actions/moveBookBetweenShelves";
 import { createShelfAndMoveBook } from "@/actions/createShelfAndMoveBook";
+import { shelveAllOrphans } from "@/actions/shelveAllOrphans";
+import { useResponsiveLibraryConfig } from "./useResponsiveSlotCount";
 import type { Shelf, ShelfBook } from "@/services/libraryData";
 
 type OpenBookState = {
@@ -35,6 +38,9 @@ type OpenBookState = {
 type Props = {
   shelves: Shelf[];
   totalBooks: number;
+  /** Livros físicos no acervo sem `shelf_id` — renderizados como seção
+   *  "Sem estante" no fim, com lombadas draggable. */
+  unshelved: ShelfBook[];
 };
 
 /**
@@ -52,12 +58,34 @@ type Props = {
  * melhorias visuais já no CSS (wood grain nas prateleiras, lombadas
  * vintage com raised bands + frisos + gold-foil) continuam aplicáveis.
  */
-export function LibraryWall({ shelves, totalBooks }: Props) {
+export function LibraryWall({ shelves, totalBooks, unshelved }: Props) {
   const router = useRouter();
   const [zoomedShelfId, setZoomedShelfId] = useState<string | null>(null);
   const [draggedBook, setDraggedBook] = useState<ShelfBook | null>(null);
   const [openBook, setOpenBook] = useState<OpenBookState | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [reorganizing, setReorganizing] = useState(false);
+  const [reorganizeError, setReorganizeError] = useState<string | null>(null);
+  const { targetCapacity } = useResponsiveLibraryConfig();
+
+  // O botão "Reorganizar" aparece quando vale a pena: há órfãos OU alguma
+  // estante tem mais livros do que cabem no breakpoint atual.
+  const hasOverflow = shelves.some((s) => s.total_books > targetCapacity);
+  const needsReorganize = unshelved.length > 0 || hasOverflow;
+
+  const handleReorganize = () => {
+    setReorganizing(true);
+    setReorganizeError(null);
+    startTransition(async () => {
+      const result = await shelveAllOrphans({ targetCapacity });
+      setReorganizing(false);
+      if (!result.ok) {
+        setReorganizeError(result.message);
+        return;
+      }
+      router.refresh();
+    });
+  };
 
   // Sessão 17.5: handler dos clicks de lombada — captura DOMRect e abre
   // o overlay state-driven (sem trocar de rota).
@@ -155,6 +183,24 @@ export function LibraryWall({ shelves, totalBooks }: Props) {
             {shelves.length === 1 ? "estante" : "estantes"}
             {isPending && " · salvando..."}
           </p>
+          {needsReorganize && (
+            <div className="mt-2 pointer-events-auto inline-flex flex-col items-center gap-1">
+              <button
+                type="button"
+                onClick={handleReorganize}
+                disabled={reorganizing}
+                title={`Distribui todos os livros físicos em estantes com até ${targetCapacity} cada (ajustado pela sua tela). Cria estantes novas se precisar; estantes extras ficam vazias pra você deletar.`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gold/40 bg-gold/10 text-gold text-xs font-body font-medium transition-colors hover:bg-gold/20 hover:text-gold-deep disabled:opacity-60 disabled:cursor-wait"
+              >
+                {reorganizing ? "Reorganizando..." : "Reorganizar biblioteca"}
+              </button>
+              {reorganizeError && (
+                <p className="text-[11px] text-burgundy bg-burgundy/10 border border-burgundy/30 rounded px-2 py-0.5">
+                  {reorganizeError}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Sessão 17.5: parede inteira dims/blur quando overlay de livro
@@ -182,6 +228,11 @@ export function LibraryWall({ shelves, totalBooks }: Props) {
               ))}
               {/* Slot integrado de "+ Nova estante" — ghost shelf no fim */}
               <AddShelfSlot />
+              {/* Livros sem estante — arrastáveis pras estantes reais */}
+              <UnshelvedSection
+                books={unshelved}
+                onSpineClick={handleSpineClick}
+              />
             </>
           )}
         </motion.div>

@@ -308,13 +308,10 @@ export async function updateBookFull(
   // disposed_date é opcional: se o user não souber a data exata, deixa em
   // branco. A história fica registrada com `changedAt = NOW()` (fallback
   // mais abaixo na inserção em book_status_history).
-  if (isLentToOwnedReturn && !returnedToAcervoAtForm) {
-    return {
-      ok: false,
-      message: "Informe a data em que o livro voltou pro acervo.",
-      field: "returned_to_acervo_at",
-    };
-  }
+  // returned_to_acervo_at também é opcional (mesma lógica dos outros
+  // campos de data). Sem data, o history insere com `changedAt = NOW()`
+  // e o timeline mostra "sem data informada" quando book.returned_to_acervo_at
+  // estiver null.
   if (purchase_origin === "assinatura" && !subscription_id) {
     return {
       ok: false,

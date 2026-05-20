@@ -79,6 +79,7 @@ export type BookDetail = {
   borrowed_from: string | null;
   borrowed_at: string | null;
   returned_at: string | null;
+  returned_to_acervo_at: string | null;
   lent_to: string | null;
   subscription: { id: string; name: string } | null;
   /** Outros livros que vieram no mesmo exemplar físico (omnibus). */
@@ -262,11 +263,15 @@ function PosseTimeline({
           h.status === "sold" ||
           h.status === "traded" ||
           h.status === "lost";
+        // Re-entrada no acervo (owned mas não é a primeira entry) é
+        // governada pelo `returned_to_acervo_at`.
+        const isReEntryToOwned = h.status === "owned" && !isFirstEntry;
         const showNoDate =
           (isFirstEntry && !book.acquired_at) ||
           (isDisposalEvent && !book.disposed_date) ||
           (h.status === "borrowed" && !book.borrowed_at) ||
-          (h.status === "returned" && !book.returned_at);
+          (h.status === "returned" && !book.returned_at) ||
+          (isReEntryToOwned && !book.returned_to_acervo_at);
         return (
           <li key={h.id} className="relative">
             <span

@@ -64,6 +64,10 @@ export type Shelf = {
 export type LibraryData = {
   shelves: Shelf[];
   total_books: number;
+  /** Livros físicos em casa/emprestados que estão sem `shelf_id` — listados
+   *  numa seção "Sem estante" no fim do mural pra que possam ser arrastados
+   *  pras estantes reais. */
+  unshelved: ShelfBook[];
 };
 
 // =============================================================================
@@ -241,12 +245,19 @@ export async function getLibraryData(userId: string): Promise<LibraryData> {
     .contains("formats_owned", ["physical"])
     .order("shelf_position", { ascending: true, nullsFirst: false });
 
-  // 4. Group books por shelf_id
+  // 4. Group books por shelf_id. Livros sem shelf_id (ou com shelf_id que
+  //    não bate com nenhuma estante real — defensivo) vão pra `unshelved`,
+  //    que é exibida como seção separada no mural.
   const byShelf = new Map<string, ShelfBook[]>();
   for (const s of shelves ?? []) byShelf.set(s.id, []);
+  const unshelved: ShelfBook[] = [];
 
   for (const b of (books as unknown as BookForShelfRaw[] | null) ?? []) {
-    if (!b.shelf_id || !byShelf.has(b.shelf_id)) continue;
+    if (!b.shelf_id || !byShelf.has(b.shelf_id)) {
+      // Não tem estante (ou aponta pra estante deletada). Vira órfão.
+      unshelved.push(mapBookToShelfBook(b, ""));
+      continue;
+    }
     byShelf.get(b.shelf_id)!.push(mapBookToShelfBook(b, b.shelf_id));
   }
 
@@ -262,7 +273,9 @@ export async function getLibraryData(userId: string): Promise<LibraryData> {
 
   return {
     shelves: result,
-    total_books: result.reduce((acc, s) => acc + s.total_books, 0),
+    total_books:
+      result.reduce((acc, s) => acc + s.total_books, 0) + unshelved.length,
+    unshelved,
   };
 }
 

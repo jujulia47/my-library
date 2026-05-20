@@ -214,6 +214,7 @@ export default async function Page({
           borrowed_from: book.borrowed_from,
           borrowed_at: book.borrowed_at,
           returned_at: book.returned_at,
+          returned_to_acervo_at: book.returned_to_acervo_at,
           lent_to: book.lent_to,
           subscription,
           bundled,

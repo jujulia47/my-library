@@ -11,11 +11,8 @@ import { AddBookSlot } from "./AddBookSlot";
 import { EmptyShelfCta } from "./EmptyShelfCta";
 import { DeleteShelfButton } from "./DeleteShelfButton";
 import { renderDecoration } from "./decorations";
-import {
-  getShelfLayout,
-  DEFAULT_SHELF_SLOTS,
-  type ShelfSlot,
-} from "@/utils/shelfLayout";
+import { getShelfLayout, type ShelfSlot } from "@/utils/shelfLayout";
+import { useResponsiveSlotCount } from "./useResponsiveSlotCount";
 import type { Shelf, ShelfBook } from "@/services/libraryData";
 
 type Props = {
@@ -53,9 +50,10 @@ export function ShelfRow({ shelf, onZoom, onSpineClick }: Props) {
     return () => io.disconnect();
   }, []);
 
+  const slotCount = useResponsiveSlotCount();
   const layout = useMemo(
-    () => getShelfLayout(shelf.id, DEFAULT_SHELF_SLOTS),
-    [shelf.id],
+    () => getShelfLayout(shelf.id, slotCount),
+    [shelf.id, slotCount],
   );
 
   // Mapa position → book.

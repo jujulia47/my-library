@@ -2,7 +2,7 @@
  * Quadro com moldura ornamentada (refinado). Moldura dourada com detalhes
  * em alto-relevo nos cantos (rosáceas), passe-partout creme e tela com 3
  * variantes de conteúdo via `seed`: paisagem (céu, montanhas, lago, sol),
- * retrato (figura com aura) ou padrão (vitral geométrico).
+ * botânica (ilustração vintage de flor) ou padrão (vitral geométrico).
  */
 export function Quadro({
   seed = "default",
@@ -110,7 +110,7 @@ export function Quadro({
         <rect x="12" y="14" width="44" height="58" fill="#F5E8D0" />
 
         {variant === "paisagem" && <PaisagemArt />}
-        {variant === "retrato" && <RetratoArt />}
+        {variant === "botanica" && <BotanicaArt />}
         {variant === "padrao" && <PadraoArt />}
 
         {/* Cordão de pendurar (atrás, pequeno) */}
@@ -126,11 +126,11 @@ export function Quadro({
   );
 }
 
-function pickVariant(seed: string): "paisagem" | "retrato" | "padrao" {
+function pickVariant(seed: string): "paisagem" | "botanica" | "padrao" {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
   const idx = Math.abs(hash) % 3;
-  return idx === 0 ? "paisagem" : idx === 1 ? "retrato" : "padrao";
+  return idx === 0 ? "paisagem" : idx === 1 ? "botanica" : "padrao";
 }
 
 function PaisagemArt() {
@@ -178,40 +178,52 @@ function PaisagemArt() {
   );
 }
 
-function RetratoArt() {
+function BotanicaArt() {
   return (
     <g>
-      <defs>
-        <radialGradient id="qd-portrait-bg" cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#D4845D" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#3D2418" stopOpacity="0.85" />
-        </radialGradient>
-      </defs>
-      {/* Fundo */}
-      <rect x="12" y="14" width="44" height="58" fill="url(#qd-portrait-bg)" />
-      {/* Aura/halo atrás da figura */}
-      <circle cx="34" cy="32" r="11" fill="rgba(255,224,138,0.18)" />
-      {/* Cabelo (atrás) */}
-      <path d="M 22 36 Q 22 22 34 22 Q 46 22 46 36 Q 46 30 34 30 Q 22 30 22 36 Z" fill="#1A0F09" />
-      {/* Rosto ovalado */}
-      <ellipse cx="34" cy="33" rx="7" ry="9" fill="#E8C5A6" />
-      {/* Sombra do rosto */}
-      <path d="M 28 36 Q 30 40 34 41 Q 38 40 40 36 Q 38 38 34 38 Q 30 38 28 36 Z" fill="rgba(60,30,20,0.25)" />
-      {/* Olhos */}
-      <ellipse cx="31" cy="33" rx="0.7" ry="0.4" fill="#3D2418" />
-      <ellipse cx="37" cy="33" rx="0.7" ry="0.4" fill="#3D2418" />
-      {/* Nariz */}
-      <path d="M 34 34 L 33.4 37 L 34.6 37" fill="none" stroke="#9D6B4A" strokeWidth="0.3" />
-      {/* Boca */}
-      <path d="M 32 39 Q 34 40 36 39" fill="none" stroke="#82393A" strokeWidth="0.5" />
-      {/* Pescoço */}
-      <rect x="32" y="42" width="4" height="5" fill="#E8C5A6" />
-      {/* Vestes */}
-      <path d="M 14 72 Q 14 50 34 50 Q 54 50 54 72 Z" fill="#5A3A20" />
-      <path d="M 28 50 Q 34 56 40 50" fill="#3D2418" />
-      {/* Colar dourado */}
-      <ellipse cx="34" cy="50" rx="4.5" ry="0.6" fill="#D4B056" />
-      <circle cx="34" cy="51.5" r="0.8" fill="#D4B056" />
+      {/* Fundo papel envelhecido */}
+      <rect x="12" y="14" width="44" height="58" fill="#F0E4C8" />
+      {/* Manchas de envelhecimento (foxing) */}
+      <circle cx="19" cy="22" r="2.6" fill="rgba(160,132,62,0.13)" />
+      <circle cx="49" cy="62" r="3.4" fill="rgba(160,132,62,0.1)" />
+      <circle cx="46" cy="20" r="1.8" fill="rgba(160,132,62,0.1)" />
+
+      {/* Caule curvo */}
+      <path
+        d="M 34 69 Q 32.5 50 34 31"
+        stroke="#5C6E47"
+        strokeWidth="1.1"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      {/* Folhas alternadas */}
+      <path d="M 34 58 Q 25 55 23 46 Q 29 50 34 56 Z" fill="#7E9C5E" />
+      <path d="M 34 50 Q 43 47 45 38 Q 39 42 34 48 Z" fill="#5C6E47" />
+      <path d="M 34 43 Q 26 41 25 33 Q 30 37 34 42 Z" fill="#7E9C5E" />
+      {/* Nervuras das folhas */}
+      <path d="M 34 57 Q 29 53 24 47" stroke="#3F4D31" strokeWidth="0.3" fill="none" />
+      <path d="M 34 49 Q 39 45 44 39" stroke="#3F4D31" strokeWidth="0.3" fill="none" />
+
+      {/* Flor principal — 4 pétalas cardinais + miolo */}
+      <ellipse cx="34" cy="22" rx="2.5" ry="3.6" fill="#D98C6A" />
+      <ellipse cx="34" cy="32" rx="2.5" ry="3.6" fill="#C97B5A" />
+      <ellipse cx="29" cy="27" rx="3.6" ry="2.5" fill="#D98C6A" />
+      <ellipse cx="39" cy="27" rx="3.6" ry="2.5" fill="#D98C6A" />
+      {/* Pétalas diagonais menores */}
+      <ellipse cx="30.6" cy="23.6" rx="2" ry="2.8" fill="#E0A07E" opacity="0.9" transform="rotate(-45 30.6 23.6)" />
+      <ellipse cx="37.4" cy="23.6" rx="2" ry="2.8" fill="#E0A07E" opacity="0.9" transform="rotate(45 37.4 23.6)" />
+      {/* Miolo */}
+      <circle cx="34" cy="27" r="2.6" fill="#E8B84F" />
+      <circle cx="34" cy="27" r="1.3" fill="#A0843E" />
+
+      {/* Botão lateral (flor fechada) */}
+      <ellipse cx="44" cy="36" rx="1.8" ry="2.8" fill="#C97B5A" />
+      <path d="M 44 38.5 L 44 41" stroke="#5C6E47" strokeWidth="0.6" />
+
+      {/* Etiqueta botânica (linhas sugerindo nome em latim) */}
+      <line x1="22" y1="65" x2="46" y2="65" stroke="#A0843E" strokeWidth="0.4" opacity="0.55" />
+      <line x1="26" y1="68" x2="42" y2="68" stroke="#A0843E" strokeWidth="0.3" opacity="0.4" />
     </g>
   );
 }

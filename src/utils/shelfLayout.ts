@@ -104,13 +104,22 @@ export function getShelfLayout(
 
   // Pass 1: tipo de cada slot. Loop com índice `i` que pode pular 5
   // posições quando consome um cluster laying-stack.
+  //
+  // Cap de decorações: a taxa de 8% gera ~6-7 decorações em estantes
+  // grandes (83 slots). Como decorações são largas (70-280px), isso fazia
+  // o conteúdo estourar a largura da tela. Limitamos a `MAX_DECORATIONS`
+  // por estante — slots de decoração além do cap viram cluster/tilted/
+  // standing (caem nos branches seguintes).
+  const MAX_DECORATIONS = 4;
+  let decorationCount = 0;
   let i = 0;
   let stackCounter = 0;
   while (i < totalSlots) {
     const r = pseudoRandom(seed, i);
 
-    if (r < 0.08) {
+    if (r < 0.08 && decorationCount < MAX_DECORATIONS) {
       slots.push({ position: i, type: "decoration" });
+      decorationCount += 1;
       i += 1;
     } else if (r < 0.2 && i + STACK_HEIGHT - 1 < totalSlots) {
       // Cluster de 5 slots contíguos. Só roda se há espaço; senão cai pro

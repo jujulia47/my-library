@@ -16,7 +16,6 @@ import {
   StatusBadge,
   BookCoverFallback,
   ConfirmDialog,
-  Badge,
 } from "@/components/ui";
 import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
 import type { BookListItem } from "@/services/bookList";
@@ -150,12 +149,14 @@ export default function BookCard({ book, priority = false }: Props) {
         </Link>
 
         {/* Badge de estado terminal (saiu do acervo) — fica FORA do wrapper
-            esmaecido pra ficar legível. */}
+            esmaecido pra ficar legível. Usa bg sólido alto-contraste
+            (burgundy/90 + ivory) em vez do `Badge variant="fade"` antigo
+            que sumia em cima de capas coloridas. */}
         {isDisposed && disposedLabel && (
           <div className="absolute top-4 left-4 z-10 pointer-events-none">
-            <Badge variant="fade" size="sm" className="shadow-sm">
+            <span className="inline-flex items-center rounded-full bg-burgundy/90 text-ivory-light px-2.5 py-0.5 text-[11px] font-body font-medium tracking-wide shadow-md backdrop-blur-sm">
               {disposedLabel}
-            </Badge>
+            </span>
           </div>
         )}
 

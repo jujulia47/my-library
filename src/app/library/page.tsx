@@ -26,7 +26,11 @@ export default async function LibraryPage() {
 
   return (
     <AppShell fullBleed>
-      <LibraryWall shelves={data.shelves} totalBooks={data.total_books} />
+      <LibraryWall
+        shelves={data.shelves}
+        totalBooks={data.total_books}
+        unshelved={data.unshelved}
+      />
     </AppShell>
   );
 }
