@@ -89,6 +89,21 @@ export default function CoverUpload({
     setError(null);
     setRemoved(false);
 
+    // Sincroniza o `<input type="file">` com o arquivo. Crucial pro DROP:
+    // o arquivo dropado vai pro `dataTransfer`, NÃO pro input — sem isso o
+    // form envia `cover` vazio mesmo com o preview aparecendo. Pro seletor
+    // nativo o input já tem o arquivo; re-setar é idempotente (não dispara
+    // change de novo). DataTransfer é a única forma de programar file inputs.
+    if (inputRef.current) {
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        inputRef.current.files = dt.files;
+      } catch {
+        // DataTransfer pode falhar em browsers muito antigos
+      }
+    }
+
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     const url = URL.createObjectURL(file);
     objectUrlRef.current = url;
@@ -99,11 +114,21 @@ export default function CoverUpload({
     handleFile(e.target.files?.[0]);
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
     handleFile(e.dataTransfer.files?.[0]);
+  };
+
+  // Handlers de drag reaproveitados pelo preview e pela faixa de upload.
+  const dragHandlers = {
+    onDragOver: (e: React.DragEvent<HTMLElement>) => {
+      e.preventDefault();
+      setIsDragging(true);
+    },
+    onDragLeave: () => setIsDragging(false),
+    onDrop: handleDrop,
   };
 
   const handleRemove = () => {
@@ -132,9 +157,18 @@ export default function CoverUpload({
         </label>
       )}
 
-      {/* Preview em destaque, centralizado */}
+      {/* Preview em destaque, centralizado — também é drop zone + clicável
+          (label htmlFor abre o seletor de arquivo). */}
       <div className="flex justify-center">
-        <div className="w-[200px]">
+        <label
+          htmlFor={inputId}
+          {...dragHandlers}
+          title={dropzoneLabel}
+          className={clsx(
+            "block w-[200px] cursor-pointer rounded-md transition-all",
+            isDragging && "ring-2 ring-gold ring-offset-2 ring-offset-paper",
+          )}
+        >
           {previewUrl ? (
             <div
               className="relative w-full rounded-md overflow-hidden border border-ink-deep/30"
@@ -156,18 +190,13 @@ export default function CoverUpload({
               className="w-full"
             />
           )}
-        </div>
+        </label>
       </div>
 
       {/* Dropzone como faixa horizontal fina */}
       <label
         htmlFor={inputId}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
+        {...dragHandlers}
         className={clsx(
           "flex items-center justify-center gap-2 w-full h-[60px] px-4 rounded-md border-2 border-dashed cursor-pointer transition-colors duration-150",
           isDragging

@@ -7,12 +7,15 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
+  closestCorners,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -49,6 +52,7 @@ import { archiveCollection } from "@/actions/archiveCollection";
 import { removeCollectionItem } from "@/actions/removeCollectionItem";
 import { toggleCollectionFavorite } from "@/actions/toggleCollectionFavorite";
 import { reorderCollectionItems } from "@/actions/reorderCollectionItems";
+import { moveCollectionItemToSection } from "@/actions/moveCollectionItemToSection";
 import { imagesUrl } from "@/services/images";
 import AddCollectionItemModal from "@/components/forms/AddCollectionItemModal";
 import SectionEditModal from "@/components/forms/SectionEditModal";
@@ -201,36 +205,101 @@ export default function CollectionDetailClient({ data }: Props) {
     }),
   );
 
-  // Reorder dentro de uma seção. dnd-kit dá os ids `active` e `over`; a
-  // gente acha eles na lista da seção, troca de posição via `arrayMove`, e
-  // recompõe a lista global preservando os items das outras seções.
-  const handleDragEnd = (event: DragEndEvent, sectionKey: string) => {
+  // Item sendo arrastado (pra renderizar no DragOverlay).
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const draggedItem = draggedItemId
+    ? items.find((i) => i.item_id === draggedItemId) ?? null
+    : null;
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setDraggedItemId(String(event.active.id));
+  };
+
+  // Drag de items: reorder dentro da seção OU move entre seções. O `over`
+  // pode ser um `item_id` (livro) ou a key de uma seção (droppable vazio).
+  const handleDragEnd = (event: DragEndEvent) => {
+    setDraggedItemId(null);
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const sectionItems = items.filter(
-      (i) => (i.section ?? UNSECTIONED) === sectionKey,
-    );
-    const oldIdx = sectionItems.findIndex((i) => i.item_id === active.id);
-    const newIdx = sectionItems.findIndex((i) => i.item_id === over.id);
-    if (oldIdx < 0 || newIdx < 0) return;
-    const reorderedSection = arrayMove(sectionItems, oldIdx, newIdx);
-    // Recompõe a lista global percorrendo `items` na ordem original e
-    // substituindo cada slot da seção alvo pelo item correspondente da
-    // nova ordem — assim outros items (de outras seções) ficam intactos.
-    let sectionCursor = 0;
-    const merged: CollectionItem[] = items.map((i) => {
-      if ((i.section ?? UNSECTIONED) === sectionKey) {
-        const replacement = reorderedSection[sectionCursor];
-        sectionCursor += 1;
-        return replacement;
-      }
-      return i;
-    });
-    setItems(merged);
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    const activeItem = items.find((i) => i.item_id === activeId);
+    if (!activeItem) return;
+    const sourceKey = activeItem.section ?? UNSECTIONED;
+
+    const overItem = items.find((i) => i.item_id === overId);
+    const targetKey = overItem ? overItem.section ?? UNSECTIONED : overId;
+
+    // ----- Reorder dentro da mesma seção -----
+    if (sourceKey === targetKey) {
+      const sectionItems = items.filter(
+        (i) => (i.section ?? UNSECTIONED) === sourceKey,
+      );
+      const oldIdx = sectionItems.findIndex((i) => i.item_id === activeId);
+      const newIdx = sectionItems.findIndex((i) => i.item_id === overId);
+      if (oldIdx < 0 || newIdx < 0) return;
+      const reordered = arrayMove(sectionItems, oldIdx, newIdx);
+      let cursor = 0;
+      const merged = items.map((i) =>
+        (i.section ?? UNSECTIONED) === sourceKey ? reordered[cursor++] : i,
+      );
+      setItems(merged);
+      startTransition(async () => {
+        await reorderCollectionItems({
+          collectionSlug: c.slug,
+          orderedItemIds: reordered.map((i) => i.item_id),
+        });
+        router.refresh();
+      });
+      return;
+    }
+
+    // ----- Move entre seções -----
+    const targetSectionValue = targetKey === UNSECTIONED ? null : targetKey;
+    const movedItem = {
+      ...activeItem,
+      section: targetSectionValue,
+    } as CollectionItem;
+    const withoutActive = items.filter((i) => i.item_id !== activeId);
+
+    // Índice de inserção: antes do `over` item, ou no fim da seção destino
+    // quando solto na área vazia da seção (droppable da seção).
+    let insertIdx: number;
+    if (overItem) {
+      insertIdx = withoutActive.findIndex((i) => i.item_id === overId);
+    } else {
+      const lastOfTarget = [...withoutActive]
+        .reverse()
+        .find((i) => (i.section ?? UNSECTIONED) === targetKey);
+      insertIdx = lastOfTarget
+        ? withoutActive.findIndex(
+            (i) => i.item_id === lastOfTarget.item_id,
+          ) + 1
+        : withoutActive.length;
+    }
+    const newItems = [
+      ...withoutActive.slice(0, insertIdx),
+      movedItem,
+      ...withoutActive.slice(insertIdx),
+    ];
+    setItems(newItems);
+
+    const orderedTargetItemIds = newItems
+      .filter((i) => (i.section ?? UNSECTIONED) === targetKey)
+      .map((i) => i.item_id);
+    const orderedSourceItemIds = newItems
+      .filter((i) => (i.section ?? UNSECTIONED) === sourceKey)
+      .map((i) => i.item_id);
+
     startTransition(async () => {
-      await reorderCollectionItems({
+      await moveCollectionItemToSection({
         collectionSlug: c.slug,
-        orderedItemIds: reorderedSection.map((i) => i.item_id),
+        itemId: activeId,
+        targetSection: targetSectionValue,
+        orderedTargetItemIds,
+        orderedSourceItemIds,
       });
       router.refresh();
     });
@@ -584,11 +653,18 @@ export default function CollectionDetailClient({ data }: Props) {
           </Button>
         </Card>
       ) : (
-        <div className="space-y-8">
-          {grouped.map((group) => {
-            const isUnsectioned = group.key === UNSECTIONED;
-            return (
-              <section key={group.key}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setDraggedItemId(null)}
+        >
+          <div className="space-y-8">
+            {grouped.map((group) => {
+              const isUnsectioned = group.key === UNSECTIONED;
+              return (
+                <section key={group.key}>
                 {/* Header da seção (suprime quando só há unsectioned) */}
                 {!onlyUnsectioned && (
                   <div className="group flex items-center justify-between gap-3 mb-3 pb-2 border-b border-border">
@@ -633,11 +709,7 @@ export default function CollectionDetailClient({ data }: Props) {
                   </div>
                 )}
 
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={(e) => handleDragEnd(e, group.key)}
-                >
+                <SectionDroppable sectionKey={group.key}>
                   <SortableContext
                     items={group.items.map((i) => i.item_id)}
                     strategy={rectSortingStrategy}
@@ -653,11 +725,23 @@ export default function CollectionDetailClient({ data }: Props) {
                       ))}
                     </div>
                   </SortableContext>
-                </DndContext>
+                </SectionDroppable>
               </section>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+          <DragOverlay>
+            {draggedItem && (
+              <div className="opacity-90">
+                <ItemCard
+                  item={draggedItem}
+                  onRemove={() => {}}
+                  showMarkPurchased={isWishlistCollection}
+                />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {/* MODAIS */}
@@ -861,6 +945,32 @@ function buildStats(p: {
 // =====================================================================
 // Item Card (book or wishlist)
 // =====================================================================
+/**
+ * Wrapper droppable de uma seção — registra a seção inteira como zona de
+ * drop pra que items de OUTRAS seções possam ser soltos nela (drag entre
+ * seções). Realça com ring dourado quando há item pairando sobre ela.
+ */
+function SectionDroppable({
+  sectionKey,
+  children,
+}: {
+  sectionKey: string;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: sectionKey });
+  return (
+    <div
+      ref={setNodeRef}
+      className={clsx(
+        "rounded-md transition-colors -m-1.5 p-1.5 min-h-[60px]",
+        isOver && "bg-gold/[0.06] ring-1 ring-gold/35",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 /**
  * Wrapper sortable do ItemCard — registra o item no SortableContext da
  * seção pra que o dnd-kit consiga mover entre posições.
