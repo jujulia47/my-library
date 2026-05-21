@@ -143,11 +143,26 @@ export async function bookListQuery(
     query = query.overlaps("formats_owned", ["physical"]);
   }
 
-  // Formats: array overlap com `&&`. Postgrest exposes `overlaps`.
-  const validFormats = (params.formats ?? []).filter(
+  // Formats: array overlap com `&&`. Valor especial "none" = livro sem
+  // nenhum formato definido (`formats_owned` null ou array vazio) — pra
+  // achar registros incompletos. Combina via OR com formatos reais.
+  const rawFormats = params.formats ?? [];
+  const wantsNoFormat = rawFormats.includes("none");
+  const validFormats = rawFormats.filter(
     (f): f is BookFormat => FORMATS.includes(f as BookFormat),
   );
-  if (validFormats.length > 0) {
+  if (wantsNoFormat && validFormats.length > 0) {
+    // Cada formato vira sua própria condição `ov.{x}` (array de 1 elemento,
+    // sem vírgula interna — a vírgula no `.or()` é separador de condição).
+    const ovConds = validFormats
+      .map((f) => `formats_owned.ov.{${f}}`)
+      .join(",");
+    query = query.or(
+      `formats_owned.is.null,formats_owned.eq.{},${ovConds}`,
+    );
+  } else if (wantsNoFormat) {
+    query = query.or("formats_owned.is.null,formats_owned.eq.{}");
+  } else if (validFormats.length > 0) {
     query = query.overlaps("formats_owned", validFormats);
   }
 

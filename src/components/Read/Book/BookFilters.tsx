@@ -38,6 +38,9 @@ const FORMAT_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] 
   { value: "physical", label: "Físico", variant: "cappuccino" },
   { value: "ebook", label: "E-book", variant: "moss" },
   { value: "audiobook", label: "Audiobook", variant: "terracota" },
+  // "Sem formato": livros cadastrados sem nenhum formato definido — útil
+  // pra achar registros incompletos.
+  { value: "none", label: "Sem formato", variant: "fade" },
 ];
 
 const MONTHS = [
