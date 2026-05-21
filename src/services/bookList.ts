@@ -94,6 +94,8 @@ export type BookListParams = {
   author_slugs?: string[];
   year?: number;
   month?: number;
+  /** Quando true, lista só livros marcados como favoritos. */
+  favorite?: boolean;
   sort?: BookListSort;
 };
 
@@ -166,6 +168,11 @@ export async function bookListQuery(
     query = query.overlaps("formats_owned", validFormats);
   }
 
+  // Favoritos: filtro nativo booleano.
+  if (params.favorite) {
+    query = query.eq("is_favorite", true);
+  }
+
   // Filtro por autor: pré-consulta `book_author` pra obter book_ids dos
   // autores selecionados. Aplica `query.in("id", bookIds)` em seguida.
   // Vazio (nenhum livro daqueles autores) → garante resultado vazio
@@ -191,12 +198,11 @@ export async function bookListQuery(
     query = query.in("id", matchingBookIds);
   }
 
-  // Sort nativo. Default `title_asc` ganha favoritos no topo (mesmo pattern de
-  // collectionList "newest"). Os outros sorts respeitam a coluna pedida pura.
+  // Sort nativo — respeita a coluna pedida pura. "Título (A-Z)" é A-Z de
+  // verdade: sem boost de favoritos (que quebrava a expectativa do user de
+  // ordenação alfabética simples quando escolhe esse sort explicitamente).
   if (sort === "title_asc") {
-    query = query
-      .order("is_favorite", { ascending: false })
-      .order("title", { ascending: true });
+    query = query.order("title", { ascending: true });
   } else if (sort === "title_desc") {
     query = query.order("title", { ascending: false });
   } else if (sort === "created_desc") {

@@ -11,6 +11,7 @@ import {
   CalendarDaysIcon,
   RectangleStackIcon,
   UserCircleIcon,
+  HeartIcon,
 } from "@heroicons/react/24/outline";
 import type { ComponentType, SVGProps } from "react";
 import { Button, Select, Card, Badge } from "@/components/ui";
@@ -92,6 +93,7 @@ export default function BookFilters({
   const authorSlugs = parseList(sp.get("author"));
   const year = sp.get("year") ? Number(sp.get("year")) : null;
   const month = sp.get("month") ? Number(sp.get("month")) : null;
+  const favorite = sp.get("favorite") === "1";
   const sort = sp.get("sort") ?? "reading_first";
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -141,6 +143,7 @@ export default function BookFilters({
       year: null,
       month: null,
       author: null,
+      favorite: null,
     });
   };
 
@@ -149,7 +152,8 @@ export default function BookFilters({
     ownerships.length +
     formats.length +
     authorSlugs.length +
-    (year ? 1 : 0);
+    (year ? 1 : 0) +
+    (favorite ? 1 : 0);
 
   const activeChips: {
     key: string;
@@ -208,6 +212,14 @@ export default function BookFilters({
         variant: "fade",
         onRemove: () => removeListItem("author", authorSlugs, slug),
       });
+  }
+  if (favorite) {
+    activeChips.push({
+      key: "favorite",
+      label: "Favoritos",
+      variant: "burgundy",
+      onRemove: () => setParam({ favorite: null }),
+    });
   }
 
   return (
@@ -314,6 +326,20 @@ export default function BookFilters({
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-5 space-y-6">
+            <FilterGroup
+              label="Favoritos"
+              icon={HeartIcon}
+              iconColor="text-burgundy"
+            >
+              <CheckboxList
+                options={[{ value: "1", label: "Só favoritos" }]}
+                selected={favorite ? ["1"] : []}
+                onToggle={() =>
+                  setParam({ favorite: favorite ? null : "1" })
+                }
+              />
+            </FilterGroup>
+
             <FilterGroup
               label="Status de leitura"
               icon={BookOpenIcon}

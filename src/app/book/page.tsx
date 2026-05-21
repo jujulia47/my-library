@@ -49,6 +49,7 @@ export default async function BookPage({
   const monthStr = pickFirst(sp.month);
   const year = yearStr ? Number(yearStr) || undefined : undefined;
   const month = monthStr ? Number(monthStr) || undefined : undefined;
+  const favorite = pickFirst(sp.favorite) === "1";
   const sortRaw = pickFirst(sp.sort) ?? "reading_first";
   const sort = (
     VALID_SORTS.has(sortRaw as BookListSort) ? sortRaw : "reading_first"
@@ -80,6 +81,7 @@ export default async function BookPage({
       author_slugs: authorSlugs,
       year,
       month,
+      favorite,
       sort,
     }),
     bookCounts(),
