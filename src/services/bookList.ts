@@ -306,6 +306,9 @@ export async function bookListQuery(
 
 export async function bookCounts() {
   const supabase = await createClient();
+  // Total do header conta cada `book` cadastrado (inclui volumes que dividem
+  // exemplar físico) — é o "acervo cadastrado". A contagem sem duplicados de
+  // exemplar fica por conta de `countPhysicalCopies`, usada no filtro.
   const { count: totalCount } = await supabase
     .from("book")
     .select("id", { count: "exact", head: true });
@@ -319,6 +322,35 @@ export async function bookCounts() {
   );
 
   return { total: totalCount ?? 0, finished: finishedBookIds.size };
+}
+
+/**
+ * Conta exemplares físicos numa lista de livros: volumes ligados por
+ * `bundled_with` (omnibus / "mesmo exemplar de") representam um único livro
+ * físico e contam como 1. Agrupa por componente conexo do grafo, restrito aos
+ * livros presentes na própria lista — IDs bundled fora dela são ignorados.
+ */
+export function countPhysicalCopies(
+  books: { id: string; bundled_with: string[] | null }[],
+): number {
+  const byId = new Map(books.map((b) => [b.id, b]));
+  const seen = new Set<string>();
+  let count = 0;
+  for (const b of books) {
+    if (seen.has(b.id)) continue;
+    // BFS pelo grupo bundled — todo o componente conexo conta como 1 exemplar.
+    const stack: string[] = [b.id];
+    while (stack.length > 0) {
+      const cur = stack.pop();
+      if (cur === undefined || seen.has(cur)) continue;
+      seen.add(cur);
+      for (const nb of byId.get(cur)?.bundled_with ?? []) {
+        if (byId.has(nb) && !seen.has(nb)) stack.push(nb);
+      }
+    }
+    count += 1;
+  }
+  return count;
 }
 
 /**

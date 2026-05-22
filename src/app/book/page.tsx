@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import AppShell from "@/components/AppShell";
 import BookCard from "@/components/BookCard";
 import BookFilters from "@/components/Read/Book/BookFilters";
@@ -5,6 +6,7 @@ import { NoBooks, NoFilteredBooks } from "@/components/Read/Book/BookEmpty";
 import {
   bookListQuery,
   bookCounts,
+  countPhysicalCopies,
   yearsWithFinishedReadings,
   type BookListSort,
 } from "@/services/bookList";
@@ -91,15 +93,68 @@ export default async function BookPage({
   const pagination = parsePagination(sp);
   const paged = paginateArray(books, pagination);
 
+  // Subtítulo do header. Base (sempre): total de títulos cadastrados — conta
+  // volumes que dividem exemplar separadamente, é o "acervo cadastrado". Com
+  // filtro ativo, mostra também quantos livros caem no filtro. Para "Na
+  // estante" (owned) essa contagem ignora duplicados de exemplar físico:
+  // volumes bundled contam 1 (os cards na lista continuam todos visíveis).
+  const anyFilter =
+    statuses.length > 0 ||
+    ownerships.length > 0 ||
+    formats.length > 0 ||
+    authorSlugs.length > 0 ||
+    year !== undefined ||
+    month !== undefined ||
+    favorite;
+  const isNaEstante = ownerships.includes("owned");
+  const filteredVolumes = books.length;
+  const filteredPhysical = isNaEstante
+    ? countPhysicalCopies(books)
+    : filteredVolumes;
+  // Volumes "a mais" por dividirem exemplar — diferença entre cadastrados e
+  // exemplares físicos no recorte atual.
+  const sharedVolumes = filteredVolumes - filteredPhysical;
+
+  let subtitle: ReactNode;
+  if (counts.total === 0) {
+    subtitle = "Sua estante começa aqui";
+  } else {
+    const base = `${counts.total} ${
+      counts.total === 1 ? "título" : "títulos"
+    } · ${counts.finished} lidos`;
+    if (!anyFilter) {
+      subtitle = base;
+    } else if (isNaEstante) {
+      subtitle = (
+        <>
+          {base} · {filteredPhysical}{" "}
+          {filteredPhysical === 1 ? "livro" : "livros"} na estante
+          {sharedVolumes > 0 && (
+            <>
+              <br />
+              <span className="text-sm not-italic text-ink-fade">
+                {filteredVolumes} volumes na estante — {sharedVolumes}{" "}
+                {sharedVolumes === 1
+                  ? "compõe o mesmo livro físico que outro"
+                  : "compõem o mesmo livro físico que outro"}
+                .
+              </span>
+            </>
+          )}
+        </>
+      );
+    } else {
+      subtitle = `${base} · ${filteredVolumes} ${
+        filteredVolumes === 1 ? "livro" : "livros"
+      } no filtro`;
+    }
+  }
+
   return (
     <AppShell>
       <PageHeader
         title="Livros"
-        subtitle={
-          counts.total === 0
-            ? "Sua estante começa aqui"
-            : `${counts.total} ${counts.total === 1 ? "título" : "títulos"} · ${counts.finished} lidos`
-        }
+        subtitle={subtitle}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             <BookFilters yearsAvailable={years} allAuthors={allAuthors} />
