@@ -43,6 +43,7 @@ export type BookForOpenView = {
   language: Database["public"]["Enums"]["book_language"] | null;
   synopsis: string | null;
   is_favorite: boolean;
+  wont_read: boolean;
   ownership_status: OwnershipStatus;
   authors: { id: string; name: string }[];
   categories: { id: string; name: string }[];
@@ -932,8 +933,9 @@ function PageRating({ book }: { book: BookForOpenView }) {
 function PagePhysicalStatus({ book }: { book: BookForOpenView }) {
   // Status de leitura: pega o da reading mais recente.
   const latest = book.readings[0];
-  const readingStatus =
-    (latest?.status as LegacyReadingStatus | null) ?? "tbr";
+  const readingStatus: LegacyReadingStatus =
+    (latest?.status as LegacyReadingStatus | null) ??
+    (book.wont_read ? "wont_read" : "tbr");
 
   return (
     <div>

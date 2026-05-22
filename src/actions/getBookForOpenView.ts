@@ -122,6 +122,7 @@ export async function getBookForOpenView(
     language: book.language,
     synopsis: book.synopsis,
     is_favorite: book.is_favorite,
+    wont_read: book.wont_read,
     ownership_status: book.ownership_status,
     authors,
     categories,

@@ -24,6 +24,7 @@ const STATUS_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] 
   { value: "finished", label: "Lido", variant: "gold" },
   { value: "abandoned", label: "Abandonado", variant: "gold" },
   { value: "tbr", label: "Quero ler", variant: "gold" },
+  { value: "wont_read", label: "Não vou ler", variant: "cappuccino" },
 ];
 
 const OWNERSHIP_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] = [

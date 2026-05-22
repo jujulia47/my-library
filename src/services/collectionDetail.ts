@@ -18,7 +18,7 @@ export type CollectionItemBook = {
     title: string;
     cover: string | null;
     authors: string[];
-    derived_status: ReadingStatus | "tbr";
+    derived_status: ReadingStatus | "tbr" | "wont_read";
     last_activity_at: string | null;
   };
 };
@@ -64,6 +64,7 @@ type RawBookFromQuery = {
   slug: string;
   title: string;
   cover: string | null;
+  wont_read: boolean | null;
   book_author: { author: { name: string } | null }[] | null;
   reading: RawReadingFromQuery[] | null;
 };
@@ -91,9 +92,16 @@ type RawCollectionItemFromQuery = {
 
 function deriveBookStatus(
   readings: RawReadingFromQuery[] | null,
-): { status: ReadingStatus | "tbr"; last_activity_at: string | null } {
+  wontRead: boolean,
+): {
+  status: ReadingStatus | "tbr" | "wont_read";
+  last_activity_at: string | null;
+} {
   if (!readings || readings.length === 0)
-    return { status: "tbr", last_activity_at: null };
+    return {
+      status: wontRead ? "wont_read" : "tbr",
+      last_activity_at: null,
+    };
   const sorted = [...readings].sort((a, b) => {
     const af = a.finish_date ?? "";
     const bf = b.finish_date ?? "";
@@ -126,7 +134,7 @@ export async function getCollectionDetailBySlug(
     .select(
       `id, section, position, added_at, was_wishlist, book_id, wishlist_id,
        book:book_id(
-         id, slug, title, cover,
+         id, slug, title, cover, wont_read,
          book_author(author(name)),
          reading(status, start_date, finish_date, updated_at)
        ),
@@ -149,7 +157,10 @@ export async function getCollectionDetailBySlug(
         raw.book.book_author
           ?.map((ba) => ba.author?.name)
           .filter((n): n is string => !!n) ?? [];
-      const derived = deriveBookStatus(raw.book.reading);
+      const derived = deriveBookStatus(
+        raw.book.reading,
+        raw.book.wont_read ?? false,
+      );
       if (
         derived.last_activity_at &&
         (!lastActivity || derived.last_activity_at > lastActivity)

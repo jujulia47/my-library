@@ -671,6 +671,18 @@ function ExpandedCard({ entry }: { entry: BibliographyEntry }) {
             ))}
           </>
         )}
+        {status === "wont_read" && (
+          <>
+            <p>
+              <span className="text-ink-fade">—</span> Não vou ler
+            </p>
+            {entry.in_collections.map((c) => (
+              <p key={c} className="italic text-ink-fade">
+                Em &ldquo;{c}&rdquo;
+              </p>
+            ))}
+          </>
+        )}
       </div>
 
       <Link

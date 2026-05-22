@@ -153,6 +153,8 @@ export async function updateBookFull(
   const serie_id = (formData.get("serie_id") as string) || null;
   const volumeRaw = formData.get("volume") as string | null;
   const volume = volumeRaw ? Number(volumeRaw) || null : null;
+  // Checkbox "não vou ler" — `on` quando marcado, ausente quando não.
+  const wont_read = formData.get("wont_read") === "on";
 
   // bundled_with vem como CSV de IDs do BookMultiSelect.
   const bundledRaw = (formData.get("bundled_with") as string) ?? "";
@@ -401,6 +403,7 @@ export async function updateBookFull(
     borrowed_from,
     lent_to,
     subscription_id,
+    wont_read,
   };
   // acquired_at: undefined = não mexe (transição lent_out → owned preserva).
   // null/string = atualiza pra esse valor.

@@ -6,7 +6,7 @@ type QuoteRow = Database["public"]["Tables"]["quote"]["Row"];
 type ReadingRow = Database["public"]["Tables"]["reading"]["Row"];
 type ReadingStatus = Database["public"]["Enums"]["reading_status"];
 
-export type LegacyStatus = ReadingStatus | "tbr";
+export type LegacyStatus = ReadingStatus | "tbr" | "wont_read";
 
 export type QuoteListSort = "newest" | "oldest" | "author_asc";
 
@@ -31,12 +31,16 @@ type RawQuote = QuoteRow & {
     id: string;
     slug: string;
     title: string;
+    wont_read?: boolean | null;
     book_author?: { author: { name: string } | null }[] | null;
     reading?: ReadingRow[] | null;
   } | null;
 };
 
-function deriveBookStatus(reading: ReadingRow[] | null | undefined): LegacyStatus {
+function deriveBookStatus(
+  reading: ReadingRow[] | null | undefined,
+  wontRead: boolean,
+): LegacyStatus {
   const sorted = (reading ?? []).slice().sort((a, b) => {
     const af = a.finish_date ?? "";
     const bf = b.finish_date ?? "";
@@ -45,7 +49,7 @@ function deriveBookStatus(reading: ReadingRow[] | null | undefined): LegacyStatu
     const bs = b.start_date ?? "";
     return bs.localeCompare(as);
   });
-  return sorted[0]?.status ?? "tbr";
+  return sorted[0]?.status ?? (wontRead ? "wont_read" : "tbr");
 }
 
 function flatten(raw: RawQuote): QuoteListItem {
@@ -62,7 +66,7 @@ function flatten(raw: RawQuote): QuoteListItem {
       slug: raw.book.slug,
       title: raw.book.title,
       author: bookAuthorJoined,
-      status: deriveBookStatus(raw.book.reading),
+      status: deriveBookStatus(raw.book.reading, raw.book.wont_read ?? false),
     };
   }
 
@@ -105,7 +109,7 @@ export async function quoteListQuery(
   let query = supabase
     .from("quote")
     .select(
-      `*, book(id, slug, title, book_author(author(name)), reading(status, start_date, finish_date))`,
+      `*, book(id, slug, title, wont_read, book_author(author(name)), reading(status, start_date, finish_date))`,
     );
 
   // Tipo: linked (book_id not null) / standalone (book_id null)

@@ -7,7 +7,7 @@ type ReadingStatus = Database["public"]["Enums"]["reading_status"];
 type OwnershipStatus = Database["public"]["Enums"]["ownership_status"];
 type BookFormat = Database["public"]["Enums"]["book_format"];
 
-export type LegacyStatus = ReadingStatus | "tbr";
+export type LegacyStatus = ReadingStatus | "tbr" | "wont_read";
 
 export type BookListSort =
   | "reading_first"
@@ -53,6 +53,7 @@ const FORMATS: BookFormat[] = ["physical", "ebook", "audiobook"];
 export const ALL_STATUS_VALUES: LegacyStatus[] = [
   ...READING_STATUSES,
   "tbr",
+  "wont_read",
 ];
 
 function flatten(raw: RawBookFromQuery): BookListItem {
@@ -226,6 +227,7 @@ export async function bookListQuery(
   );
   if (requested.length > 0) {
     const wantsTbr = requested.includes("tbr");
+    const wantsWontRead = requested.includes("wont_read");
     const readingSet = new Set(
       requested.filter((s): s is ReadingStatus =>
         READING_STATUSES.includes(s as ReadingStatus),
@@ -234,7 +236,12 @@ export async function bookListQuery(
     books = books.filter((b) => {
       const last = b.latest_reading?.status as ReadingStatus | undefined;
       if (last && readingSet.has(last)) return true;
-      if (wantsTbr && b.reading.length === 0) return true;
+      // Sem leitura registrada: distingue "não vou ler" (flag wont_read)
+      // de "quero ler" (tbr) pela coluna `wont_read` do livro.
+      if (b.reading.length === 0) {
+        if (wantsWontRead && b.wont_read) return true;
+        if (wantsTbr && !b.wont_read) return true;
+      }
       return false;
     });
   }

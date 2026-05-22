@@ -34,8 +34,11 @@ export default function BookCard({ book, priority = false }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const status =
-    (book.latest_reading?.status as LegacyReadingStatus | null) ?? "tbr";
+  // Sem leitura registrada, o status deriva da flag `wont_read`:
+  // "não vou ler" se marcada, "quero ler" (tbr) se não.
+  const status: LegacyReadingStatus =
+    (book.latest_reading?.status as LegacyReadingStatus | null) ??
+    (book.wont_read ? "wont_read" : "tbr");
   // Sessão 17.2: o que era `disposed` virou 4 estados (donated/sold/traded/
   // lost) — todos significam "saiu do acervo". Mostra o card esmaecido e
   // badge correspondente; pra `returned` (livro emprestado que voltou)

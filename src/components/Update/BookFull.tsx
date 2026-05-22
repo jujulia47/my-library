@@ -390,6 +390,24 @@ export default function BookFull({
             </div>
           </fieldset>
 
+          {/* Intenção de leitura: "não vou ler" — livro que o user tem mas
+              não pretende ler. Vira o status derivado "Não vou ler" em vez
+              de "Quero ler" (tbr) quando o livro não tem leituras. */}
+          <label className="inline-flex items-start gap-2 cursor-pointer text-sm text-ink-deep mb-6">
+            <input
+              type="checkbox"
+              name="wont_read"
+              defaultChecked={book.wont_read}
+              className="w-4 h-4 mt-0.5 rounded border-border accent-moss focus:ring-moss/30"
+            />
+            <span>
+              Não vou ler este livro
+              <span className="block text-xs italic text-ink-fade">
+                Só tenho na estante — não conta como &ldquo;quero ler&rdquo;.
+              </span>
+            </span>
+          </label>
+
           <OwnershipFields
             initial={{
               ownership_status: book.ownership_status,

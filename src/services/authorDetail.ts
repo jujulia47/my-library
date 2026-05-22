@@ -84,7 +84,7 @@ export type BibliographyEntry = {
   is_owned: boolean;
   book_id: string | null;
   book_slug: string | null;
-  derived_status: ReadingStatus | "tbr" | null;
+  derived_status: ReadingStatus | "tbr" | "wont_read" | null;
   rating: number | null;
   current_page: number | null;
   pages_count: number | null;
@@ -359,7 +359,7 @@ export async function authorDetailBySlug(
       ? supabase
           .from("book")
           .select(
-            `id, slug, title, created_at, pages,
+            `id, slug, title, created_at, pages, wont_read,
              reading(status, start_date, finish_date, current_page, rating, updated_at)`,
           )
           .in("id", bookIds)
@@ -378,6 +378,7 @@ export async function authorDetailBySlug(
     title: string;
     created_at: string;
     pages: number | null;
+    wont_read: boolean | null;
     reading: {
       status: ReadingStatus;
       start_date: string | null;
@@ -422,9 +423,11 @@ export async function authorDetailBySlug(
       return (c.start_date ?? "").localeCompare(a.start_date ?? "");
     });
     const last = sortedR[0];
-    const status: ReadingStatus | "tbr" = last
+    const status: ReadingStatus | "tbr" | "wont_read" = last
       ? (last.status as ReadingStatus)
-      : "tbr";
+      : b.wont_read
+        ? "wont_read"
+        : "tbr";
     const bibForYear = (bibRes.data ?? []).find(
       (bib) => normalize(bib.title) === titleKey,
     );

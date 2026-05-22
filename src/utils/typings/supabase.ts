@@ -171,6 +171,7 @@ export type Database = {
           updated_at: string
           user_id: string
           volume: number | null
+          wont_read: boolean
         }
         Insert: {
           acquired_at?: string | null
@@ -213,6 +214,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           volume?: number | null
+          wont_read?: boolean
         }
         Update: {
           acquired_at?: string | null
@@ -255,6 +257,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           volume?: number | null
+          wont_read?: boolean
         }
         Relationships: [
           {

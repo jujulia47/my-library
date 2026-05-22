@@ -15,6 +15,7 @@ const statusBorderClass: Record<LegacyStatus, string> = {
   finished: "border-l-moss",
   abandoned: "border-l-burgundy",
   tbr: "border-l-ink-fade",
+  wont_read: "border-l-cappuccino",
 };
 
 function buildAttribution(q: QuoteListItem): { main: string; muted?: boolean } {

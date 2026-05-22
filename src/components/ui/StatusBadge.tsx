@@ -5,9 +5,11 @@ type ReadingStatus = Database["public"]["Enums"]["reading_status"];
 type OwnershipStatus = Database["public"]["Enums"]["ownership_status"];
 type SerieStatus = Database["public"]["Enums"]["serie_status"];
 
-// "tbr" não está no enum reading_status — é um pseudo-status usado pela UI
-// quando o livro existe mas não tem registro em `reading`.
-export type LegacyReadingStatus = ReadingStatus | "tbr";
+// "tbr" e "wont_read" não estão no enum reading_status — são pseudo-status
+// usados pela UI quando o livro existe mas não tem registro em `reading`:
+//   - tbr        → vai ler (default)
+//   - wont_read  → não vai ler (flag `book.wont_read`)
+export type LegacyReadingStatus = ReadingStatus | "tbr" | "wont_read";
 
 const readingMap: Record<LegacyReadingStatus, { variant: BadgeVariant; label: string }> = {
   reading: { variant: "gold", label: "Lendo" },
@@ -15,6 +17,7 @@ const readingMap: Record<LegacyReadingStatus, { variant: BadgeVariant; label: st
   finished: { variant: "moss", label: "Lido" },
   abandoned: { variant: "burgundy", label: "Abandonado" },
   tbr: { variant: "fade", label: "Quero ler" },
+  wont_read: { variant: "cappuccino", label: "Não vou ler" },
 };
 
 const ownershipMap: Record<OwnershipStatus, { variant: BadgeVariant; label: string }> = {

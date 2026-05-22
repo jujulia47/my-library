@@ -73,6 +73,7 @@ export type BookDetail = {
   formats_owned: BookFormat[] | null;
   comments: string | null;
   is_favorite: boolean;
+  wont_read: boolean;
   purchase_origin: PurchaseOrigin | null;
   purchase_price: number | null;
   acquired_at: string | null;
@@ -360,10 +361,12 @@ export default function BookDetailClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Última leitura para o badge no hero
+  // Última leitura para o badge no hero. Sem leitura, deriva da flag
+  // `wont_read`: "não vou ler" se marcada, "quero ler" (tbr) se não.
   const latestReading = readings[0] ?? null;
-  const latestStatus =
-    (latestReading?.status as LegacyReadingStatus | null) ?? "tbr";
+  const latestStatus: LegacyReadingStatus =
+    (latestReading?.status as LegacyReadingStatus | null) ??
+    (book.wont_read ? "wont_read" : "tbr");
 
   // Leitura em andamento mais recente (start_date desc) — alimenta o bloco
   // "Leitura atual" no hero. Ignora "paused" e demais status.
