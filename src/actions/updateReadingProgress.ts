@@ -46,6 +46,19 @@ export async function updateReadingProgress(
     };
   }
 
+  // Data em que as páginas foram lidas. Default = hoje; usuário pode informar
+  // outra (típico: esqueceu de registrar ontem). Não aceita data no futuro.
+  const logDateRaw = (formData.get("log_date") as string | null)?.trim() || "";
+  const today = todayISO();
+  const logDate = logDateRaw || today;
+  if (logDate > today) {
+    return {
+      ok: false,
+      message: "Data de leitura não pode ser no futuro.",
+      field: "log_date",
+    };
+  }
+
   const { data: existing } = await supabase
     .from("reading")
     .select("status, current_page")
@@ -71,19 +84,18 @@ export async function updateReadingProgress(
 
   const delta = current_page - previousPage;
   if (delta > 0) {
-    const today = todayISO();
     const { data: existingLog } = await supabase
       .from("reading_progress_log")
       .select("pages_delta")
       .eq("reading_id", id)
-      .eq("log_date", today)
+      .eq("log_date", logDate)
       .maybeSingle();
     const finalDelta = (existingLog?.pages_delta ?? 0) + delta;
     await supabase.from("reading_progress_log").upsert(
       {
         user_id: user.id,
         reading_id: id,
-        log_date: today,
+        log_date: logDate,
         pages_delta: finalDelta,
       },
       { onConflict: "reading_id,log_date" },
