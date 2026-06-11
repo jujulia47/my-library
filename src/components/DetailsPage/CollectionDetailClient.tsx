@@ -64,6 +64,33 @@ import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
 
 const UNSECTIONED = "__unsectioned__";
 
+type CollectionSort =
+  | "default"
+  | "status"
+  | "added_desc"
+  | "added_asc"
+  | "title_asc";
+
+// Filtros de status pra coleção. Não inclui todos os filtros da página de
+// Livros — só os que fazem sentido pra "olhar dentro da coleção".
+const FILTER_OPTIONS: { value: LegacyReadingStatus; label: string }[] = [
+  { value: "reading", label: "Lendo" },
+  { value: "finished", label: "Lido" },
+  { value: "paused", label: "Pausado" },
+  { value: "tbr", label: "Quero ler" },
+  { value: "abandoned", label: "Abandonado" },
+  { value: "wont_read", label: "Não vou ler" },
+];
+
+const STATUS_RANK: Record<string, number> = {
+  reading: 0,
+  paused: 1,
+  finished: 2,
+  abandoned: 3,
+  tbr: 4,
+  wont_read: 5,
+};
+
 function formatBRL(value: number, withCents = false): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -197,6 +224,23 @@ export default function CollectionDetailClient({ data }: Props) {
   useEffect(() => {
     setItems(itemsFromServer);
   }, [itemsFromServer]);
+
+  // Ordenação e filtro locais. Quando qualquer um sai do default, drag &
+  // drop fica desativado — reordenar com vista filtrada/reordenada quebraria
+  // o mapeamento pra `position` do servidor.
+  const [sortMode, setSortMode] = useState<CollectionSort>("default");
+  const [statusFilters, setStatusFilters] = useState<Set<LegacyReadingStatus>>(
+    new Set(),
+  );
+  const toggleStatus = (s: LegacyReadingStatus) => {
+    setStatusFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  };
+  const dndDisabled = sortMode !== "default" || statusFilters.size > 0;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -380,10 +424,50 @@ export default function CollectionDetailClient({ data }: Props) {
   // ----- Datas raw -----
   const dateRow = dateRangeRaw(c.start_date, c.end_date);
 
+  // ----- Filtragem + ordenação pra render -----
+  const processedItems = useMemo(() => {
+    let arr: CollectionItem[] = items;
+    if (statusFilters.size > 0) {
+      // Filtro por status só faz sentido pra books — wishlist não tem
+      // derived_status e some quando há filtro ativo.
+      arr = arr.filter((i) => {
+        if (i.kind !== "book") return false;
+        const s = (i.book.derived_status as LegacyReadingStatus) ?? "tbr";
+        return statusFilters.has(s);
+      });
+    }
+    if (sortMode === "default") return arr;
+    const sorted = [...arr];
+    if (sortMode === "status") {
+      const rank = (i: CollectionItem): number => {
+        if (i.kind !== "book") return 99;
+        const s = (i.book.derived_status as LegacyReadingStatus) ?? "tbr";
+        return STATUS_RANK[s] ?? 6;
+      };
+      sorted.sort((a, b) => {
+        const ra = rank(a);
+        const rb = rank(b);
+        if (ra !== rb) return ra - rb;
+        return b.added_at.localeCompare(a.added_at);
+      });
+    } else if (sortMode === "added_desc") {
+      sorted.sort((a, b) => b.added_at.localeCompare(a.added_at));
+    } else if (sortMode === "added_asc") {
+      sorted.sort((a, b) => a.added_at.localeCompare(b.added_at));
+    } else if (sortMode === "title_asc") {
+      sorted.sort((a, b) => {
+        const ta = a.kind === "book" ? a.book.title : a.wishlist.title;
+        const tb = b.kind === "book" ? b.book.title : b.wishlist.title;
+        return ta.localeCompare(tb, "pt-BR");
+      });
+    }
+    return sorted;
+  }, [items, statusFilters, sortMode]);
+
   // ----- Group items by section -----
   const grouped = useMemo(() => {
     const map = new Map<string, CollectionItem[]>();
-    for (const item of items) {
+    for (const item of processedItems) {
       const key = item.section ?? UNSECTIONED;
       const arr = map.get(key) ?? [];
       arr.push(item);
@@ -405,7 +489,7 @@ export default function CollectionDetailClient({ data }: Props) {
       });
     }
     return ordered;
-  }, [items]);
+  }, [processedItems]);
 
   const onlyUnsectioned =
     grouped.length === 1 && grouped[0]?.key === UNSECTIONED;
@@ -632,6 +716,72 @@ export default function CollectionDetailClient({ data }: Props) {
         ))}
       </div>
 
+      {/* FILTER + SORT TOOLBAR */}
+      {items.length > 0 && (
+        <div className="flex flex-col gap-3 mb-5 pb-3 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-body text-ink-fade mr-1">
+                Filtrar:
+              </span>
+              {FILTER_OPTIONS.map((opt) => {
+                const active = statusFilters.has(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => toggleStatus(opt.value)}
+                    className={clsx(
+                      "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-body transition-colors",
+                      active
+                        ? "bg-moss text-ivory-light border-moss"
+                        : "bg-ivory-light text-ink-soft border-border hover:bg-paper-soft",
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+              {statusFilters.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilters(new Set())}
+                  className="text-xs font-body text-ink-fade hover:text-ink-deep underline ml-1"
+                >
+                  limpar
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-body text-ink-fade">
+                Ordenar:
+              </label>
+              <select
+                value={sortMode}
+                onChange={(e) =>
+                  setSortMode(e.target.value as CollectionSort)
+                }
+                className="text-sm font-body rounded-md border border-border bg-ivory-light px-2 py-1 text-ink-deep hover:bg-paper-soft focus:outline-none focus:ring-2 focus:ring-gold/40"
+              >
+                <option value="default">Padrão (manual)</option>
+                <option value="status">
+                  Lendo → Lido → adicionados
+                </option>
+                <option value="added_desc">Adicionado recente</option>
+                <option value="added_asc">Adicionado antigo</option>
+                <option value="title_asc">Título A-Z</option>
+              </select>
+            </div>
+          </div>
+          {dndDisabled && (
+            <p className="text-xs italic text-ink-fade">
+              Ordenação/filtro aplicado — arrastar pra reordenar fica
+              desativado.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* SECTIONS / ITEMS */}
       {items.length === 0 ? (
         <Card className="text-center py-12">
@@ -660,6 +810,20 @@ export default function CollectionDetailClient({ data }: Props) {
           onDragEnd={handleDragEnd}
           onDragCancel={() => setDraggedItemId(null)}
         >
+          {processedItems.length === 0 ? (
+            <Card className="text-center py-10">
+              <p className="text-ink-soft italic">
+                Nenhum item bate com o filtro selecionado.
+              </p>
+              <button
+                type="button"
+                onClick={() => setStatusFilters(new Set())}
+                className="mt-2 text-sm text-gold-deep hover:text-ink-deep underline"
+              >
+                Limpar filtros
+              </button>
+            </Card>
+          ) : (
           <div className="space-y-8">
             {grouped.map((group) => {
               const isUnsectioned = group.key === UNSECTIONED;
@@ -720,6 +884,7 @@ export default function CollectionDetailClient({ data }: Props) {
                           key={item.item_id}
                           item={item}
                           showMarkPurchased={isWishlistCollection}
+                          disabled={dndDisabled}
                           onRemove={() => setRemoveTarget(item)}
                         />
                       ))}
@@ -730,6 +895,7 @@ export default function CollectionDetailClient({ data }: Props) {
               );
             })}
           </div>
+          )}
           <DragOverlay>
             {draggedItem && (
               <div className="opacity-90">
@@ -985,10 +1151,12 @@ function SortableItemCard({
   item,
   onRemove,
   showMarkPurchased,
+  disabled,
 }: {
   item: CollectionItem;
   onRemove: () => void;
   showMarkPurchased?: boolean;
+  disabled?: boolean;
 }) {
   const {
     attributes,
@@ -997,7 +1165,7 @@ function SortableItemCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.item_id });
+  } = useSortable({ id: item.item_id, disabled });
   const wasDraggingRef = useRef(false);
 
   useEffect(() => {
