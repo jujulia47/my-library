@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import clsx from "clsx";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import AppShell from "@/components/AppShell";
 import { PageHeader, BookCoverFallback } from "@/components/ui";
 import {
@@ -64,10 +65,39 @@ export default async function SearchPage({
         title={q ? `Resultados para "${q}"` : "Busca"}
         subtitle={
           q.length < 2
-            ? "Digite pelo menos 2 caracteres na barra de busca."
+            ? "Digite pelo menos 2 caracteres."
             : `${result.total} ${result.total === 1 ? "resultado" : "resultados"}`
         }
       />
+
+      {/* Input nativo de busca — server-rendered, sem JS. Garante que no
+          mobile (onde o TopBar com busca global é escondido) sempre exista
+          um campo pra digitar. Submete via GET pra essa mesma página. */}
+      <form action="/search" method="get" className="mb-6">
+        {activeCat !== "all" && (
+          <input type="hidden" name="cat" value={activeCat} />
+        )}
+        <label htmlFor="search-q" className="sr-only">
+          Buscar
+        </label>
+        <div className="relative">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-fade"
+          >
+            <MagnifyingGlassIcon className="w-5 h-5" />
+          </span>
+          <input
+            id="search-q"
+            name="q"
+            type="search"
+            defaultValue={q}
+            autoFocus={!q}
+            placeholder="Buscar livros, séries, autores, citações…"
+            className="w-full rounded-md bg-ivory-light text-ink-deep placeholder:text-ink-fade border border-ink-fade/40 focus:border-gold focus:ring-2 focus:ring-gold/20 pl-10 pr-3 py-2.5 text-base sm:text-sm font-body outline-none transition-colors"
+          />
+        </div>
+      </form>
 
       {q.length >= 2 && (
         <div className="flex flex-wrap gap-2 mb-6">
