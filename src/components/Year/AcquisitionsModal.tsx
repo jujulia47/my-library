@@ -277,6 +277,11 @@ export function AcquisitionsModal({
                       {formatBRL(it.purchase_price)}
                     </p>
                   )}
+                  {it.bundle_with_title && (
+                    <p className="text-[10px] italic text-ink-fade mt-0.5 max-w-[8rem]">
+                      mesmo exemplar de &ldquo;{it.bundle_with_title}&rdquo;
+                    </p>
+                  )}
                 </div>
               </Link>
             </li>

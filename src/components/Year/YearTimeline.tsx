@@ -12,16 +12,21 @@ import type { MonthlyTimeline, TimelineReading } from "@/services/yearData";
 // e dividido pelo número de colunas, com clamp em [MIN, MAX].
 const MONTH_WIDTH_MIN = 270;
 const MONTH_WIDTH_MAX = 380;
-const MONTH_HEADER_HEIGHT = 64;
+// Header com folga pra título do livro de caso C (ends_here) ficar acima do
+// dia 1 sem colidir com a contagem mensal.
+const MONTH_HEADER_HEIGHT = 70;
 const DAY_HEIGHT = 18;
 const DAYS_TOTAL = 31;
-// Bottom padding generoso pra acomodar o lane stagger (até ~32px na lane 2).
-const TOTAL_HEIGHT = MONTH_HEADER_HEIGHT + DAYS_TOTAL * DAY_HEIGHT + 48;
+const TOTAL_HEIGHT = MONTH_HEADER_HEIGHT + DAYS_TOTAL * DAY_HEIGHT + 24;
 const PADDING_X = 32;
 const READING_X_BASE = PADDING_X + 6;
-const LANE_OFFSET = 20;
-const LANE_LABEL_Y_STAGGER = 16;
-const LABEL_X_GAP = 10;
+// Lane bem mais larga que antes (era 20) — agora a lane carrega o título
+// acima da linha, então precisa caber ~12 chars de texto por linha.
+const LANE_OFFSET = 80;
+const TITLE_FONT_SIZE = 11;
+const TITLE_LINE_HEIGHT = 12;
+const TITLE_MAX_LINES = 2;
+const TITLE_CHARS_PER_LINE = 13;
 
 const MONTH_NAMES_PT = [
   "JAN",
@@ -248,6 +253,52 @@ function TimelineChunkSvg({
   );
 }
 
+/**
+ * Quebra o título em até `maxLines` linhas, ≈`maxChars` chars cada (estimado
+ * pelo tamanho médio de char no font do título). Última linha ganha `…` se a
+ * mensagem original não couber por inteiro.
+ */
+function wrapTitle(
+  text: string,
+  maxChars: number,
+  maxLines: number,
+): string[] {
+  if (text.length <= maxChars) return [text];
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  let dropped = 0;
+  for (let i = 0; i < words.length; i += 1) {
+    const word = words[i];
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxChars) {
+      current = candidate;
+      continue;
+    }
+    if (current) {
+      lines.push(current);
+      current = "";
+    }
+    if (lines.length >= maxLines) {
+      dropped = words.length - i;
+      break;
+    }
+    current = word.length <= maxChars ? word : `${word.slice(0, maxChars - 1)}…`;
+  }
+  if (current) {
+    if (lines.length < maxLines) lines.push(current);
+    else dropped += 1;
+  }
+  if (dropped > 0 && lines.length > 0) {
+    const last = lines[lines.length - 1];
+    lines[lines.length - 1] =
+      last.length >= maxChars - 1
+        ? `${last.slice(0, maxChars - 1)}…`
+        : `${last}…`;
+  }
+  return lines;
+}
+
 function MonthColumn({
   month,
   year,
@@ -263,44 +314,14 @@ function MonthColumn({
   onReadingHover: ReadingHoverHandler;
   onReadingLeave: () => void;
 }) {
-  const lanes = assignLanes(month.readings);
+  // Timeline agora só recebe finished slices (filtrado no service); cada
+  // leitura ocupa uma lane vertical com o título acima da linha (estilo
+  // bullet journal). Slices não-finished vão pro painel "Em outras estradas".
+  const lined = month.readings;
+  const lanes = assignLanes(lined);
   const monthName = MONTH_NAMES_PT[month.month - 1];
 
   const totalDays = daysInMonth(year, month.month - 1);
-
-  const maxLane =
-    month.readings.length > 0
-      ? Math.max(...Array.from(lanes.values()))
-      : 0;
-  const labelX = READING_X_BASE + (maxLane + 1) * LANE_OFFSET + LABEL_X_GAP;
-  const labelMaxChars = Math.max(
-    12,
-    Math.floor((monthWidth - labelX - 6) / 6.5),
-  );
-
-  // Stagger vertical do label — separado da lane horizontal. Lane é
-  // calculada por overlap temporal (assignLanes) e governa onde a LINHA fica
-  // (eixo X); usar lane também pro stagger Y do label faz uma leitura
-  // sozinha no dia 31 mas em lane 2 (porque leituras anteriores no mês
-  // ocupavam lanes 0 e 1) receber +32px de stagger, jogando o label bem
-  // abaixo do dia 31 — bug reportado pela usuária. Solução: agrupar por
-  // start_day e estagar apenas entre leituras que começam no MESMO dia.
-  const labelOffsets = new Map<string, number>();
-  const groupedByStart = new Map<number, TimelineReading[]>();
-  for (const r of month.readings) {
-    const list = groupedByStart.get(r.start_day) ?? [];
-    list.push(r);
-    groupedByStart.set(r.start_day, list);
-  }
-  for (const list of groupedByStart.values()) {
-    list.sort((a, b) => a.reading_id.localeCompare(b.reading_id));
-    list.forEach((r, idx) => labelOffsets.set(r.reading_id, idx));
-  }
-  // Bordas do grid de dias — usadas pra decidir se o stagger vai pra baixo
-  // (default, mais natural de ler) ou se precisa virar pra cima quando a
-  // leitura está nos últimos dias do mês e o stagger transbordaria.
-  const gridTop = MONTH_HEADER_HEIGHT;
-  const gridBottom = MONTH_HEADER_HEIGHT + totalDays * DAY_HEIGHT;
 
   return (
     <g transform={`translate(${offsetX}, 0)`}>
@@ -317,7 +338,7 @@ function MonthColumn({
       </text>
       <text
         x={PADDING_X}
-        y={46}
+        y={42}
         fontSize="13"
         fill={month.has_readings ? "var(--color-ink-soft)" : "var(--color-ink-fade)"}
         fontStyle={month.has_readings ? "normal" : "italic"}
@@ -376,17 +397,12 @@ function MonthColumn({
         </text>
       )}
 
-      {month.readings.map((r) => (
+      {lined.map((r) => (
         <ReadingLine
           key={`${r.reading_id}-${month.month}`}
           reading={r}
           lane={lanes.get(r.reading_id) ?? 0}
-          labelOffset={labelOffsets.get(r.reading_id) ?? 0}
-          gridTop={gridTop}
-          gridBottom={gridBottom}
           monthIndex={month.month - 1}
-          labelX={labelX}
-          labelMaxChars={labelMaxChars}
           offsetX={offsetX}
           onHover={onReadingHover}
           onLeave={onReadingLeave}
@@ -399,26 +415,14 @@ function MonthColumn({
 function ReadingLine({
   reading,
   lane,
-  labelOffset,
-  gridTop,
-  gridBottom,
   monthIndex,
-  labelX,
-  labelMaxChars,
   offsetX,
   onHover,
   onLeave,
 }: {
   reading: TimelineReading;
   lane: number;
-  /** Índice 0-based dentro do grupo de leituras com o mesmo `start_day` — só
-   *  estagara verticalmente quando há colisão real de labels no mesmo dia. */
-  labelOffset: number;
-  gridTop: number;
-  gridBottom: number;
   monthIndex: number;
-  labelX: number;
-  labelMaxChars: number;
   offsetX: number;
   onHover: ReadingHoverHandler;
   onLeave: () => void;
@@ -429,23 +433,21 @@ function ReadingLine({
   const color = COLORS[reading.color_index] ?? COLORS[0];
   const dashArray = strokeDashFor(reading.status_at_end);
 
-  // Posição Y do label: para offset 0 (única leitura naquele start_day),
-  // alinha exatamente na linha do dia. Para offsets >0 (colisão), tenta
-  // descer; se o downward transbordaria o grid do mês, vira pra cima.
-  const labelYTitle = (() => {
-    const naturalY = y1 + 6;
-    if (labelOffset === 0) return naturalY;
-    const downward = naturalY + labelOffset * LANE_LABEL_Y_STAGGER;
-    if (downward <= gridBottom - 2) return downward;
-    const upward = y1 - 6 - labelOffset * LANE_LABEL_Y_STAGGER;
-    if (upward >= gridTop + 4) return upward;
-    // Ambas direções extrapolam → cap no grid (best effort, raro na prática).
-    return Math.min(gridBottom - 2, Math.max(gridTop + 4, downward));
-  })();
-  const titleShort =
-    reading.title.length > labelMaxChars
-      ? `${reading.title.slice(0, labelMaxChars - 1)}…`
-      : reading.title;
+  // Título acima da linha:
+  //  - self_contained / starts_here: ancora no dot de início (y1).
+  //  - ends_here: ancora no dot de fim (y2) — porque o livro começou em mês
+  //    anterior, o "evento" deste mês é o fim. Título acima do dot de fim.
+  const anchorY = reading.slice_kind === "ends_here" ? y2 : y1;
+  const titleLines = wrapTitle(
+    reading.title,
+    TITLE_CHARS_PER_LINE,
+    TITLE_MAX_LINES,
+  );
+  // Última linha do título fica a 4px acima do anchor; linhas anteriores
+  // sobem por TITLE_LINE_HEIGHT cada.
+  const titleBaselineY = anchorY - 4;
+  const titleTopBaselineY =
+    titleBaselineY - (titleLines.length - 1) * TITLE_LINE_HEIGHT;
 
   // Coords absolutas no SVG (column offset + x da lane).
   const handleMouseEnter = () => {
@@ -453,14 +455,30 @@ function ReadingLine({
   };
 
   return (
-    <g
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={onLeave}
-    >
-      {/* <title> nativo do browser foi removido em favor do tooltip HTML
-          custom renderizado pelo TimelineChunkSvg. A acessibilidade
-          continua coberta pelo aria-label do Link abaixo. */}
-      <Link href={`/book/${reading.book_slug}`} aria-label={`${reading.title} — abrir livro`}>
+    <g onMouseEnter={handleMouseEnter} onMouseLeave={onLeave}>
+      <Link
+        href={`/book/${reading.book_slug}`}
+        aria-label={`${reading.title} — abrir livro`}
+      >
+        {/* Título tingido na cor da leitura, acima do dot âncora */}
+        <text
+          x={x + 4}
+          y={titleTopBaselineY}
+          fontSize={TITLE_FONT_SIZE}
+          fontWeight="500"
+          fill={color}
+        >
+          {titleLines.map((line, i) => (
+            <tspan
+              key={i}
+              x={x + 4}
+              dy={i === 0 ? 0 : TITLE_LINE_HEIGHT}
+            >
+              {line}
+            </tspan>
+          ))}
+        </text>
+
         {/* Linha vertical */}
         <line
           x1={x}
@@ -473,11 +491,24 @@ function ReadingLine({
           strokeDasharray={dashArray}
         />
 
-        {/* Bolinha início */}
-        <circle cx={x} cy={y1} r={2.6} fill={color} />
+        {/* Bolinha início — anel quando ends_here (não começou aqui) */}
+        {reading.slice_kind === "ends_here" ? (
+          <circle
+            cx={x}
+            cy={y1}
+            r={2.6}
+            fill="var(--color-paper)"
+            stroke={color}
+            strokeWidth="1.4"
+          />
+        ) : (
+          <circle cx={x} cy={y1} r={2.6} fill={color} />
+        )}
 
-        {/* Bolinha fim — círculo cheio quando finished, anel quando outro */}
-        {reading.status_at_end === "finished" ? (
+        {/* Bolinha fim — círculo cheio quando finished/abandoned, anel quando
+            continua ou paused */}
+        {reading.status_at_end === "finished" ||
+        reading.status_at_end === "abandoned" ? (
           <circle cx={x} cy={y2} r={3.2} fill={color} />
         ) : (
           <circle
@@ -490,7 +521,8 @@ function ReadingLine({
           />
         )}
 
-        {/* Seta "veio do ano anterior" */}
+        {/* Seta "veio do ano anterior" — só na fatia onde a leitura entra
+            no ano */}
         {reading.came_from_previous_year && (
           <text
             x={x - 5}
@@ -502,29 +534,6 @@ function ReadingLine({
             ←
           </text>
         )}
-
-        {/* Conector horizontal sutil ligando o dot de início à entrada do
-            label — reforça a associação visual quando há várias lanes. */}
-        <line
-          x1={x + 3}
-          y1={labelYTitle - 3}
-          x2={labelX - 3}
-          y2={labelYTitle - 3}
-          stroke={color}
-          strokeWidth="0.6"
-          opacity="0.4"
-        />
-
-        {/* Título tingido na cor da leitura */}
-        <text
-          x={labelX}
-          y={labelYTitle}
-          fontSize="13"
-          fontWeight="500"
-          fill={color}
-        >
-          {titleShort}
-        </text>
       </Link>
     </g>
   );

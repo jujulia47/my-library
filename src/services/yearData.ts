@@ -21,28 +21,48 @@ export type TopBookOfYear = {
   finish_date: string;
 };
 
-export type Achievement =
-  | {
-      kind: "challenge";
-      id: string;
-      slug: string;
-      name: string;
-      completed_month: number;
-    }
-  | {
-      kind: "series";
-      id: string;
-      slug: string;
-      name: string;
-      finished_month: number;
-    }
-  | {
-      kind: "subscription";
-      id: string;
-      slug: string;
-      name: string;
-      months_active: number;
-    };
+/**
+ * Marco de leitura no ano. Cada entrada é um livro que disparou um milestone
+ * (10º livro do ano, 10k páginas, primeira 5★, etc.). Calculado em ordem
+ * cronológica por finish_date, então o card pode mostrar a sequência de
+ * conquistas conforme o ano avançou.
+ */
+export type Milestone = {
+  kind: "books" | "pages" | "first_five_star";
+  /** Texto curto: "25º livro do ano", "10k páginas no ano", etc. */
+  label: string;
+  date: string;
+  book_title: string;
+  book_slug: string;
+};
+
+/**
+ * Leitura que não está "lida" mas tocou o ano — em curso, pausada ou
+ * abandonada. Vai pro painel "Em outras estradas" (separado da linha do
+ * tempo, que agora só lista os finalizados).
+ */
+export type OtherReadingItem = {
+  reading_id: string;
+  book_id: string;
+  book_slug: string;
+  title: string;
+  author_name: string | null;
+  cover_url: string | null;
+  start_date: string | null;
+  current_page: number | null;
+  pages_total: number | null;
+  /** Data relevante pro card:
+   *   - "reading" → start_date (quando começou)
+   *   - "paused"  → data do último evento `paused`
+   *   - "abandoned" → finish_date (data do abandono) */
+  reference_date: string | null;
+};
+
+export type OtherReadings = {
+  reading: OtherReadingItem[];
+  paused: OtherReadingItem[];
+  abandoned: OtherReadingItem[];
+};
 
 export type AcquisitionItem = {
   id: string;
@@ -54,6 +74,13 @@ export type AcquisitionItem = {
   purchase_price: number | null;
   acquired_at: string;
   subscription: { id: string; name: string } | null;
+  /**
+   * Quando este livro divide o mesmo exemplar físico com outro (`bundled_with`),
+   * o item "secundário" do bundle tem `purchase_price = null` (pra não inflar
+   * a soma) e `bundle_with_title` apontando pro título do "primário" — assim
+   * a UI pode mostrar "mesmo exemplar de X" em vez do preço.
+   */
+  bundle_with_title: string | null;
 };
 
 export type AcquisitionsBreakdown = {
@@ -93,6 +120,15 @@ export type TimelineReading = {
     | "abandoned"
     | "continues_next_month";
   came_from_previous_year: boolean;
+  /**
+   * Onde essa fatia de leitura cai dentro do mês:
+   *  - "self_contained": começou e terminou neste mês (caso típico).
+   *  - "starts_here":    começou neste mês, continua nos seguintes.
+   *  - "ends_here":      começou em mês anterior, terminou neste.
+   *  - "ongoing":        atravessa o mês sem começar nem terminar aqui — vira
+   *                      um chip no header em vez de linha vertical.
+   */
+  slice_kind: "self_contained" | "starts_here" | "ends_here" | "ongoing";
   pages_read: number | null;
   duration_days: number | null;
   color_index: number;
@@ -124,7 +160,8 @@ export type YearData = {
   };
 
   top_books: TopBookOfYear[];
-  achievements: Achievement[];
+  milestones: Milestone[];
+  other_readings: OtherReadings;
   acquisitions: AcquisitionsBreakdown;
   countries: CountryEntry[];
   favorite_quote: FavoriteQuote | null;
@@ -321,103 +358,178 @@ function computeTopBooks(rows: FinishedRaw[]): TopBookOfYear[] {
   });
 }
 
-async function fetchAchievements(
+/**
+ * Marcos de leitura: deriva uma lista de "conquistas numéricas" a partir das
+ * finished readings do ano, em ordem cronológica de finish_date.
+ *
+ * Categorias:
+ *  - books:  10º / 25º / 50º / 100º / 150º / 200º livro do ano
+ *  - pages:  5k / 10k / 25k / 50k / 100k páginas no ano (cruza o limiar)
+ *  - first_five_star: primeira leitura 5★ do ano
+ *
+ * Cada milestone aponta pro livro que disparou (o que cruzou o threshold).
+ */
+function computeMilestones(rows: FinishedRaw[]): Milestone[] {
+  const sorted = rows
+    .filter((r) => r.finish_date && r.book)
+    .slice()
+    .sort((a, b) => (a.finish_date ?? "").localeCompare(b.finish_date ?? ""));
+
+  const BOOK_TARGETS = [10, 25, 50, 100, 150, 200];
+  const PAGE_TARGETS = [5000, 10000, 25000, 50000, 100000];
+
+  const milestones: Milestone[] = [];
+  let bookCount = 0;
+  let pageCount = 0;
+  let firstFiveStarRecorded = false;
+
+  for (const r of sorted) {
+    bookCount += 1;
+    const prevPageCount = pageCount;
+    pageCount += r.book?.pages ?? 0;
+    const date = r.finish_date as string;
+    const title = r.book!.title;
+    const slug = r.book!.slug;
+
+    for (const target of BOOK_TARGETS) {
+      if (bookCount === target) {
+        milestones.push({
+          kind: "books",
+          label: `${target}º livro do ano`,
+          date,
+          book_title: title,
+          book_slug: slug,
+        });
+      }
+    }
+
+    for (const target of PAGE_TARGETS) {
+      if (prevPageCount < target && pageCount >= target) {
+        milestones.push({
+          kind: "pages",
+          label: `${target / 1000}k páginas no ano`,
+          date,
+          book_title: title,
+          book_slug: slug,
+        });
+      }
+    }
+
+    if (!firstFiveStarRecorded && r.rating === 5) {
+      firstFiveStarRecorded = true;
+      milestones.push({
+        kind: "first_five_star",
+        label: "Primeira leitura 5★ do ano",
+        date,
+        book_title: title,
+        book_slug: slug,
+      });
+    }
+  }
+
+  milestones.sort((a, b) => a.date.localeCompare(b.date));
+  return milestones;
+}
+
+type OtherReadingRaw = {
+  id: string;
+  status: Database["public"]["Enums"]["reading_status"];
+  start_date: string | null;
+  finish_date: string | null;
+  current_page: number | null;
+  book: {
+    id: string;
+    slug: string;
+    title: string;
+    pages: number | null;
+    cover: string | null;
+    book_author: { author: { name: string } | null }[] | null;
+  } | null;
+  reading_event: { event_type: string; event_date: string }[] | null;
+};
+
+/**
+ * Leituras que tocaram o ano mas não terminaram — em curso, pausadas no ano,
+ * abandonadas no ano. Vai pro card "Em outras estradas" separado da linha
+ * do tempo (que agora lista só os concluídos).
+ *
+ * Critérios:
+ *  - reading:   status='reading', start_date <= year-end. Mostra mesmo se
+ *               começou em anos anteriores — é "em curso" hoje.
+ *  - paused:    status='paused' E tem evento `paused` cuja event_date cai
+ *               neste ano.
+ *  - abandoned: status='abandoned' E finish_date cai neste ano.
+ */
+async function fetchOtherReadings(
   supabase: SupabaseServer,
   userId: string,
   year: number,
-): Promise<Achievement[]> {
-  const result: Achievement[] = [];
+): Promise<OtherReadings> {
+  const yearStartISO = `${year}-01-01`;
+  const yearEndISO = `${year}-12-31`;
 
-  // 1. Challenges concluídos no ano (`completed_at` populado em sessão 15.1).
-  const { data: challenges } = await supabase
-    .from("collection")
-    .select("id, slug, name, completed_at")
-    .eq("user_id", userId)
-    .eq("type", "challenge")
-    .not("completed_at", "is", null)
-    .gte("completed_at", `${year}-01-01`)
-    .lte("completed_at", `${year}-12-31T23:59:59.999Z`)
-    .order("completed_at", { ascending: false });
-
-  for (const c of challenges ?? []) {
-    if (!c.completed_at) continue;
-    result.push({
-      kind: "challenge",
-      id: c.id,
-      slug: c.slug,
-      name: c.name,
-      completed_month: new Date(c.completed_at).getUTCMonth() + 1,
-    });
-  }
-
-  // 2. Séries finalizadas no ano via `serie.finish_date`.
-  const { data: series } = await supabase
-    .from("serie")
-    .select("id, slug, name, finish_date")
-    .eq("user_id", userId)
-    .eq("status", "finished")
-    .not("finish_date", "is", null)
-    .gte("finish_date", `${year}-01-01`)
-    .lte("finish_date", `${year}-12-31`)
-    .order("finish_date", { ascending: false });
-
-  for (const s of series ?? []) {
-    if (!s.finish_date) continue;
-    result.push({
-      kind: "series",
-      id: s.id,
-      slug: s.slug,
-      name: s.name,
-      finished_month: new Date(s.finish_date).getUTCMonth() + 1,
-    });
-  }
-
-  // 3. Subscriptions com items added_at no ano. months_active = count distinct
-  //    (year, month) dos added_at. Pra simplificar, fetch dos collection_item
-  //    de cada subscription e agrupa em memória — datasets pequenos.
-  const { data: subs } = await supabase
-    .from("collection")
+  const { data } = await supabase
+    .from("reading")
     .select(
-      `id, slug, name,
-       collection_item(added_at)`,
+      `id, status, start_date, finish_date, current_page,
+       book:book_id(id, slug, title, pages, cover,
+         book_author(author(name))),
+       reading_event(event_type, event_date)`,
     )
     .eq("user_id", userId)
-    .eq("type", "subscription");
+    .in("status", ["reading", "paused", "abandoned"]);
 
-  type SubRaw = {
-    id: string;
-    slug: string;
-    name: string;
-    collection_item: { added_at: string }[] | null;
-  };
-  for (const s of (subs as unknown as SubRaw[] | null) ?? []) {
-    const months = new Set<number>();
-    for (const item of s.collection_item ?? []) {
-      const d = new Date(item.added_at);
-      if (d.getUTCFullYear() === year) months.add(d.getUTCMonth() + 1);
+  const result: OtherReadings = { reading: [], paused: [], abandoned: [] };
+
+  for (const r of (data as unknown as OtherReadingRaw[] | null) ?? []) {
+    if (!r.book) continue;
+    const author =
+      r.book.book_author?.find((ba) => ba.author?.name)?.author?.name ?? null;
+    const cover_url = r.book.cover ? imagesUrl(r.book.cover) : null;
+    const baseItem: Omit<OtherReadingItem, "reference_date"> = {
+      reading_id: r.id,
+      book_id: r.book.id,
+      book_slug: r.book.slug,
+      title: r.book.title,
+      author_name: author,
+      cover_url,
+      start_date: r.start_date,
+      current_page: r.current_page,
+      pages_total: r.book.pages,
+    };
+
+    if (r.status === "reading") {
+      // Inclui qualquer "em curso" cujo início é até o fim do ano (mesmo
+      // que tenha começado em ano anterior — segue valendo "está rolando").
+      if (r.start_date && r.start_date <= yearEndISO) {
+        result.reading.push({ ...baseItem, reference_date: r.start_date });
+      }
+    } else if (r.status === "paused") {
+      const lastPaused = (r.reading_event ?? [])
+        .filter((e) => e.event_type === "paused")
+        .map((e) => e.event_date)
+        .sort()
+        .pop();
+      if (lastPaused && lastPaused >= yearStartISO && lastPaused <= yearEndISO) {
+        result.paused.push({ ...baseItem, reference_date: lastPaused });
+      }
+    } else if (r.status === "abandoned") {
+      if (
+        r.finish_date &&
+        r.finish_date >= yearStartISO &&
+        r.finish_date <= yearEndISO
+      ) {
+        result.abandoned.push({ ...baseItem, reference_date: r.finish_date });
+      }
     }
-    if (months.size === 0) continue;
-    result.push({
-      kind: "subscription",
-      id: s.id,
-      slug: s.slug,
-      name: s.name,
-      months_active: months.size,
-    });
   }
 
-  // Sort: challenge > series > subscription; entre iguais, mais recente primeiro.
-  const kindOrder: Record<Achievement["kind"], number> = {
-    challenge: 0,
-    series: 1,
-    subscription: 2,
-  };
-  result.sort((a, b) => {
-    if (a.kind !== b.kind) return kindOrder[a.kind] - kindOrder[b.kind];
-    const am = a.kind === "subscription" ? 0 : (a as { completed_month?: number; finished_month?: number }).completed_month ?? (a as { finished_month?: number }).finished_month ?? 0;
-    const bm = b.kind === "subscription" ? 0 : (b as { completed_month?: number; finished_month?: number }).completed_month ?? (b as { finished_month?: number }).finished_month ?? 0;
-    return bm - am;
-  });
+  // Mais recente primeiro em cada coluna.
+  for (const arr of [result.reading, result.paused, result.abandoned]) {
+    arr.sort((a, b) =>
+      (b.reference_date ?? "").localeCompare(a.reference_date ?? ""),
+    );
+  }
 
   return result;
 }
@@ -430,6 +542,7 @@ type AcquisitionRaw = {
   purchase_origin: PurchaseOrigin | null;
   purchase_price: number | null;
   acquired_at: string;
+  bundled_with: string[] | null;
   subscription: { id: string; name: string } | null;
   book_author: { author: { name: string } | null }[] | null;
 };
@@ -443,6 +556,7 @@ async function fetchAcquisitions(
     .from("book")
     .select(
       `id, slug, title, cover, purchase_origin, purchase_price, acquired_at,
+       bundled_with,
        subscription(id, name),
        book_author(author(name))`,
     )
@@ -452,6 +566,45 @@ async function fetchAcquisitions(
     .order("acquired_at", { ascending: false });
 
   const rows = (data as unknown as AcquisitionRaw[] | null) ?? [];
+
+  // Identifica bundles dentro do recorte do ano: livros que dividem o mesmo
+  // exemplar físico (`bundled_with`). Em cada componente conexo, elege um
+  // "primário" que carrega o preço; os demais ficam como secundários (price
+  // nulo + título do primário pra exibir "mesmo exemplar de …"). Isso evita
+  // que o user veja o preço repetido em cada volume do omnibus e que o total
+  // some duas vezes o mesmo pagamento.
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const primaryOf = new Map<string, string>(); // bookId → primaryId
+  const titleByPrimary = new Map<string, string>();
+  const seen = new Set<string>();
+
+  for (const r of rows) {
+    if (seen.has(r.id)) continue;
+    const group: AcquisitionRaw[] = [];
+    const stack: string[] = [r.id];
+    while (stack.length > 0) {
+      const cur = stack.pop();
+      if (cur === undefined || seen.has(cur)) continue;
+      seen.add(cur);
+      const node = byId.get(cur);
+      if (!node) continue;
+      group.push(node);
+      for (const nb of node.bundled_with ?? []) {
+        if (byId.has(nb) && !seen.has(nb)) stack.push(nb);
+      }
+    }
+    if (group.length <= 1) continue;
+
+    // Primário: o livro do grupo com preço E menor id (estável). Sem preço
+    // em nenhum, cai no menor id mesmo assim — pra que os secundários tenham
+    // pra onde apontar no rótulo.
+    const withPrice = group.filter((b) => b.purchase_price !== null);
+    const pool = withPrice.length > 0 ? withPrice : group;
+    const primary = [...pool].sort((a, b) => a.id.localeCompare(b.id))[0];
+    for (const b of group) primaryOf.set(b.id, primary.id);
+    titleByPrimary.set(primary.id, primary.title);
+  }
+
   const byOrigin = new Map<PurchaseOrigin, number>();
   let totalSpent: number | null = null;
   const items: AcquisitionItem[] = [];
@@ -463,9 +616,21 @@ async function fetchAcquisitions(
         (byOrigin.get(b.purchase_origin) ?? 0) + 1,
       );
     }
-    if (b.purchase_price !== null) {
-      totalSpent = (totalSpent ?? 0) + Number(b.purchase_price);
+
+    const primaryId = primaryOf.get(b.id);
+    const isSecondary = primaryId !== undefined && primaryId !== b.id;
+    const priceForItem =
+      !isSecondary && b.purchase_price !== null
+        ? Number(b.purchase_price)
+        : null;
+    const bundleWithTitle = isSecondary
+      ? titleByPrimary.get(primaryId) ?? null
+      : null;
+
+    if (priceForItem !== null) {
+      totalSpent = (totalSpent ?? 0) + priceForItem;
     }
+
     items.push({
       id: b.id,
       slug: b.slug,
@@ -474,10 +639,10 @@ async function fetchAcquisitions(
         b.book_author?.find((ba) => ba.author?.name)?.author?.name ?? null,
       cover_url: b.cover ? imagesUrl(b.cover) : null,
       purchase_origin: b.purchase_origin,
-      purchase_price:
-        b.purchase_price !== null ? Number(b.purchase_price) : null,
+      purchase_price: priceForItem,
       acquired_at: b.acquired_at,
       subscription: b.subscription,
+      bundle_with_title: bundleWithTitle,
     });
   }
 
@@ -741,6 +906,25 @@ async function fetchMonthlyTimeline(
         statusAtEnd = "continues_next_month";
       }
 
+      // slice_kind: cataloga a fatia em A/B/C/D pra renderização.
+      //  - começa "de verdade" neste mês: é o startMonth E não veio do ano
+      //    anterior (caso contrário foi forçado a começar em jan/01).
+      //  - termina "de verdade" neste mês: readingActuallyEndsHere (finish_date
+      //    presente caindo no mês) ou paused na última fatia visível.
+      const startsInThisSlice = m === startMonth && !cameFromPrevYear;
+      const endsInThisSlice =
+        readingActuallyEndsHere ||
+        (r.status === "paused" && isLastSliceOfReading);
+      let sliceKind: TimelineReading["slice_kind"];
+      if (startsInThisSlice && endsInThisSlice) sliceKind = "self_contained";
+      else if (startsInThisSlice) sliceKind = "starts_here";
+      else if (endsInThisSlice) sliceKind = "ends_here";
+      else sliceKind = "ongoing";
+
+      // Filtro: a timeline mostra só os concluídos. Não-finished aparecem
+      // no painel "Em outras estradas".
+      if (statusAtEnd !== "finished") continue;
+
       monthBuckets.get(m)?.push({
         reading_id: r.id,
         book_id: r.book.id,
@@ -752,6 +936,7 @@ async function fetchMonthlyTimeline(
         end_day: endDay,
         status_at_end: statusAtEnd,
         came_from_previous_year: cameFromPrevYear && m === startMonth,
+        slice_kind: sliceKind,
         pages_read: pagesRead,
         duration_days: totalDuration,
         color_index: colorIndex,
@@ -879,7 +1064,7 @@ export async function getYearData(
   const [
     availableYears,
     finishedRows,
-    achievements,
+    otherReadings,
     acquisitions,
     countries,
     favoriteQuote,
@@ -888,7 +1073,7 @@ export async function getYearData(
   ] = await Promise.all([
     fetchAvailableYears(supabase, userId),
     fetchFinishedReadings(supabase, userId, year),
-    fetchAchievements(supabase, userId, year),
+    fetchOtherReadings(supabase, userId, year),
     fetchAcquisitions(supabase, userId, year),
     fetchCountries(supabase, userId, year),
     fetchFavoriteQuote(supabase, userId, year),
@@ -899,6 +1084,7 @@ export async function getYearData(
   const totals = computeYearTotals(finishedRows);
   const records = computeRecords(finishedRows);
   const topBooks = computeTopBooks(finishedRows);
+  const milestones = computeMilestones(finishedRows);
 
   console.log(`[yearData] year=${year} took ${Date.now() - startedAt}ms`);
 
@@ -909,7 +1095,8 @@ export async function getYearData(
     total_pages_read: totals.pages,
     records,
     top_books: topBooks,
-    achievements,
+    milestones,
+    other_readings: otherReadings,
     acquisitions,
     countries,
     favorite_quote: favoriteQuote,

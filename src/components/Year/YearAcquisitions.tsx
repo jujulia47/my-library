@@ -137,6 +137,14 @@ export function YearAcquisitions({ acquisitions, year }: Props) {
                         {formatBRL(it.purchase_price)}
                       </span>
                     )}
+                    {it.bundle_with_title && (
+                      <span
+                        className="block italic text-[9px]"
+                        title={`Mesmo exemplar de ${it.bundle_with_title}`}
+                      >
+                        mesmo exemplar
+                      </span>
+                    )}
                   </div>
                 </Link>
               </li>

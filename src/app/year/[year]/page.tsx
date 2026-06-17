@@ -7,11 +7,12 @@ import { SectionLabel } from "@/components/Home/SectionLabel";
 import { YearHeader } from "@/components/Year/YearHeader";
 import { YearRecords } from "@/components/Year/YearRecords";
 import { TopBooksOfYear } from "@/components/Year/TopBooksOfYear";
-import { YearAchievements } from "@/components/Year/YearAchievements";
+import { YearMilestones } from "@/components/Year/YearMilestones";
 import { YearAcquisitions } from "@/components/Year/YearAcquisitions";
 import { YearCountries } from "@/components/Year/YearCountries";
 import { FavoriteQuoteOfYear } from "@/components/Year/FavoriteQuoteOfYear";
 import { YearTimeline } from "@/components/Year/YearTimeline";
+import { YearOtherRoads } from "@/components/Year/YearOtherRoads";
 import { YearFooterStats } from "@/components/Year/YearFooterStats";
 import { YearEmptyState } from "@/components/Year/YearEmptyState";
 
@@ -71,7 +72,7 @@ export default async function YearPage({ params }: Props) {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
-        <YearAchievements achievements={data.achievements} year={year} />
+        <YearMilestones milestones={data.milestones} year={year} />
         <YearAcquisitions acquisitions={data.acquisitions} year={year} />
       </div>
 
@@ -91,6 +92,9 @@ export default async function YearPage({ params }: Props) {
 
       <SectionLabel>Linha do tempo</SectionLabel>
       <YearTimeline timeline={data.monthly_timeline} year={year} />
+
+      <SectionLabel>Em outras estradas</SectionLabel>
+      <YearOtherRoads data={data.other_readings} />
 
       <YearFooterStats stats={data.footer_stats} />
     </AppShell>
