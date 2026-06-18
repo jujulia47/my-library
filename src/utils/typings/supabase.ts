@@ -718,6 +718,30 @@ export type Database = {
           },
         ]
       }
+      reading_goal: {
+        Row: {
+          created_at: string
+          goal_count: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          goal_count: number
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          goal_count?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       reading_progress_log: {
         Row: {
           created_at: string

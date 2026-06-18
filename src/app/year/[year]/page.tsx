@@ -7,6 +7,7 @@ import { SectionLabel } from "@/components/Home/SectionLabel";
 import { YearHeader } from "@/components/Year/YearHeader";
 import { YearRecords } from "@/components/Year/YearRecords";
 import { TopBooksOfYear } from "@/components/Year/TopBooksOfYear";
+import { YearBooksGrid } from "@/components/Year/YearBooksGrid";
 import { YearMilestones } from "@/components/Year/YearMilestones";
 import { YearAcquisitions } from "@/components/Year/YearAcquisitions";
 import { YearCountries } from "@/components/Year/YearCountries";
@@ -70,6 +71,12 @@ export default async function YearPage({ params }: Props) {
           <TopBooksOfYear books={data.top_books} />
         </>
       )}
+
+      <YearBooksGrid
+        books={data.finished_books}
+        year={year}
+        goal={data.reading_goal}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
         <YearMilestones milestones={data.milestones} year={year} />

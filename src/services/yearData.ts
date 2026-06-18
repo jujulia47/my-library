@@ -22,6 +22,21 @@ export type TopBookOfYear = {
 };
 
 /**
+ * Cada livro finalizado no ano vira uma "casinha" no grid de marcação (estilo
+ * bullet journal). Ordinal = posição cronológica (1º, 2º, …). Os slots além
+ * do `goal` configurado aparecem como bônus.
+ */
+export type FinishedBookEntry = {
+  ordinal: number;
+  slug: string;
+  title: string;
+  author_name: string | null;
+  finish_date: string;
+  rating: number | null;
+  is_favorite: boolean;
+};
+
+/**
  * Marco de leitura no ano. Cada entrada é um livro que disparou um milestone
  * (10º livro do ano, 10k páginas, primeira 5★, etc.). Calculado em ordem
  * cronológica por finish_date, então o card pode mostrar a sequência de
@@ -160,6 +175,10 @@ export type YearData = {
   };
 
   top_books: TopBookOfYear[];
+  finished_books: FinishedBookEntry[];
+  /** Meta de livros lidos do user pra esse ano (vinda de `reading_goal`).
+   *  `null` quando o user nunca definiu — UI cai no default (50). */
+  reading_goal: number | null;
   milestones: Milestone[];
   other_readings: OtherReadings;
   acquisitions: AcquisitionsBreakdown;
@@ -334,6 +353,32 @@ function computeRecords(rows: FinishedRaw[]): YearData["records"] {
   return { best_month: bestMonth, longest_book: longest, fastest_book: fastest };
 }
 
+/**
+ * Lista completa de livros finalizados no ano, ordenada cronologicamente.
+ * Alimenta o grid "Livros lidos em YYYY" do estilo bullet journal — cada
+ * entrada vira uma casinha numerada (ordinal).
+ */
+function computeFinishedBooks(rows: FinishedRaw[]): FinishedBookEntry[] {
+  return rows
+    .filter((r) => r.book && r.finish_date)
+    .slice()
+    .sort((a, b) => (a.finish_date ?? "").localeCompare(b.finish_date ?? ""))
+    .map((r, idx) => {
+      const book = r.book!;
+      const author =
+        book.book_author?.find((ba) => ba.author?.name)?.author?.name ?? null;
+      return {
+        ordinal: idx + 1,
+        slug: book.slug,
+        title: book.title,
+        author_name: author,
+        finish_date: r.finish_date as string,
+        rating: r.rating,
+        is_favorite: book.is_favorite,
+      };
+    });
+}
+
 function computeTopBooks(rows: FinishedRaw[]): TopBookOfYear[] {
   const candidates = rows.filter(
     (r) => r.book && r.finish_date && (r.rating === 5 || r.book.is_favorite),
@@ -460,6 +505,24 @@ type OtherReadingRaw = {
  *               neste ano.
  *  - abandoned: status='abandoned' E finish_date cai neste ano.
  */
+/**
+ * Lê a meta de livros lidos do user pra esse ano (tabela `reading_goal`).
+ * `null` significa "nunca definiu" — UI usa o default 50.
+ */
+async function fetchReadingGoal(
+  supabase: SupabaseServer,
+  userId: string,
+  year: number,
+): Promise<number | null> {
+  const { data } = await supabase
+    .from("reading_goal")
+    .select("goal_count")
+    .eq("user_id", userId)
+    .eq("year", year)
+    .maybeSingle();
+  return data?.goal_count ?? null;
+}
+
 async function fetchOtherReadings(
   supabase: SupabaseServer,
   userId: string,
@@ -1070,6 +1133,7 @@ export async function getYearData(
     favoriteQuote,
     monthlyTimeline,
     footerStats,
+    readingGoal,
   ] = await Promise.all([
     fetchAvailableYears(supabase, userId),
     fetchFinishedReadings(supabase, userId, year),
@@ -1079,11 +1143,13 @@ export async function getYearData(
     fetchFavoriteQuote(supabase, userId, year),
     fetchMonthlyTimeline(supabase, userId, year),
     fetchFooterStats(supabase, userId, year),
+    fetchReadingGoal(supabase, userId, year),
   ]);
 
   const totals = computeYearTotals(finishedRows);
   const records = computeRecords(finishedRows);
   const topBooks = computeTopBooks(finishedRows);
+  const finishedBooks = computeFinishedBooks(finishedRows);
   const milestones = computeMilestones(finishedRows);
 
   console.log(`[yearData] year=${year} took ${Date.now() - startedAt}ms`);
@@ -1095,6 +1161,8 @@ export async function getYearData(
     total_pages_read: totals.pages,
     records,
     top_books: topBooks,
+    finished_books: finishedBooks,
+    reading_goal: readingGoal,
     milestones,
     other_readings: otherReadings,
     acquisitions,
