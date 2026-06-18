@@ -70,16 +70,24 @@ function DailyQuoteInner({ quotes }: { quotes: QuoteForCarousel[] }) {
       />
 
       <div
-        className="transition-opacity ease-out"
+        className="relative transition-opacity ease-out"
         style={{
           opacity: isFading ? 0 : 1,
           transitionDuration: `${FADE_MS}ms`,
         }}
       >
-        <blockquote className="font-display italic text-[15px] leading-relaxed text-ink-deep line-clamp-5">
+        {/* Aspas decorativas — menor que no /year (card é compacto) mas ainda
+            puxam o olho pro começo da citação. */}
+        <span
+          aria-hidden
+          className="absolute -top-3 -left-1 font-display text-5xl leading-none text-gold-deep/35 select-none"
+        >
+          “
+        </span>
+        <blockquote className="font-display italic text-base leading-relaxed text-ink-deep line-clamp-5 pl-5 pr-2 pt-1">
           {current.text}
         </blockquote>
-        <p className="text-[11px] italic text-ink-fade mt-3">
+        <p className="text-[12px] italic text-ink-fade mt-3 pl-5">
           — {current.author_name ?? "Autor desconhecido"}
           {current.book_title && current.book_slug && (
             <>

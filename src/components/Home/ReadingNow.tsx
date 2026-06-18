@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { BookmarkIcon } from "@heroicons/react/24/solid";
 import { BookCoverFallback } from "@/components/ui";
 import UpdateProgressModal, {
   type UpdateProgressTarget,
@@ -107,7 +108,11 @@ function ReadingNowCard({
             />
           </div>
           <div className="flex justify-between items-center mt-1 gap-2">
-            <span className="text-[10px] text-ink-fade font-body">
+            <span className="inline-flex items-center gap-1 text-[10px] text-ink-fade font-body">
+              <BookmarkIcon
+                className="w-3 h-3 text-gold-deep/70"
+                aria-hidden
+              />
               {item.current_page}/{item.pages_count} · {item.progress_percent}%
             </span>
             <button

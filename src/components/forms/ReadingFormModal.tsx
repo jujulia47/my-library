@@ -140,7 +140,7 @@ export default function ReadingFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? "Editar leitura" : "Registrar leitura"}
+      title="Anotar leitura"
       size="md"
     >
       <form onSubmit={onSubmit} className="space-y-5">
@@ -274,7 +274,7 @@ export default function ReadingFormModal({
             loading={isPending}
             disabled={isTbrInCreate}
           >
-            Salvar leitura
+            Salvar anotação
           </Button>
         </div>
       </form>

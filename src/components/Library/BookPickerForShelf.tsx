@@ -69,7 +69,7 @@ export function BookPickerForShelf({ orphans, shelfId }: Props) {
           className="text-sm underline hover:text-gold transition-colors"
           style={{ color: "rgba(240,192,64,0.85)" }}
         >
-          Cadastrar novo livro
+          Catalogar novo livro
         </Link>
       </div>
     );

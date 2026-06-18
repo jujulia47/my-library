@@ -7,10 +7,10 @@ export function NoBooks() {
   return (
     <EmptyState
       title="Sua biblioteca está vazia"
-      description="Comece adicionando seu primeiro livro."
+      description="Comece catalogando seu primeiro livro."
       action={
         <Button as="Link" href="/book/new" variant="primary">
-          Adicionar livro
+          Catalogar livro
         </Button>
       }
     />

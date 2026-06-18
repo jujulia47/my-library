@@ -6,29 +6,8 @@ import {
   TrophyIcon,
 } from "@heroicons/react/24/outline";
 import { HomeCard, HomeCardEmpty } from "@/components/Home/HomeCard";
+import { formatLongDate } from "@/utils/formatDate";
 import type { Milestone } from "@/services/yearData";
-
-const MONTH_SHORT_PT = [
-  "jan",
-  "fev",
-  "mar",
-  "abr",
-  "mai",
-  "jun",
-  "jul",
-  "ago",
-  "set",
-  "out",
-  "nov",
-  "dez",
-];
-
-function formatShort(date: string, year: number): string {
-  const d = new Date(date);
-  const month = MONTH_SHORT_PT[d.getUTCMonth()] ?? "";
-  const day = d.getUTCDate();
-  return `${day}/${month}/${String(year).slice(-2)}`;
-}
 
 type Props = {
   milestones: Milestone[];
@@ -40,7 +19,10 @@ type Props = {
  * coleções/séries/assinaturas). Lista os pontos numéricos cruzados — 10º
  * livro, 10k páginas, primeira 5★ — em ordem cronológica.
  */
-export function YearMilestones({ milestones, year }: Props) {
+// `year` é referência semântica do card (escopo do ano da página) mas não
+// entra mais no texto da data — `formatLongDate` já produz "9 de junho de
+// 2026" completo. Mantemos a prop pra compatibilidade com chamadas externas.
+export function YearMilestones({ milestones, year: _year }: Props) {
   return (
     <HomeCard
       title="Marcos de leitura"
@@ -78,8 +60,8 @@ export function YearMilestones({ milestones, year }: Props) {
                   {m.book_title}
                 </Link>
               </div>
-              <span className="text-[11px] italic text-ink-fade flex-shrink-0">
-                {formatShort(m.date, year)}
+              <span className="font-body text-[11px] italic text-ink-fade flex-shrink-0">
+                {formatLongDate(m.date)}
               </span>
             </li>
           ))}

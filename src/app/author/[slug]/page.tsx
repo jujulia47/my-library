@@ -158,7 +158,7 @@ export default async function AuthorPage({
           className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-body font-medium transition-colors border bg-ivory-light text-cappuccino border-cappuccino hover:bg-cappuccino hover:text-ivory-light"
         >
           <PlusIcon className="w-4 h-4" />
-          Adicionar livro
+          Catalogar livro
         </Link>
         <Link
           href={`/quote/new?author_id=${author.id}&from=${encodeURIComponent(fromForCreate)}`}

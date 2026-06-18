@@ -81,3 +81,5 @@ export type {
 
 export { default as RatingStars } from "./RatingStars";
 export type { RatingStarsProps } from "./RatingStars";
+
+export { BookStamp } from "./BookStamp";

@@ -78,7 +78,7 @@ export default async function AddBookToShelfPage({ params }: Props) {
             style={{ color: "var(--color-paper-aged)" }}
           >
             <ShelfSymbol symbol={shelf.symbol} size={20} />
-            Adicionar livro
+            Catalogar livro
           </h1>
         </div>
 

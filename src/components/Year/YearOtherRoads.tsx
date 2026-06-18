@@ -6,29 +6,8 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { BookCoverFallback } from "@/components/ui";
+import { formatLongDate } from "@/utils/formatDate";
 import type { OtherReadingItem, OtherReadings } from "@/services/yearData";
-
-const MONTH_SHORT_PT = [
-  "jan",
-  "fev",
-  "mar",
-  "abr",
-  "mai",
-  "jun",
-  "jul",
-  "ago",
-  "set",
-  "out",
-  "nov",
-  "dez",
-];
-
-function formatShort(date: string | null): string | null {
-  if (!date) return null;
-  const d = new Date(date);
-  const month = MONTH_SHORT_PT[d.getUTCMonth()] ?? "";
-  return `${d.getUTCDate()}/${month}/${String(d.getUTCFullYear()).slice(-2)}`;
-}
 
 type Props = {
   data: OtherReadings;
@@ -133,7 +112,7 @@ function RoadItem({
           Math.round((item.current_page / item.pages_total) * 100),
         )
       : null;
-  const date = formatShort(item.reference_date);
+  const date = item.reference_date ? formatLongDate(item.reference_date) : null;
   return (
     <li>
       <Link
@@ -169,9 +148,11 @@ function RoadItem({
               {item.author_name}
             </p>
           )}
-          <div className="flex items-center gap-2 mt-1 text-[10px] text-ink-fade">
+          <div className="flex items-center gap-2 mt-1 text-xs text-ink-fade">
             {percent !== null && (
-              <span className="tabular-nums">{percent}%</span>
+              <span className="tabular-nums font-medium text-ink-soft">
+                {percent}%
+              </span>
             )}
             {date && (
               <span className="italic">

@@ -41,7 +41,10 @@ import {
   XCircleIcon,
   HeartIcon as HeartOutlineIcon,
 } from "@heroicons/react/24/outline";
-import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
+import {
+  BookmarkIcon,
+  HeartIcon as HeartSolidIcon,
+} from "@heroicons/react/24/solid";
 import { toggleBookFavorite } from "@/actions/toggleBookFavorite";
 import type { Database } from "@/utils/typings/supabase";
 
@@ -605,7 +608,7 @@ export default function BookDetailClient({
             size="sm"
             onClick={() => setReadingModal({ open: true, reading: null })}
           >
-            Registrar leitura
+            Anotar leitura
           </Button>
           <Button
             type="button"
@@ -760,9 +763,19 @@ export default function BookDetailClient({
                     />
                   </div>
                 ) : null}
-                <p className="text-xs text-ink-fade italic">
+                <p className="text-xs text-ink-fade italic inline-flex items-center gap-1 flex-wrap">
                   {book.pages && activeReading.current_page ? (
-                    <>{activePercent}% lido · </>
+                    <span className="inline-flex items-center gap-1 not-italic">
+                      <BookmarkIcon
+                        className="w-3 h-3 text-gold-deep/70"
+                        aria-hidden
+                      />
+                      <span className="italic">
+                        {activeReading.current_page}/{book.pages} ·{" "}
+                        {activePercent}%
+                      </span>
+                      <span className="italic">·</span>
+                    </span>
                   ) : null}
                   começou em {longDate(activeReading.start_date)}
                 </p>
@@ -1094,7 +1107,11 @@ export default function BookDetailClient({
                               style={{ width: `${progressPercent}%` }}
                             />
                           </div>
-                          <p className="text-sm text-ink-fade italic mt-1">
+                          <p className="text-sm text-ink-fade italic mt-1 inline-flex items-center gap-1">
+                            <BookmarkIcon
+                              className="w-3.5 h-3.5 text-gold-deep/70 not-italic"
+                              aria-hidden
+                            />
                             Página atual: {r.current_page} · {progressPercent}%
                             lido
                           </p>

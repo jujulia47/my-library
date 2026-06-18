@@ -203,7 +203,7 @@ export default function BookMinimal({
         <BackButton fallback="/book" />
       </div>
       <h1 className="font-display text-3xl font-medium text-ink-deep mb-2">
-        Adicionar livro
+        Catalogar livro
       </h1>
       <p className="font-body text-ink-fade italic mb-6">
         O essencial agora — você completa os detalhes depois.

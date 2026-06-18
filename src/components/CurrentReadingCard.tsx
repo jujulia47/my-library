@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BookmarkIcon } from "@heroicons/react/24/solid";
 import { BookCoverFallback } from "@/components/ui";
 
 export type CurrentReadingItem = {
@@ -90,9 +91,17 @@ export default function CurrentReadingCard({
           </div>
         )}
 
-        <p className="mt-1.5 text-xs text-ink-fade font-body">
-          {hasProgress && <span>{percent}% lido</span>}
-          {hasProgress && startedLabel && <span className="mx-1">·</span>}
+        <p className="mt-1.5 text-xs text-ink-fade font-body inline-flex items-center gap-1 flex-wrap">
+          {hasProgress && (
+            <span className="inline-flex items-center gap-1">
+              <BookmarkIcon
+                className="w-3 h-3 text-gold-deep/70"
+                aria-hidden
+              />
+              {current_page}/{book.pages} · {percent}%
+            </span>
+          )}
+          {hasProgress && startedLabel && <span>·</span>}
           {startedLabel && <span>começou em {startedLabel}</span>}
         </p>
       </div>

@@ -37,6 +37,46 @@ export type FinishedBookEntry = {
 };
 
 /**
+ * Um volume dentro de uma série, com status agregado considerando o ano
+ * corrente — "read_this_year" ganha destaque visual no tracker (é o que o
+ * user fechou esse ano), "read_other_year" entra mais discreto.
+ */
+export type SeriesVolumeEntry = {
+  /** Número do volume (book.volume). Pode ser decimal (1.5 num bundle). */
+  volume_number: number | null;
+  book_id: string;
+  book_slug: string;
+  book_title: string;
+  status:
+    | "read_this_year"
+    | "read_other_year"
+    | "in_progress"
+    | "paused"
+    | "abandoned"
+    | "not_read";
+  rating: number | null;
+  finish_date: string | null;
+};
+
+/**
+ * Tracker de uma série que o user leu pelo menos um volume no ano corrente.
+ * Lista todos os volumes da série (não só os do ano) pra dar visualização
+ * completa do progresso — estilo "series tracker" de bullet journal.
+ */
+export type SeriesTrackerEntry = {
+  serie_id: string;
+  serie_slug: string;
+  serie_name: string;
+  /** Total de volumes que o user diz que a série tem (book.serie.qty_volumes).
+   *  Null quando desconhecido — UI cai em `volumes.length`. */
+  qty_volumes: number | null;
+  volumes: SeriesVolumeEntry[];
+  registered_count: number;
+  read_this_year_count: number;
+  total_read_count: number;
+};
+
+/**
  * Marco de leitura no ano. Cada entrada é um livro que disparou um milestone
  * (10º livro do ano, 10k páginas, primeira 5★, etc.). Calculado em ordem
  * cronológica por finish_date, então o card pode mostrar a sequência de
@@ -179,6 +219,10 @@ export type YearData = {
   /** Meta de livros lidos do user pra esse ano (vinda de `reading_goal`).
    *  `null` quando o user nunca definiu — UI cai no default (50). */
   reading_goal: number | null;
+  /** Trackers das séries que tiveram pelo menos um volume terminado no ano.
+   *  Lista TODOS os volumes da série (não só os do ano) pra dar visão do
+   *  progresso completo. */
+  series_trackers: SeriesTrackerEntry[];
   milestones: Milestone[];
   other_readings: OtherReadings;
   acquisitions: AcquisitionsBreakdown;
@@ -505,6 +549,146 @@ type OtherReadingRaw = {
  *               neste ano.
  *  - abandoned: status='abandoned' E finish_date cai neste ano.
  */
+type SeriesTrackerRawSerie = {
+  id: string;
+  slug: string;
+  name: string;
+  qty_volumes: number | null;
+  book: {
+    id: string;
+    slug: string;
+    title: string;
+    volume: number | null;
+    reading: {
+      status: Database["public"]["Enums"]["reading_status"];
+      finish_date: string | null;
+      rating: number | null;
+    }[] | null;
+  }[] | null;
+};
+
+/**
+ * Trackers de série pro ano. Estratégia:
+ *  1. Acha as serie_ids que tiveram pelo menos uma reading finished no ano.
+ *  2. Busca essas séries com todos os books (independente do ano) e seus
+ *     readings — pra montar o tracker completo.
+ *  3. Pra cada volume, deriva o status agregado considerando o ano corrente
+ *     (destaca o que foi lido neste ano vs. anos anteriores).
+ */
+async function fetchSeriesTrackers(
+  supabase: SupabaseServer,
+  userId: string,
+  year: number,
+): Promise<SeriesTrackerEntry[]> {
+  const yearStartISO = `${year}-01-01`;
+  const yearEndISO = `${year}-12-31`;
+
+  const { data: finishedRows } = await supabase
+    .from("reading")
+    .select("book:book_id(serie_id)")
+    .eq("user_id", userId)
+    .eq("status", "finished")
+    .gte("finish_date", yearStartISO)
+    .lte("finish_date", yearEndISO);
+
+  type FinishedRow = { book: { serie_id: string | null } | null };
+  const serieIds = new Set<string>();
+  for (const r of (finishedRows as unknown as FinishedRow[] | null) ?? []) {
+    if (r.book?.serie_id) serieIds.add(r.book.serie_id);
+  }
+  if (serieIds.size === 0) return [];
+
+  const { data: series } = await supabase
+    .from("serie")
+    .select(
+      `id, slug, name, qty_volumes,
+       book(id, slug, title, volume,
+         reading(status, finish_date, rating))`,
+    )
+    .in("id", [...serieIds]);
+
+  const result: SeriesTrackerEntry[] = [];
+  for (const s of (series as unknown as SeriesTrackerRawSerie[] | null) ?? []) {
+    const books = (s.book ?? []).slice().sort((a, b) => {
+      // volume null vai pro fim (não bagunça a ordem dos numerados)
+      if (a.volume === null && b.volume === null) return 0;
+      if (a.volume === null) return 1;
+      if (b.volume === null) return -1;
+      return a.volume - b.volume;
+    });
+
+    const volumes: SeriesVolumeEntry[] = [];
+    let readThisYear = 0;
+    let totalRead = 0;
+
+    for (const b of books) {
+      const readings = b.reading ?? [];
+      // Prefere finished pra computar status base; senão o estado em curso.
+      const finished = readings.find(
+        (r) => r.status === "finished" && r.finish_date,
+      );
+      const inProgress = readings.find((r) => r.status === "reading");
+      const paused = readings.find((r) => r.status === "paused");
+      const abandoned = readings.find((r) => r.status === "abandoned");
+
+      let status: SeriesVolumeEntry["status"] = "not_read";
+      let finishDate: string | null = null;
+      let rating: number | null = null;
+
+      if (finished) {
+        finishDate = finished.finish_date as string;
+        rating = finished.rating ?? null;
+        if (finishDate >= yearStartISO && finishDate <= yearEndISO) {
+          status = "read_this_year";
+          readThisYear += 1;
+          totalRead += 1;
+        } else {
+          status = "read_other_year";
+          totalRead += 1;
+        }
+      } else if (inProgress) {
+        status = "in_progress";
+      } else if (paused) {
+        status = "paused";
+      } else if (abandoned) {
+        status = "abandoned";
+      }
+
+      volumes.push({
+        volume_number: b.volume,
+        book_id: b.id,
+        book_slug: b.slug,
+        book_title: b.title,
+        status,
+        rating,
+        finish_date: finishDate,
+      });
+    }
+
+    result.push({
+      serie_id: s.id,
+      serie_slug: s.slug,
+      serie_name: s.name,
+      qty_volumes: s.qty_volumes,
+      volumes,
+      registered_count: volumes.length,
+      read_this_year_count: readThisYear,
+      total_read_count: totalRead,
+    });
+  }
+
+  // Ordem: séries que tiveram mais leitura neste ano primeiro; tie-break
+  // alfabético pra estabilidade entre renders.
+  result.sort((a, b) => {
+    if (a.read_this_year_count !== b.read_this_year_count) {
+      return b.read_this_year_count - a.read_this_year_count;
+    }
+    return a.serie_name.localeCompare(b.serie_name, "pt-BR");
+  });
+
+  return result;
+}
+
 /**
  * Lê a meta de livros lidos do user pra esse ano (tabela `reading_goal`).
  * `null` significa "nunca definiu" — UI usa o default 50.
@@ -1134,6 +1318,7 @@ export async function getYearData(
     monthlyTimeline,
     footerStats,
     readingGoal,
+    seriesTrackers,
   ] = await Promise.all([
     fetchAvailableYears(supabase, userId),
     fetchFinishedReadings(supabase, userId, year),
@@ -1144,6 +1329,7 @@ export async function getYearData(
     fetchMonthlyTimeline(supabase, userId, year),
     fetchFooterStats(supabase, userId, year),
     fetchReadingGoal(supabase, userId, year),
+    fetchSeriesTrackers(supabase, userId, year),
   ]);
 
   const totals = computeYearTotals(finishedRows);
@@ -1163,6 +1349,7 @@ export async function getYearData(
     top_books: topBooks,
     finished_books: finishedBooks,
     reading_goal: readingGoal,
+    series_trackers: seriesTrackers,
     milestones,
     other_readings: otherReadings,
     acquisitions,

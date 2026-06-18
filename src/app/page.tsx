@@ -46,7 +46,7 @@ export default async function HomePage() {
           icon={<BookmarkIcon className="w-3.5 h-3.5" />}
           iconColor="#EF9F27"
         >
-          Lendo agora ·{" "}
+          Hoje na sua mesa ·{" "}
           {data.reading_now.length === 0
             ? "nenhum livro"
             : `${data.reading_now.length} ${

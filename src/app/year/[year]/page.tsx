@@ -8,6 +8,7 @@ import { YearHeader } from "@/components/Year/YearHeader";
 import { YearRecords } from "@/components/Year/YearRecords";
 import { TopBooksOfYear } from "@/components/Year/TopBooksOfYear";
 import { YearBooksGrid } from "@/components/Year/YearBooksGrid";
+import { YearSeriesTracker } from "@/components/Year/YearSeriesTracker";
 import { YearMilestones } from "@/components/Year/YearMilestones";
 import { YearAcquisitions } from "@/components/Year/YearAcquisitions";
 import { YearCountries } from "@/components/Year/YearCountries";
@@ -77,6 +78,13 @@ export default async function YearPage({ params }: Props) {
         year={year}
         goal={data.reading_goal}
       />
+
+      {data.series_trackers.length > 0 && (
+        <>
+          <SectionLabel>Séries do ano</SectionLabel>
+          <YearSeriesTracker trackers={data.series_trackers} />
+        </>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
         <YearMilestones milestones={data.milestones} year={year} />

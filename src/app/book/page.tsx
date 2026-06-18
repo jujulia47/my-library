@@ -159,7 +159,7 @@ export default async function BookPage({
           <div className="flex items-center gap-2 flex-wrap">
             <BookFilters yearsAvailable={years} allAuthors={allAuthors} />
             <Button as="Link" href="/book/new" variant="primary" size="sm">
-              + Adicionar livro
+              + Catalogar livro
             </Button>
           </div>
         }

@@ -1,3 +1,89 @@
+// Helpers de formatação de data em pt-BR. Distinção principal:
+//  - `formatLongDate`: "9 de junho de 2026" — estilo entrada de diário, pra
+//    cards e destaques. Mais ar, mais sensação de jornal.
+//  - `formatShortDate`: "9/jun/26" — pra rótulos densos (tabelas, tooltips,
+//    timeline) onde texto longo quebraria layout.
+//  - `formatMonthYearShort`: "jun/26" — selos/carimbos compactos.
+
+const LONG_MONTHS_PT = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+];
+
+const SHORT_MONTHS_PT = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+];
+
+function parseISODate(iso: string): Date | null {
+  // Aceita `YYYY-MM-DD` e timestamp ISO completo. Para `YYYY-MM-DD` puro,
+  // adicionamos `T00:00:00Z` pra forçar UTC e evitar shift de fuso.
+  const value = iso.includes("T") ? iso : `${iso}T00:00:00Z`;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export function formatLongDate(iso: string): string {
+  const d = parseISODate(iso);
+  if (!d) return iso;
+  return `${d.getUTCDate()} de ${LONG_MONTHS_PT[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+}
+
+const WEEKDAYS_PT = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+];
+
+/**
+ * "Sábado, 21 de junho de 2026" — cabeçalho estilo entrada de diário.
+ * Recebe Date ou ISO; UTC-aware.
+ */
+export function formatLongDateWithWeekday(input: Date | string): string {
+  const d = typeof input === "string" ? parseISODate(input) : input;
+  if (!d) return typeof input === "string" ? input : "";
+  const weekday = WEEKDAYS_PT[d.getUTCDay()];
+  return `${weekday}, ${d.getUTCDate()} de ${LONG_MONTHS_PT[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+}
+
+export function formatShortDate(iso: string): string {
+  const d = parseISODate(iso);
+  if (!d) return iso;
+  const yy = String(d.getUTCFullYear()).slice(-2);
+  return `${d.getUTCDate()}/${SHORT_MONTHS_PT[d.getUTCMonth()]}/${yy}`;
+}
+
+export function formatMonthYearShort(iso: string): string {
+  const d = parseISODate(iso);
+  if (!d) return iso;
+  const yy = String(d.getUTCFullYear()).slice(-2);
+  return `${SHORT_MONTHS_PT[d.getUTCMonth()]}/${yy}`;
+}
+
 export const formatDate = (dateString: string | null) => {
   if (!dateString) return null;
   

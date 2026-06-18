@@ -1,21 +1,7 @@
 import Link from "next/link";
 import { HomeOrnaments } from "./HomeOrnaments";
+import { formatLongDateWithWeekday } from "@/utils/formatDate";
 import type { HomeData } from "@/services/homeData";
-
-const MONTHS = [
-  "janeiro",
-  "fevereiro",
-  "março",
-  "abril",
-  "maio",
-  "junho",
-  "julho",
-  "agosto",
-  "setembro",
-  "outubro",
-  "novembro",
-  "dezembro",
-];
 
 function getGreeting(userName: string | null): string {
   const hour = new Date().getHours();
@@ -26,12 +12,6 @@ function getGreeting(userName: string | null): string {
         ? "Boa tarde"
         : "Boa noite";
   return userName ? `${prefix}, ${userName}` : prefix;
-}
-
-function formatDateBR(iso: string): string {
-  const date = new Date(`${iso}T00:00:00`);
-  const day = date.getDate();
-  return `${day} de ${MONTHS[date.getMonth()]}`;
 }
 
 type Props = {
@@ -48,7 +28,7 @@ export function HomeHeader({
   userName,
 }: Props) {
   const greeting = getGreeting(userName);
-  const dateLabel = formatDateBR(today);
+  const dateLabel = formatLongDateWithWeekday(today);
 
   return (
     <header

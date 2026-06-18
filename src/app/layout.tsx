@@ -39,6 +39,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        {/* Caveat: fonte cursiva (script) usada no campo manuscrito do
+            modal "Página final". Carregada do Google Fonts em vez de
+            @fontsource por causa de problema de SSL no install local. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="font-body bg-ivory text-ink-deep min-h-screen">
         {children}
       </body>

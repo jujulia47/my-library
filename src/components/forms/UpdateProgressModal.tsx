@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import Modal from "./Modal";
-import { Input, Textarea, Button } from "@/components/ui";
+import { Input, Button } from "@/components/ui";
 import StarRating from "@/components/FormFields/StarRating";
 import { updateReadingProgress } from "@/actions/updateReadingProgress";
 import { finishReading } from "@/actions/finishReading";
@@ -114,7 +115,7 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
       onClose={onClose}
       title={
         phase === "finish"
-          ? `Leitura concluída · ${target.book_title}`
+          ? "Página final"
           : `Atualizar progresso · ${target.book_title}`
       }
       size="sm"
@@ -185,37 +186,89 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
           </div>
         </form>
       ) : (
-        <form onSubmit={onSubmitFinish} className="space-y-4">
+        <form
+          onSubmit={onSubmitFinish}
+          className="-mx-6 -mb-6 px-6 pt-2 pb-6 rounded-b-lg space-y-6"
+          // Sutil gradiente de papel + leve tint dourado pra evocar a página
+          // final de um caderno. As "ruled lines" ficam dentro do textarea.
+          style={{
+            backgroundImage:
+              "linear-gradient(180deg, var(--color-ivory-light) 0%, var(--color-paper) 100%)",
+          }}
+        >
           <input type="hidden" name="id" value={target.reading_id} />
           <input type="hidden" name="book_slug" value={target.book_slug} />
 
-          <p className="text-sm italic text-ink-fade">
-            Última página registrada! Marque a leitura como concluída e, se
-            quiser, deixe estrelas e resenha.
-          </p>
+          {/* Hero do "encerrar" — vinheta de página final, com cabeçalho
+              centralizado e o nome do livro em destaque. */}
+          <div className="text-center pt-3 pb-1">
+            <p className="font-body text-[10px] uppercase tracking-[0.25em] text-ink-fade">
+              Última página
+            </p>
+            <h2 className="font-display text-2xl text-ink-deep mt-1 leading-tight">
+              {target.book_title}
+            </h2>
+            <p className="font-body text-xs italic text-ink-fade mt-2">
+              Hoje você fecha esse livro.
+            </p>
+          </div>
 
-          <Input
-            label="Data de conclusão"
-            name="finish_date"
-            type="date"
-            defaultValue={logDate}
-            max={todayMax}
-          />
-
-          <div>
+          {/* Estrelas centralizadas e maiores — primeiro gesto de avaliação. */}
+          <div className="flex justify-center scale-125 py-2">
             <StarRating
-              label="Avaliação"
+              label=""
               value={rating}
               onChange={setRating}
               name="rating"
             />
           </div>
 
-          <Textarea
-            label="Resenha"
-            name="review"
-            placeholder="O que ficou pra você?"
-          />
+          {/* "Como foi a leitura?" — campo manuscrito com linhas pautadas
+              tipo caderno. O label vira pergunta em font-display italic; o
+              textarea é transparente e ganha "ruled lines" via background. */}
+          <div>
+            <label
+              htmlFor="finish-review"
+              className="block font-display italic text-lg text-ink-deep mb-2"
+            >
+              Como foi a leitura?
+            </label>
+            <textarea
+              id="finish-review"
+              name="review"
+              rows={6}
+              placeholder="Comece a escrever…"
+              className="w-full bg-transparent font-body italic text-base text-ink-deep placeholder:text-ink-fade/60 focus:outline-none resize-none border-0"
+              // Linhas pautadas: gradient com uma linha fina a cada 28px
+              // (alinhada com o leading do texto pra a escrita "cair" em
+              // cima da pauta).
+              style={{
+                lineHeight: "28px",
+                backgroundImage:
+                  "linear-gradient(to bottom, transparent 27px, var(--color-border) 27px, var(--color-border) 28px, transparent 28px)",
+                backgroundSize: "100% 28px",
+              }}
+            />
+          </div>
+
+          {/* Data de conclusão — discreto, no rodapé do "caderno". */}
+          <div className="flex items-center justify-between gap-3 pt-1 text-xs italic text-ink-fade">
+            <label
+              htmlFor="finish-date"
+              className="flex items-center gap-1.5"
+            >
+              <CalendarDaysIcon className="w-3.5 h-3.5" aria-hidden />
+              <span>fechado em</span>
+            </label>
+            <input
+              id="finish-date"
+              name="finish_date"
+              type="date"
+              defaultValue={logDate}
+              max={todayMax}
+              className="bg-transparent border-b border-border/70 focus:outline-none focus:border-gold text-ink-deep not-italic text-xs px-1 py-0.5"
+            />
+          </div>
 
           {error && (
             <p className="text-sm text-burgundy bg-burgundy/10 border border-burgundy/30 rounded-md px-3 py-2">
@@ -223,7 +276,7 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
             </p>
           )}
 
-          <div className="flex justify-between items-center gap-2 pt-3 border-t border-border">
+          <div className="flex justify-between items-center gap-2 pt-4 border-t border-border/60">
             <Button
               type="button"
               variant="ghost"
@@ -231,7 +284,7 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
               onClick={handleFinishLater}
               disabled={isPending}
             >
-              Concluir depois
+              Anotar depois
             </Button>
             <Button
               type="submit"
@@ -239,7 +292,7 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
               size="sm"
               loading={isPending}
             >
-              Concluir leitura
+              Encerrar leitura
             </Button>
           </div>
         </form>

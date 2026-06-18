@@ -4,6 +4,8 @@
   /* Fontes — carregadas via @fontsource em layout.tsx */
   --font-display: "Cormorant Garamond", Georgia, serif;
   --font-body: "EB Garamond", Georgia, serif;
+  /* Cursiva pra elementos manuscritos (página final, anotações). */
+  --font-cursive: "Caveat", "Segoe Script", "Snell Roundhand", cursive;
   /* Cinzel: romana clássica, usada nas capas-fallback dos livros (BookCoverFallback). */
   --font-cover: "Cinzel", Georgia, serif;
 
