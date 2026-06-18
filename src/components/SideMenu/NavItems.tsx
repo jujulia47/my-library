@@ -14,6 +14,7 @@ import {
   UserCircleIcon,
   CalendarDaysIcon,
   CubeIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { BookOpenIcon as BookOpenSolid } from "@heroicons/react/24/solid";
 
@@ -27,6 +28,7 @@ type NavItem = {
 
 const items: NavItem[] = [
   { href: "/", label: "Início", Icon: HomeIcon },
+  { href: "/today", label: "Diário de hoje", Icon: PencilSquareIcon },
   { href: "/book", label: "Livros", Icon: BookOpenIcon },
   { href: "/serie", label: "Séries", Icon: Squares2X2Icon },
   { href: "/quote", label: "Citações", Icon: ChatBubbleLeftRightIcon },
