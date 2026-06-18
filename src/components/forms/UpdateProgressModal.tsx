@@ -152,6 +152,25 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
             helperText="Quando você leu essas páginas — use ontem se esqueceu de registrar no dia."
           />
 
+          {/* Anotação opcional do dia — trecho, sensação, contexto. Salva
+              em `reading_progress_log.notes`. Em font display italic pra
+              dar o ar de diário sem precisar puxar cursiva pra cá. */}
+          <div>
+            <label
+              htmlFor="progress-notes"
+              className="block font-display italic text-sm text-ink-deep mb-1"
+            >
+              Anotação do dia <span className="text-ink-fade text-xs not-italic">(opcional)</span>
+            </label>
+            <textarea
+              id="progress-notes"
+              name="notes"
+              rows={3}
+              placeholder="Trecho marcante, o que sentiu, onde estava…"
+              className="w-full bg-ivory-light text-ink-deep placeholder:text-ink-fade/70 text-sm font-body leading-relaxed border border-border focus:border-gold focus:ring-2 focus:ring-gold/20 focus:outline-none rounded-md px-3 py-2 resize-none"
+            />
+          </div>
+
           {reached100 && (
             <p className="text-sm italic text-moss bg-moss/10 border border-moss/30 rounded-md px-3 py-2">
               Você chegou na última página. Ao salvar, vou abrir a tela de
@@ -223,9 +242,10 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
             />
           </div>
 
-          {/* "Como foi a leitura?" — campo manuscrito com linhas pautadas
-              tipo caderno. O label vira pergunta em font-display italic; o
-              textarea é transparente e ganha "ruled lines" via background. */}
+          {/* "Como foi a leitura?" — campo manuscrito em fonte cursiva
+              (Caveat) sobre linhas pautadas tipo caderno. O label vira
+              pergunta em font-display italic; o textarea fica transparente
+              com letra cursiva descendo na pauta. */}
           <div>
             <label
               htmlFor="finish-review"
@@ -238,15 +258,16 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
               name="review"
               rows={6}
               placeholder="Comece a escrever…"
-              className="w-full bg-transparent font-body italic text-base text-ink-deep placeholder:text-ink-fade/60 focus:outline-none resize-none border-0"
-              // Linhas pautadas: gradient com uma linha fina a cada 28px
-              // (alinhada com o leading do texto pra a escrita "cair" em
-              // cima da pauta).
+              className="w-full bg-transparent text-2xl text-ink-deep placeholder:text-ink-fade/60 focus:outline-none resize-none border-0"
+              // Linhas pautadas + fonte cursiva. line-height alinhado pra
+              // letra cair "em cima" da pauta. Caveat é maior que serif,
+              // por isso fontSize cresce pra 1.5rem (text-2xl).
               style={{
-                lineHeight: "28px",
+                fontFamily: "var(--font-cursive)",
+                lineHeight: "36px",
                 backgroundImage:
-                  "linear-gradient(to bottom, transparent 27px, var(--color-border) 27px, var(--color-border) 28px, transparent 28px)",
-                backgroundSize: "100% 28px",
+                  "linear-gradient(to bottom, transparent 35px, var(--color-border) 35px, var(--color-border) 36px, transparent 36px)",
+                backgroundSize: "100% 36px",
               }}
             />
           </div>

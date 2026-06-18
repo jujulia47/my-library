@@ -82,24 +82,39 @@ export async function updateReadingProgress(
     .eq("id", id);
   if (error) return { ok: false, ...translateSupabaseError(error) };
 
+  // Anotação opcional do dia — trecho, sensação, contexto. Vai pro log do
+  // dia, junto com o delta de páginas. Empty string vira null pra não
+  // "limpar" notas antigas sem querer.
+  const notesRaw = (formData.get("notes") as string | null)?.trim() || "";
+  const notes = notesRaw ? notesRaw : null;
+
   const delta = current_page - previousPage;
-  if (delta > 0) {
+  if (delta > 0 || notes) {
     const { data: existingLog } = await supabase
       .from("reading_progress_log")
-      .select("pages_delta")
+      .select("pages_delta, notes")
       .eq("reading_id", id)
       .eq("log_date", logDate)
       .maybeSingle();
     const finalDelta = (existingLog?.pages_delta ?? 0) + delta;
-    await supabase.from("reading_progress_log").upsert(
-      {
-        user_id: user.id,
-        reading_id: id,
-        log_date: logDate,
-        pages_delta: finalDelta,
-      },
-      { onConflict: "reading_id,log_date" },
-    );
+    // Se passou nota nova, usa. Se não passou nada, preserva a existente.
+    const finalNotes = notes ?? existingLog?.notes ?? null;
+    const { error: logError } = await supabase
+      .from("reading_progress_log")
+      .upsert(
+        {
+          user_id: user.id,
+          reading_id: id,
+          log_date: logDate,
+          pages_delta: finalDelta,
+          notes: finalNotes,
+        },
+        { onConflict: "reading_id,log_date" },
+      );
+    // Se a coluna notes ainda não existe no banco, ou outro erro no log,
+    // surfaceamos pra você ver — antes ficava silencioso e a anotação
+    // sumia sem rastro.
+    if (logError) return { ok: false, ...translateSupabaseError(logError) };
   }
 
   const slug = formData.get("book_slug") as string | null;

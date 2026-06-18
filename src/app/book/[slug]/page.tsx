@@ -11,6 +11,8 @@ import type { Database } from "@/utils/typings/supabase";
 
 type ReadingRow = Database["public"]["Tables"]["reading"]["Row"];
 type ReadingEventRow = Database["public"]["Tables"]["reading_event"]["Row"];
+type ReadingProgressLogRow =
+  Database["public"]["Tables"]["reading_progress_log"]["Row"];
 
 export default async function Page({
   params,
@@ -54,7 +56,11 @@ export default async function Page({
       .eq("book_id", book.id),
     supabase
       .from("reading")
-      .select("*, reading_event(id, event_type, event_date, notes)")
+      .select(
+        `*,
+         reading_event(id, event_type, event_date, notes),
+         reading_progress_log(id, log_date, pages_delta, notes)`,
+      )
       .eq("book_id", book.id)
       .order("finish_date", { ascending: false, nullsFirst: false })
       .order("start_date", { ascending: false, nullsFirst: false }),
@@ -100,6 +106,12 @@ export default async function Page({
     reading_event?:
       | Pick<ReadingEventRow, "id" | "event_type" | "event_date" | "notes">[]
       | null;
+    reading_progress_log?:
+      | Pick<
+          ReadingProgressLogRow,
+          "id" | "log_date" | "pages_delta" | "notes"
+        >[]
+      | null;
   };
 
   const readingItems: ReadingItem[] = (readings ?? []).map(
@@ -112,6 +124,16 @@ export default async function Page({
           notes: ev.notes,
         }))
         .sort((a, b) => a.event_date.localeCompare(b.event_date));
+      // Anotações do progress_log — só as que têm texto, ordenadas por dia.
+      const notes = (r.reading_progress_log ?? [])
+        .filter((log) => log.notes && log.notes.trim().length > 0)
+        .map((log) => ({
+          id: log.id,
+          log_date: log.log_date,
+          pages_delta: log.pages_delta,
+          notes: log.notes as string,
+        }))
+        .sort((a, b) => a.log_date.localeCompare(b.log_date));
       return {
         id: r.id,
         status: r.status,
@@ -122,6 +144,7 @@ export default async function Page({
         rating: r.rating,
         review: r.review,
         events,
+        notes,
       };
     },
   );

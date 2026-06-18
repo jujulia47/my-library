@@ -747,6 +747,7 @@ export type Database = {
           created_at: string
           id: string
           log_date: string
+          notes: string | null
           pages_delta: number
           reading_id: string
           user_id: string
@@ -755,6 +756,7 @@ export type Database = {
           created_at?: string
           id?: string
           log_date: string
+          notes?: string | null
           pages_delta: number
           reading_id: string
           user_id: string
@@ -763,6 +765,7 @@ export type Database = {
           created_at?: string
           id?: string
           log_date?: string
+          notes?: string | null
           pages_delta?: number
           reading_id?: string
           user_id?: string

@@ -25,6 +25,7 @@ import ResumeReadingModal from "@/components/forms/ResumeReadingModal";
 import FinishReadingModal from "@/components/forms/FinishReadingModal";
 import AbandonReadingModal from "@/components/forms/AbandonReadingModal";
 import { deleteReading } from "@/actions/deleteReading";
+import { removeReadingProgressNote } from "@/actions/removeReadingProgressNote";
 import { deleteQuoteById } from "@/actions/createQuoteForBook";
 import { deleteBook } from "@/actions/deleteBook";
 import { startReading } from "@/actions/startReading";
@@ -106,6 +107,13 @@ export type ReadingEventItem = {
   notes: string | null;
 };
 
+export type ReadingNoteItem = {
+  id: string;
+  log_date: string;
+  pages_delta: number;
+  notes: string;
+};
+
 export type ReadingItem = {
   id: string;
   status: ReadingStatus;
@@ -116,6 +124,7 @@ export type ReadingItem = {
   rating: number | null;
   review: string | null;
   events: ReadingEventItem[];
+  notes: ReadingNoteItem[];
 };
 
 export type BookStatusHistoryItem = {
@@ -332,6 +341,7 @@ export default function BookDetailClient({
   const [deleteBookOpen, setDeleteBookOpen] = useState(false);
   const [deleteReadingId, setDeleteReadingId] = useState<string | null>(null);
   const [deleteQuoteId, setDeleteQuoteId] = useState<string | null>(null);
+  const [removeNoteId, setRemoveNoteId] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [, startTransition] = useTransition();
   const [pendingAction, setPendingAction] = useState(false);
@@ -469,6 +479,21 @@ export default function BookDetailClient({
         return;
       }
       setDeleteReadingId(null);
+      router.refresh();
+    });
+  };
+
+  const handleRemoveNote = (logId: string) => {
+    setPendingAction(true);
+    setActionError(null);
+    startTransition(async () => {
+      const result = await removeReadingProgressNote(logId, book.slug);
+      setPendingAction(false);
+      if (!result.ok) {
+        setActionError(result.message);
+        return;
+      }
+      setRemoveNoteId(null);
       router.refresh();
     });
   };
@@ -1137,6 +1162,58 @@ export default function BookDetailClient({
                         </details>
                       )}
 
+                      {/* Anotações do dia — vindas de reading_progress_log.notes.
+                          Cada entrada vira uma "página de diário" colada na
+                          linha do tempo da leitura. Em font display italic
+                          pra dar ar de manuscrito sem cursiva pesada. */}
+                      {r.notes.length > 0 && (
+                        <details className="text-sm group/notes" open>
+                          <summary className="cursor-pointer text-ink-fade italic hover:text-ink-deep list-none inline-flex items-center gap-1">
+                            <span>
+                              {r.notes.length === 1
+                                ? "1 anotação"
+                                : `${r.notes.length} anotações`}
+                            </span>
+                            <span className="transition-transform duration-150 group-open/notes:rotate-180">
+                              ▾
+                            </span>
+                          </summary>
+                          <ul className="mt-3 space-y-3 pl-3 border-l-2 border-gold/30">
+                            {r.notes.map((n) => (
+                              <li
+                                key={n.id}
+                                className="font-body text-ink-soft group/note relative"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-[11px] uppercase tracking-wider text-ink-fade font-medium">
+                                    {longDate(n.log_date)}
+                                    {n.pages_delta > 0 && (
+                                      <span className="text-ink-fade/70 normal-case tracking-normal italic ml-2">
+                                        · {n.pages_delta}{" "}
+                                        {n.pages_delta === 1
+                                          ? "página"
+                                          : "páginas"}
+                                      </span>
+                                    )}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRemoveNoteId(n.id)}
+                                    aria-label="Remover anotação"
+                                    className="opacity-0 group-hover/note:opacity-100 group-focus-within/note:opacity-100 transition-opacity text-ink-fade hover:text-burgundy p-0.5"
+                                  >
+                                    <TrashIcon className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                                <p className="font-display italic text-base text-ink-deep leading-relaxed mt-0.5">
+                                  {n.notes}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+
                       {timelineEvents.length > 0 && (
                         <details className="text-sm group/timeline">
                           <summary className="cursor-pointer text-ink-fade italic hover:text-ink-deep list-none inline-flex items-center gap-1">
@@ -1465,6 +1542,25 @@ export default function BookDetailClient({
         title="Excluir citação?"
         description={actionError ?? "Esta ação não pode ser desfeita."}
         confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        variant="destructive"
+        loading={pendingAction}
+      />
+      <ConfirmDialog
+        open={removeNoteId !== null}
+        onClose={() => {
+          setRemoveNoteId(null);
+          setActionError(null);
+        }}
+        onConfirm={() => {
+          if (removeNoteId) handleRemoveNote(removeNoteId);
+        }}
+        title="Remover anotação?"
+        description={
+          actionError ??
+          "A anotação será apagada. As páginas registradas naquele dia ficam preservadas."
+        }
+        confirmLabel="Remover"
         cancelLabel="Cancelar"
         variant="destructive"
         loading={pendingAction}
