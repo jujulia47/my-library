@@ -11,6 +11,7 @@ import {
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import NavItems from "./NavItems";
+import { SoundToggle } from "./SoundToggle";
 import { signOut } from "@/app/login/actions";
 
 export default function SideMenuMobile() {
@@ -96,7 +97,8 @@ export default function SideMenuMobile() {
           <nav className="flex-1 px-3 py-4 overflow-y-auto custom-scrollbar">
             <NavItems onNavigate={() => setOpen(false)} />
           </nav>
-          <div className="border-t border-border p-3">
+          <div className="border-t border-border p-3 space-y-1">
+            <SoundToggle />
             <form action={signOut}>
               <button
                 type="submit"

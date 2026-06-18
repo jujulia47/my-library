@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import type { ReadingHistoryEntry } from "@/services/authorDetail";
@@ -82,76 +82,14 @@ export default function AuthorReadingHistory({
 }: AuthorReadingHistoryProps) {
   const [sortMode, setSortMode] = useState<SortMode>("recent");
   const { hoveredBookId, setHoveredBookId } = useAuthorInteraction();
-  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dwellTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Última posição do mouse em coords da viewport — usamos pra distinguir
-  // mouseenter "real" (user moveu o cursor) de "induzido pelo scroll"
-  // (página rolou por baixo do cursor, items passaram debaixo dele).
-  // No último caso, clientX/Y do evento bate com o último registrado.
-  const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Hover com dois timers:
-  //  - dwell (1s): ao entrar, só ativa o destaque/scroll depois desse
-  //    tempo — varreduras rápidas (brushing) não disparam nada.
-  //  - linger (1.5s): ao sair, mantém o destaque pra dar tempo do scroll
-  //    terminar e o user ver o card. Cancelado se ele entrar em outro item.
-  // Se o user troca entre itens com o destaque já ativo (i.e., já passou
-  // o dwell em algum), trocamos na hora — só o primeiro precisa de dwell.
-  const activateHover = (id: string) => {
-    if (leaveTimerRef.current) {
-      clearTimeout(leaveTimerRef.current);
-      leaveTimerRef.current = null;
-    }
-    if (dwellTimerRef.current) {
-      clearTimeout(dwellTimerRef.current);
-      dwellTimerRef.current = null;
-    }
-    // Se já tem um book destacado, troca instantâneo (modo "scanning").
-    if (hoveredBookId !== null) {
-      setHoveredBookId(id);
-      return;
-    }
-    dwellTimerRef.current = setTimeout(() => {
-      setHoveredBookId(id);
-      dwellTimerRef.current = null;
-    }, 850);
+  // Modelo de interação: CLIQUE. Substituiu o hover (com dwell+linger+jitter
+  // detection) — era complexo e disparava destaque sem o usuário querer.
+  // Click: toggle determinístico. Re-clicar no mesmo item desliga; clicar em
+  // outro troca pra esse outro.
+  const toggleHighlight = (id: string) => {
+    setHoveredBookId(hoveredBookId === id ? null : id);
   };
-  const scheduleLeave = () => {
-    // Se ainda não passou o dwell, cancela e não destaca nada.
-    if (dwellTimerRef.current) {
-      clearTimeout(dwellTimerRef.current);
-      dwellTimerRef.current = null;
-      return;
-    }
-    if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
-    leaveTimerRef.current = setTimeout(() => {
-      setHoveredBookId(null);
-      leaveTimerRef.current = null;
-    }, 1500);
-  };
-  // Threshold pequeno (3px) pra absorver jitter, mas detectar movimento real.
-  const isSameMousePos = (e: { clientX: number; clientY: number }): boolean => {
-    if (lastMousePosRef.current === null) return false;
-    const dx = Math.abs(e.clientX - lastMousePosRef.current.x);
-    const dy = Math.abs(e.clientY - lastMousePosRef.current.y);
-    return dx < 3 && dy < 3;
-  };
-  const handleMouseEnter = (e: React.MouseEvent, id: string) => {
-    if (isSameMousePos(e)) return; // scroll passou item por baixo do cursor
-    lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    activateHover(id);
-  };
-  const handleMouseLeave = (e: React.MouseEvent) => {
-    if (isSameMousePos(e)) return; // scroll tirou item de baixo do cursor
-    lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    scheduleLeave();
-  };
-  useEffect(() => {
-    return () => {
-      if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
-      if (dwellTimerRef.current) clearTimeout(dwellTimerRef.current);
-    };
-  }, []);
 
   const sortedEntries = useMemo(() => {
     if (sortMode === "publication") {
@@ -172,7 +110,7 @@ export default function AuthorReadingHistory({
 
   return (
     <section className="my-10">
-      <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4 pb-2 border-b border-border">
+      <div className="flex flex-wrap items-baseline justify-between gap-3 mb-1 pb-2 border-b border-border">
         <h2 className="font-display text-xl font-medium text-ink-deep">
           Histórico de leitura
         </h2>
@@ -211,6 +149,9 @@ export default function AuthorReadingHistory({
           </button>
         </div>
       </div>
+      <p className="text-xs italic text-ink-fade mb-3">
+        Clique numa entrada pra destacar o livro na linha do tempo.
+      </p>
       <div className="relative pl-6">
         {/* Linha vertical */}
         <div
@@ -219,13 +160,26 @@ export default function AuthorReadingHistory({
         />
         <ul className="space-y-3">
           {sortedEntries.map((entry, idx) => {
-            const isHovered = hoveredBookId === entry.book_id;
+            const isActive = hoveredBookId === entry.book_id;
             return (
               <li
                 key={`${entry.book_id}-${idx}`}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isActive}
+                onClick={() => toggleHighlight(entry.book_id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleHighlight(entry.book_id);
+                  }
+                }}
                 className={clsx(
-                  "relative rounded-md transition-colors -mx-1 px-1 py-0.5",
-                  isHovered && "bg-gold/10",
+                  "relative rounded-md transition-colors -mx-1 px-1 py-0.5 cursor-pointer",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/40",
+                  isActive
+                    ? "bg-gold/15"
+                    : "hover:bg-paper-soft/60",
                 )}
               >
                 <span
@@ -233,17 +187,14 @@ export default function AuthorReadingHistory({
                   className={clsx(
                     "absolute -left-[20px] top-1 w-4 h-4 rounded-full ring-2 ring-ivory shadow-sm transition-transform",
                     DOT_CLS[entry.status],
-                    isHovered && "scale-125",
+                    isActive && "scale-125",
                   )}
                 />
                 <p className="text-sm text-ink-deep">
                   <Link
                     href={`/book/${entry.book_slug}`}
+                    onClick={(e) => e.stopPropagation()}
                     className="font-medium hover:text-gold-deep transition-colors"
-                    onMouseEnter={(e) => handleMouseEnter(e, entry.book_id)}
-                    onMouseLeave={handleMouseLeave}
-                    onFocus={() => activateHover(entry.book_id)}
-                    onBlur={scheduleLeave}
                   >
                     {entry.title}
                   </Link>

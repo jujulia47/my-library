@@ -6,6 +6,7 @@ import Image from "next/image";
 import { BookmarkIcon } from "@heroicons/react/24/solid";
 import { Button, BookCoverFallback } from "@/components/ui";
 import { updateReadingProgress } from "@/actions/updateReadingProgress";
+import { playPageTurn } from "@/utils/sounds";
 import type { TodayActiveReading } from "@/services/todayData";
 
 type Props = {
@@ -78,6 +79,7 @@ export function TodayLogForm({ readings }: Props) {
       }
       setSuccess(true);
       setNote("");
+      playPageTurn();
       router.refresh();
     });
   };

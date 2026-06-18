@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import LinkBookToSerieModal from "@/components/forms/LinkBookToSerieModal";
 import { createBookMinimal } from "@/actions/createBookMinimal";
+import { playStamp } from "@/utils/sounds";
 import { lookupBookByIsbn } from "@/actions/lookupBookByIsbn";
 import { createAuthor } from "@/actions/createAuthor";
 import {
@@ -188,6 +189,8 @@ export default function BookMinimal({
         // Create flow: usa `replace` pra que o detail da nova entidade
         // substitua o /book/new no history stack — Voltar do detail vai
         // direto pra origem (lista) em vez de cair no form em branco.
+        // Carimbo de "livro catalogado" antes do redirect.
+        playStamp();
         const target = result.data?.redirectTo ?? "/book";
         router.replace(target);
         router.refresh();

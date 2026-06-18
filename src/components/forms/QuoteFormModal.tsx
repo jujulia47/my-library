@@ -8,6 +8,7 @@ import {
   createQuoteForBook,
   updateQuoteText,
 } from "@/actions/createQuoteForBook";
+import { playQuillScratch } from "@/utils/sounds";
 
 export type QuoteFormModalProps = {
   open: boolean;
@@ -55,6 +56,7 @@ export default function QuoteFormModal({
         }
         return;
       }
+      playQuillScratch();
       router.refresh();
       onClose();
     });

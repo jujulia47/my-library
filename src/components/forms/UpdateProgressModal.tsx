@@ -8,6 +8,7 @@ import { Input, Button } from "@/components/ui";
 import StarRating from "@/components/FormFields/StarRating";
 import { updateReadingProgress } from "@/actions/updateReadingProgress";
 import { finishReading } from "@/actions/finishReading";
+import { playFinishChime, playPageTurn } from "@/utils/sounds";
 
 export type UpdateProgressTarget = {
   reading_id: string;
@@ -78,10 +79,12 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
         }
         return;
       }
-      // Atingiu o fim → segue pra conclusão. Caso contrário, fecha.
+      // Atingiu o fim → segue pra conclusão. Caso contrário, toca o page
+      // turn e fecha.
       if (reached100) {
         setPhase("finish");
       } else {
+        playPageTurn();
         router.refresh();
         onClose();
       }
@@ -98,6 +101,10 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
         setError(result.message);
         return;
       }
+      // Chime ritualístico de "leitura encerrada" — respeita o toggle de
+      // mute do usuário (localStorage). Tocado antes do close pra coincidir
+      // com a animação de fechar o modal.
+      playFinishChime();
       router.refresh();
       onClose();
     });

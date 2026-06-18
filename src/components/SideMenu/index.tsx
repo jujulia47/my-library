@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import SideMenuMobile from "./SideMenuMobile";
 import NavItems from "./NavItems";
+import { SoundToggle } from "./SoundToggle";
 import {
   ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
@@ -22,7 +23,8 @@ export default function SideMenu() {
         <nav className="flex-1 px-3 py-4 overflow-y-auto custom-scrollbar">
           <NavItems />
         </nav>
-        <div className="border-t border-border p-3">
+        <div className="border-t border-border p-3 space-y-1">
+          <SoundToggle />
           <form action={signOut}>
             <button
               type="submit"

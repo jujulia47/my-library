@@ -11,6 +11,7 @@ import {
   BackButton,
 } from "@/components/ui";
 import createQuote from "@/actions/createQuote";
+import { playQuillScratch } from "@/utils/sounds";
 import updateQuote from "@/actions/updateQuote";
 
 function safeFrom(value: string | null): string | null {
@@ -126,6 +127,7 @@ export default function QuoteForm(props: Props) {
           }
           return;
         }
+        playQuillScratch();
         const target = result.data?.redirectTo ?? cancelHref;
         const slugFromTarget =
           target.split("?")[0]?.split("/").pop() ?? "";
