@@ -52,9 +52,13 @@ export function YearAcquisitions({ acquisitions, year }: Props) {
     );
   }
 
-  // items já vem ordenado por acquired_at desc do service.
-  const inlineItems = acquisitions.items.slice(0, INLINE_LIMIT);
-  const hasMore = acquisitions.items.length > INLINE_LIMIT;
+  // items já vem ordenado por acquired_at desc do service. Filtro defensivo
+  // contra entradas undefined que apareciam em alguns datasets — render falha
+  // duro no `it.author_name` se passar undefined pra dentro do map.
+  const inlineItems = (acquisitions.items ?? []).filter(
+    (it): it is NonNullable<typeof it> => Boolean(it),
+  ).slice(0, INLINE_LIMIT);
+  const hasMore = (acquisitions.items ?? []).length > INLINE_LIMIT;
 
   // Maior count vira referência pro tamanho proporcional das barras.
   const maxCount = Math.max(...acquisitions.by_origin.map((o) => o.count), 1);
