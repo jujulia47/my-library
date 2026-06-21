@@ -210,7 +210,7 @@ function ResultRow({
     <li>
       <Link
         href={href}
-        className="flex items-start gap-4 p-3 rounded-md border border-transparent hover:border-gold hover:bg-paper/40 transition-colors"
+        className="flex items-start gap-4 p-3 rounded-md border border-transparent hover:border-roasted-chestnut hover:bg-paper/40 transition-colors"
       >
         <Thumb item={item} category={category} />
         <div className="flex-1 min-w-0">

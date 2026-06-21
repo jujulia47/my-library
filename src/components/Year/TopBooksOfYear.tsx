@@ -16,7 +16,7 @@ export function TopBooksOfYear({ books }: Props) {
         <Link
           key={book.id}
           href={`/book/${book.slug}`}
-          className="group flex gap-3 p-3 rounded-lg border border-border bg-ivory-light hover:border-gold transition-colors duration-150"
+          className="group flex gap-3 p-3 rounded-lg border border-border bg-ivory-light hover:border-roasted-chestnut transition-colors duration-150"
         >
           <div
             className="relative flex-shrink-0 w-[50px] h-[75px] rounded-sm overflow-hidden border border-ink-deep/15"

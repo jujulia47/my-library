@@ -50,7 +50,7 @@ export default function AuthorCard({ author }: AuthorCardProps) {
         "border border-border bg-ivory-light",
         "shadow-[0_1px_2px_rgba(74,56,38,0.05),0_4px_12px_rgba(74,56,38,0.06)]",
         "transition-all duration-150",
-        "hover:border-gold hover:-translate-y-0.5",
+        "hover:border-roasted-chestnut hover:-translate-y-0.5",
       )}
     >
       <div className="flex items-start gap-4">

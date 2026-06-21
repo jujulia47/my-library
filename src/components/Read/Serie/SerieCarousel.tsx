@@ -243,7 +243,7 @@ export default function SerieCarousel({
               "absolute -left-3 top-[42%] -translate-y-1/2 z-10",
               "w-7 h-7 rounded-full bg-ivory-light border border-border cursor-pointer",
               "flex items-center justify-center text-ink-soft transition-colors",
-              "hover:border-gold hover:text-ink-deep",
+              "hover:border-roasted-chestnut hover:text-ink-deep",
               "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-border",
             )}
           >
@@ -262,7 +262,7 @@ export default function SerieCarousel({
               "absolute -right-3 top-[42%] -translate-y-1/2 z-10",
               "w-7 h-7 rounded-full bg-ivory-light border border-border cursor-pointer",
               "flex items-center justify-center text-ink-soft transition-colors",
-              "hover:border-gold hover:text-ink-deep",
+              "hover:border-roasted-chestnut hover:text-ink-deep",
               "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-border",
             )}
           >

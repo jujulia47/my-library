@@ -52,6 +52,8 @@ export type { DataTableProps, DataTableColumn } from "./DataTable";
 export { default as AuthorMultiSelect } from "./AuthorMultiSelect";
 export type { AuthorMultiSelectProps, AuthorOption } from "./AuthorMultiSelect";
 
+export { default as AuthorNameInput } from "./AuthorNameInput";
+
 export { default as CategoryMultiSelect } from "./CategoryMultiSelect";
 export type { CategoryMultiSelectProps, CategoryOption } from "./CategoryMultiSelect";
 

@@ -54,6 +54,11 @@ export default async function createWishlist(
 
   const priority = pickPriority(formData.get("priority"));
   const notes = (formData.get("notes") as string)?.trim() || null;
+  // Data de lançamento (opcional) — formato YYYY-MM-DD do <input type="date">.
+  // Datas no passado também são aceitas (caso o user marque um livro já
+  // lançado mas queira manter o registro). Vazio = null.
+  const release_date =
+    (formData.get("release_date") as string)?.trim() || null;
 
   // Slug direto via title; fallback pra UUID curto se title vira slug vazio
   // (ex: título só com símbolos). Política da sessão 6.4.
@@ -67,6 +72,7 @@ export default async function createWishlist(
     estimated_price,
     priority,
     notes,
+    release_date,
     slug,
     user_id: user.id,
   });

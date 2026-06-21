@@ -227,7 +227,7 @@ export default async function AuthorPage({
               <Link
                 key={s.id}
                 href={`/serie/${s.slug}`}
-                className="block p-4 rounded-md border border-border bg-ivory-light hover:border-gold transition-colors"
+                className="block p-4 rounded-md border border-border bg-ivory-light hover:border-roasted-chestnut transition-colors"
               >
                 <p className="font-display text-base text-ink-deep">{s.name}</p>
                 {s.qty_volumes !== null && (
@@ -280,7 +280,7 @@ export default async function AuthorPage({
                             href={`/collection/${coll.slug}#${encodeURIComponent(
                               s.name ?? "",
                             )}`}
-                            className="block p-4 rounded-md border border-border bg-ivory-light hover:border-gold transition-colors"
+                            className="block p-4 rounded-md border border-border bg-ivory-light hover:border-roasted-chestnut transition-colors"
                           >
                             <p className="font-display text-base text-ink-deep">
                               {s.name}
@@ -311,7 +311,7 @@ export default async function AuthorPage({
               <Link
                 key={c.id}
                 href={`/category/${c.slug}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-ivory-light text-sm text-ink-deep hover:border-gold transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-ivory-light text-sm text-ink-deep hover:border-roasted-chestnut transition-colors"
               >
                 <span>{c.name}</span>
                 <span className="text-xs italic text-ink-fade">

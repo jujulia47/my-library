@@ -544,6 +544,38 @@ export type Database = {
           },
         ]
       }
+      home_next_read: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_next_read_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "book"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -936,6 +968,7 @@ export type Database = {
           notes: string | null
           priority: Database["public"]["Enums"]["wishlist_priority"] | null
           purchase_link: string | null
+          release_date: string | null
           slug: string
           title: string
           title_normalized: string | null
@@ -953,6 +986,7 @@ export type Database = {
           notes?: string | null
           priority?: Database["public"]["Enums"]["wishlist_priority"] | null
           purchase_link?: string | null
+          release_date?: string | null
           slug: string
           title: string
           title_normalized?: string | null
@@ -970,6 +1004,7 @@ export type Database = {
           notes?: string | null
           priority?: Database["public"]["Enums"]["wishlist_priority"] | null
           purchase_link?: string | null
+          release_date?: string | null
           slug?: string
           title?: string
           title_normalized?: string | null

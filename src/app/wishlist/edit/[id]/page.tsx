@@ -34,6 +34,7 @@ export default async function EditWishlistPage({
               : null,
           priority: item.priority,
           notes: item.notes,
+          release_date: item.release_date,
         }}
       />
     </AppShell>

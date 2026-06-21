@@ -51,7 +51,7 @@ export function DeleteShelfButton({ shelfId }: Props) {
             type="button"
             onClick={() => setConfirming(false)}
             disabled={isPending}
-            className="text-xs px-2.5 py-1 rounded-sm border border-gold/30 text-gold-deep hover:border-gold transition-colors disabled:opacity-50"
+            className="text-xs px-2.5 py-1 rounded-sm border border-gold/30 text-gold-deep hover:border-roasted-chestnut transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>

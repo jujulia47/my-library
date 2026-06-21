@@ -115,7 +115,7 @@ export function ShelfZoom({ shelf, allShelves }: Props) {
         <div className="flex justify-between items-center mb-6 gap-3 flex-wrap">
           <Link
             href="/library"
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gold/30 hover:border-gold rounded transition-colors"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gold/30 hover:border-roasted-chestnut rounded transition-colors"
             style={{ color: "rgba(245, 232, 208, 0.85)" }}
           >
             <ChevronLeftIcon className="w-3.5 h-3.5" />

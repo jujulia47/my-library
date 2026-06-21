@@ -21,14 +21,8 @@ import type { CollectionListItem } from "@/services/collectionList";
 import { deleteCollection } from "@/actions/deleteCollection";
 import { archiveCollection } from "@/actions/archiveCollection";
 import { toggleCollectionFavorite } from "@/actions/toggleCollectionFavorite";
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import { formatBRL } from "@/utils/formatCurrency";
+import { colorHexForName } from "@/utils/colorByHash";
 
 function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR", {
@@ -232,19 +226,23 @@ export default function CollectionCard({ collection: c }: Props) {
   const dateRow = dateRangeRaw(c.start_date, c.end_date);
   const rhythm = c.type === "challenge" ? challengeRhythm(c) : null;
 
-  const progressBarColor = c.is_completed ? "bg-moss" : "bg-gold";
+  // Cor hash-based pelo nome da coleção — vira marcador único entre cards.
+  // Completed segue moss (verde "concluído"); senão pega a cor da coleção.
+  const accentColor = colorHexForName(c.name);
+  const progressBarColor = c.is_completed ? "bg-moss" : null;
 
   return (
     <>
       <div
         className={clsx(
-          "relative group rounded-lg",
-          "border border-border bg-ivory-light",
+          "relative group rounded-lg border-l-[3px]",
+          "border-t border-r border-b border-border bg-ivory-light",
           "shadow-[0_1px_2px_rgba(74,56,38,0.05),0_4px_12px_rgba(74,56,38,0.06)]",
           "transition-colors duration-150",
-          "hover:border-gold",
+          "hover:border-roasted-chestnut",
           c.is_archived && "opacity-70",
         )}
+        style={{ borderLeftColor: accentColor }}
       >
         <Link
           href={`/collection/${c.slug}`}
@@ -335,14 +333,18 @@ export default function CollectionCard({ collection: c }: Props) {
             <span>{progressText}</span>
           </div>
 
-          {/* Progress bar */}
+          {/* Progress bar — preenche com a cor hash da coleção (ou moss
+              quando completed, mantendo o "verde de conclusão"). */}
           <div className="mt-1.5 h-1.5 w-full rounded-full bg-paper overflow-hidden">
             <div
               className={clsx(
                 "h-full rounded-full transition-all",
                 progressBarColor,
               )}
-              style={{ width: `${Math.max(0, Math.min(100, c.progress_percent))}%` }}
+              style={{
+                width: `${Math.max(0, Math.min(100, c.progress_percent))}%`,
+                backgroundColor: c.is_completed ? undefined : accentColor,
+              }}
             />
           </div>
         </Link>

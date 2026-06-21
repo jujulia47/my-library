@@ -27,7 +27,7 @@ export function ShelfNavigation({ currentId, allShelves }: Props) {
         <Link
           href={`/library/shelf/${prev.id}`}
           aria-label="Estante anterior"
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gold/30 hover:border-gold rounded transition-colors"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gold/30 hover:border-roasted-chestnut rounded transition-colors"
           style={{ color: "rgba(245, 232, 208, 0.85)" }}
         >
           <ChevronLeftIcon className="w-3.5 h-3.5" />
@@ -46,7 +46,7 @@ export function ShelfNavigation({ currentId, allShelves }: Props) {
         <Link
           href={`/library/shelf/${next.id}`}
           aria-label="Próxima estante"
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gold/30 hover:border-gold rounded transition-colors"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gold/30 hover:border-roasted-chestnut rounded transition-colors"
           style={{ color: "rgba(245, 232, 208, 0.85)" }}
         >
           <ShelfSymbol symbol={next.symbol} size={14} />

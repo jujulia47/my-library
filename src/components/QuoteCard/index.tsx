@@ -75,7 +75,7 @@ export default function QuoteCard({ quote }: { quote: QuoteListItem }) {
     <div
       className={clsx(
         "group relative rounded-md border border-border",
-        "transition-colors duration-150 hover:border-gold",
+        "transition-colors duration-150 hover:border-roasted-chestnut",
         containerClass,
       )}
     >

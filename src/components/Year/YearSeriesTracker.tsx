@@ -130,14 +130,23 @@ function VolumeCell({ volume }: { volume: SeriesVolumeEntry }) {
     "w-14 h-14 flex-shrink-0 rounded-md flex items-center justify-center text-sm font-body font-medium relative transition-transform hover:scale-110 hover:shadow-sm";
 
   const stylesByStatus: Record<SeriesVolumeEntry["status"], string> = {
-    // Destaque máximo: lido neste ano. Borda mais grossa + tint mais
-    // saturado pra "saltar" no meio da fileira.
-    read_this_year: "bg-gold/40 border-2 border-gold-deep text-ink-deep",
-    // Lido em anos passados — presente mas sem chamar atenção.
-    read_other_year: "bg-gold/15 border border-gold/40 text-ink-deep",
-    in_progress: "bg-terracota/20 border border-terracota/60 text-ink-deep",
-    paused: "bg-olive/20 border border-olive/60 text-ink-deep",
-    abandoned: "bg-burgundy/15 border border-burgundy/50 text-burgundy",
+    // Paleta marrons quentes (sugestão da usuária):
+    //  - Roasted Chestnut #6D3914 — lido (escuro)
+    //  - Caramel Drizzle  #AB7843 — usado pra read_other_year (lido em ano
+    //    passado é "mais claro", como uma versão envelhecida).
+    // Lido este ano: chestnut profundo + borda grossa + texto creme.
+    read_this_year:
+      "bg-[#6D3914] border-2 border-[#6D3914] text-ivory",
+    // Lido em anos passados: chestnut desbotado — mesma cor do recente,
+    // só com opacidade baixa pra ler como "feito há tempos". Não usar
+    // caramel aqui porque conflita com o bônus do grid.
+    read_other_year:
+      "bg-[#6D3914]/18 border border-[#6D3914]/50 text-ink-deep",
+    // Em curso: evergreen moss — "leitura crescendo".
+    in_progress:
+      "bg-[#515932]/35 border border-[#515932]/70 text-ink-deep",
+    paused: "bg-olive/25 border border-olive/60 text-ink-deep",
+    abandoned: "bg-ink-fade/20 border border-ink-fade/55 text-ink-soft",
     not_read: "bg-paper-soft border border-ink-fade/30 text-ink-fade",
   };
 

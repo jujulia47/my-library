@@ -151,7 +151,7 @@ export default function LinkBookToSerieModal({
                     key={b.id}
                     type="button"
                     onClick={() => setSelected(b)}
-                    className="w-full flex items-center gap-3 p-2 rounded-md border border-transparent hover:border-gold hover:bg-paper/40 text-left transition-colors"
+                    className="w-full flex items-center gap-3 p-2 rounded-md border border-transparent hover:border-roasted-chestnut hover:bg-paper/40 text-left transition-colors"
                   >
                     <div
                       className="w-9 flex-shrink-0 relative rounded-sm overflow-hidden border border-ink-deep/20"

@@ -275,7 +275,7 @@ export default function SerieDetailClient({
       {/* Header com ações — sessão 17.3: wrapper com border-l-4 navy
           (série = saga / linha temporal). Bege passa a respirar; a barra
           lateral dá identidade visual sem virar carnaval. */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pb-4 border-b border-border bg-ivory-light border-l-4 border-l-navy rounded-r-md pl-4 pt-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pb-4 border-b border-border bg-ivory-light border-l-4 border-l-navy rounded-r-md px-4 pt-4">
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-4xl font-medium text-ink-deep leading-tight">
             {serie.name}

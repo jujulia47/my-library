@@ -661,7 +661,7 @@ function ResultRow({
         "relative w-full flex items-center gap-3 p-2 rounded-md text-left transition-colors",
         selected
           ? "border-2 border-gold bg-paper/50"
-          : "border-2 border-transparent hover:border-gold/40 hover:bg-paper/40",
+          : "border-2 border-transparent hover:border-roasted-chestnut/40 hover:bg-paper/40",
       )}
     >
       <div

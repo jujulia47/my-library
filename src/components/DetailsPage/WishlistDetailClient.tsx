@@ -19,6 +19,7 @@ import {
   CheckCircleIcon,
   ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
+import { formatBRL } from "@/utils/formatCurrency";
 import type { Database } from "@/utils/typings/supabase";
 
 type WishlistPriority = Database["public"]["Enums"]["wishlist_priority"];
@@ -43,13 +44,6 @@ const priorityBadge: Record<
   medium: { variant: "gold", label: "Média" },
   low: { variant: "fade", label: "Baixa" },
 };
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
 
 function shortDomain(url: string | null): string | null {
   if (!url) return null;

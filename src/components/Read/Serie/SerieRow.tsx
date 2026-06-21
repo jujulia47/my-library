@@ -100,7 +100,7 @@ export default function SerieRow({ serie }: Props) {
       className={clsx(
         "relative group rounded-lg p-2 -m-2",
         "border border-transparent transition-colors duration-150",
-        "hover:border-gold",
+        "hover:border-roasted-chestnut",
       )}
     >
       <Card className="relative">

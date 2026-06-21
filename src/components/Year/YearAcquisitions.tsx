@@ -10,15 +10,8 @@ import { HomeCard, HomeCardEmpty } from "@/components/Home/HomeCard";
 import { BookCoverFallback } from "@/components/ui";
 import { labelForPurchaseOrigin } from "@/utils/labels";
 import { AcquisitionsModal } from "./AcquisitionsModal";
+import { formatBRL } from "@/utils/formatCurrency";
 import type { AcquisitionsBreakdown } from "@/services/yearData";
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatShortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);

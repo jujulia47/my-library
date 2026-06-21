@@ -34,7 +34,7 @@ export function AddShelfButton() {
         onClick={handleClick}
         disabled={isPending}
         aria-label="Criar nova estante"
-        className="block w-full border-2 border-dashed border-gold/30 hover:border-gold rounded-md flex flex-col items-center justify-center gap-2 text-gold/60 hover:text-gold bg-black/20 transition-colors disabled:opacity-50"
+        className="block w-full border-2 border-dashed border-gold/30 hover:border-roasted-chestnut rounded-md flex flex-col items-center justify-center gap-2 text-gold/60 hover:text-gold bg-black/20 transition-colors disabled:opacity-50"
         style={{ marginTop: ARCH_HEIGHT, height: BODY_HEIGHT }}
       >
         <PlusIcon className="w-8 h-8" />

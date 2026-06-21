@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { createPurchaseGroup } from "@/actions/createPurchaseGroup";
 import { updatePurchaseGroup } from "@/actions/updatePurchaseGroup";
+import { formatBRL } from "@/utils/formatCurrency";
 
 export type PurchaseGroupOption = {
   id: string;
@@ -35,13 +36,6 @@ export type PurchaseGroupSelectProps = {
   /** Hidden input com o id do grupo (ou string vazia). */
   hiddenFieldName?: string;
 };
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
 
 /**
  * Picker de grupo de compra (box/kit). Busca grupos existentes do usuário;

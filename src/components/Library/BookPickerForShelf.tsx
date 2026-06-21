@@ -109,7 +109,7 @@ export function BookPickerForShelf({ orphans, shelfId }: Props) {
                   type="button"
                   onClick={() => handlePick(book.id)}
                   disabled={pendingBookId !== null}
-                  className="w-full flex gap-3 p-3 rounded-md border text-left transition-all hover:border-gold disabled:opacity-50"
+                  className="w-full flex gap-3 p-3 rounded-md border text-left transition-all hover:border-roasted-chestnut disabled:opacity-50"
                   style={{
                     background: "rgba(0,0,0,0.25)",
                     borderColor: "rgba(240,192,64,0.25)",

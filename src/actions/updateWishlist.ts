@@ -57,6 +57,8 @@ export default async function updateWishlist(
 
   const priority = pickPriority(formData.get("priority"));
   const notes = (formData.get("notes") as string)?.trim() || null;
+  const release_date =
+    (formData.get("release_date") as string)?.trim() || null;
 
   // Slug acompanha o título (regerado a cada update — sessão 6.4).
   const newSlug =
@@ -72,6 +74,7 @@ export default async function updateWishlist(
       estimated_price,
       priority,
       notes,
+      release_date,
     })
     .eq("id", id);
   if (error) return { ok: false, ...translateSupabaseError(error) };

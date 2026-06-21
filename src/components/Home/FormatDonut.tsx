@@ -5,14 +5,15 @@ import { BookOpenIcon } from "@heroicons/react/24/outline";
 import { HomeCard, HomeCardEmpty } from "./HomeCard";
 import type { FormatDistribution } from "@/services/homeData";
 
-// Cores semânticas alinhadas ao doc design-refresh, com `unknown` puxado
-// pra burgundy (em vez de ink-fade cinza) — quando o usuário só tem livros
-// "Outro" o donut renderizava todo apagado.
+// Paleta "café" — tons quentes harmonizados com os browns de /year.
+// Hex direto (em vez de `var(...)`) porque a inline-style do SVG estava
+// dando hydration mismatch quando o bundle do client ficava atrás do
+// servidor — string literal é determinístico SSR + CSR.
 const FORMAT_COLOR: Record<string, string> = {
-  physical: "#BC6E48", // terracota — quente, distingue do "outro"
-  ebook: "#2C5078", // navy-soft — frio, contrasta com físico
-  audiobook: "#5C6E47", // moss
-  unknown: "#82393A", // burgundy — não fica neutro/apagado
+  physical: "#6D3914", // roasted-chestnut
+  ebook: "#AB7843", // caramel-drizzle
+  audiobook: "#173125", // forest
+  unknown: "#4C2B08", // espresso-shot
 };
 
 const FORMAT_LABEL: Record<string, string> = {

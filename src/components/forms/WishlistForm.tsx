@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   BackButton,
+  AuthorNameInput,
 } from "@/components/ui";
 import createWishlist from "@/actions/createWishlist";
 import updateWishlist from "@/actions/updateWishlist";
@@ -58,6 +59,7 @@ type WishlistInitial = {
   estimated_price: number | null;
   priority: WishlistPriority | null;
   notes: string | null;
+  release_date: string | null;
 };
 
 type Props =
@@ -182,7 +184,7 @@ export default function WishlistForm(props: Props) {
             errorText={fieldErrors.title}
           />
 
-          <Input
+          <AuthorNameInput
             label="Autor"
             name="author_name"
             defaultValue={
@@ -190,7 +192,8 @@ export default function WishlistForm(props: Props) {
                 ? (props.initial.author_name ?? "")
                 : ""
             }
-            placeholder="Opcional"
+            placeholder="Opcional — busca os autores cadastrados"
+            helperText="Digite 2+ letras pra ver sugestões dos autores que você já cadastrou."
           />
 
           <Input
@@ -207,21 +210,36 @@ export default function WishlistForm(props: Props) {
             helperText="Amazon, Estante Virtual, site da editora… opcional."
           />
 
-          <Input
-            label="Preço estimado"
-            name="estimated_price"
-            type="number"
-            min={0}
-            step={0.01}
-            defaultValue={
-              props.mode === "edit"
-                ? (props.initial.estimated_price ?? "")
-                : ""
-            }
-            placeholder="Ex.: 45,90"
-            leftIcon={<span className="text-ink-fade">R$</span>}
-            errorText={fieldErrors.estimated_price}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Preço estimado"
+              name="estimated_price"
+              type="number"
+              min={0}
+              step={0.01}
+              defaultValue={
+                props.mode === "edit"
+                  ? (props.initial.estimated_price ?? "")
+                  : ""
+              }
+              placeholder="Ex.: 45,90"
+              leftIcon={<span className="text-ink-fade">R$</span>}
+              errorText={fieldErrors.estimated_price}
+            />
+
+            <Input
+              label="Data de lançamento"
+              name="release_date"
+              type="date"
+              defaultValue={
+                props.mode === "edit"
+                  ? (props.initial.release_date ?? "")
+                  : ""
+              }
+              helperText="Opcional — pré-venda ou lançamento futuro."
+              errorText={fieldErrors.release_date}
+            />
+          </div>
 
           <fieldset className="space-y-2">
             <legend className="text-sm font-body font-medium text-ink-deep mb-2">

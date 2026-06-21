@@ -9,6 +9,7 @@ import { YearRecords } from "@/components/Year/YearRecords";
 import { TopBooksOfYear } from "@/components/Year/TopBooksOfYear";
 import { YearBooksGrid } from "@/components/Year/YearBooksGrid";
 import { YearSeriesTracker } from "@/components/Year/YearSeriesTracker";
+import { YearMonthlyReadsList } from "@/components/Year/YearMonthlyReadsList";
 import { YearMilestones } from "@/components/Year/YearMilestones";
 import { YearAcquisitions } from "@/components/Year/YearAcquisitions";
 import { YearCountries } from "@/components/Year/YearCountries";
@@ -107,6 +108,13 @@ export default async function YearPage({ params }: Props) {
 
       <SectionLabel>Linha do tempo</SectionLabel>
       <YearTimeline timeline={data.monthly_timeline} year={year} />
+
+      {data.finished_books.length > 0 && (
+        <>
+          <SectionLabel>Livros do mês</SectionLabel>
+          <YearMonthlyReadsList books={data.finished_books} />
+        </>
+      )}
 
       <SectionLabel>Em outras estradas</SectionLabel>
       <YearOtherRoads data={data.other_readings} />

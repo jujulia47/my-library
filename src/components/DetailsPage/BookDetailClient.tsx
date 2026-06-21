@@ -30,6 +30,7 @@ import { deleteQuoteById } from "@/actions/createQuoteForBook";
 import { deleteBook } from "@/actions/deleteBook";
 import { startReading } from "@/actions/startReading";
 import { formatDate } from "@/utils/formatDate";
+import { formatBRL } from "@/utils/formatCurrency";
 import { formatDuration, formatDurationLabel } from "@/utils/formatDuration";
 import { labelForPurchaseOrigin } from "@/utils/labels";
 import {
@@ -163,13 +164,6 @@ const formatLabels: Record<BookFormat, string> = {
   ebook: "E-book",
   audiobook: "Audiobook",
 };
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
 
 function formatLongDate(iso: string): string {
   const d = new Date(iso);

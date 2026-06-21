@@ -45,6 +45,18 @@
   --color-terracota: #BC6E48;
   --color-terracota-soft: #D08054;
 
+  /* Paleta "café" — tons quentes para destaques de jornal/livraria.
+     Adicionada após validação visual em /year (livros lidos = chestnut). */
+  --color-oat-milk: #D7BDA6;
+  --color-cinnamon-latte: #B8957F;
+  --color-caramel-drizzle: #AB7843;
+  --color-roasted-chestnut: #6D3914;
+  --color-espresso-shot: #4C2B08;
+
+  /* Forest — verde profundo, mais escuro que moss. Pra cantos densos
+     (FORMATO/GÊNERO) que pedem contraste forte sem virar preto. */
+  --color-forest: #173125;
+
   /* Olive — mantém */
   --color-olive: #85614B;
 

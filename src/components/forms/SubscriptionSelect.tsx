@@ -12,6 +12,7 @@ import QuickSubscriptionModal, {
   type QuickSubscription,
 } from "./QuickSubscriptionModal";
 import { updateSubscription } from "@/actions/updateSubscription";
+import { formatBRL } from "@/utils/formatCurrency";
 
 export type SubscriptionOption = {
   id: string;
@@ -33,13 +34,6 @@ type Props = {
   errorText?: string;
   required?: boolean;
 };
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
 
 /**
  * Select single de assinatura com botão "+ Nova" inline. A lista vem do

@@ -270,16 +270,15 @@ export async function bookListQuery(
       return bd.localeCompare(ad);
     });
   } else if (sort === "reading_first") {
-    // Livros sendo lidos agora no topo (ordenados por start_date desc — leitura
-    // mais recentemente iniciada primeiro); depois pausados; depois os que já
-    // foram terminados/abandonados (por finish_date desc — "última leitura");
-    // por fim os tbr (sem reading) e demais. Dentro de cada grupo, tie-break
-    // por título.
+    // Ordem: lendo → pausado → lido → quero ler (sem reading) → abandonado.
+    // Abandonado SEMPRE vai por último — mesmo que tenha sido "última leitura"
+    // recente, o user não quer ver na frente.
     const rank = (b: BookListItem): number => {
       const s = b.latest_reading?.status;
       if (s === "reading") return 0;
       if (s === "paused") return 1;
-      if (s === "finished" || s === "abandoned") return 2;
+      if (s === "finished") return 2;
+      if (s === "abandoned") return 4;
       return 3; // sem reading (tbr) ou outros
     };
     books = books.slice().sort((a, b) => {
@@ -291,8 +290,8 @@ export async function bookListQuery(
         const ad = a.latest_reading?.start_date ?? "";
         const bd = b.latest_reading?.start_date ?? "";
         if (ad !== bd) return bd.localeCompare(ad);
-      } else if (ra === 2) {
-        // Concluídos: por finish_date desc (último que terminei primeiro).
+      } else if (ra === 2 || ra === 4) {
+        // Concluídos / abandonados: por finish_date desc (mais recente primeiro).
         const ad = a.latest_reading?.finish_date ?? "";
         const bd = b.latest_reading?.finish_date ?? "";
         if (ad !== bd) return bd.localeCompare(ad);

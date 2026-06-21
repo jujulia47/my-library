@@ -19,6 +19,12 @@ import {
   eventDateForTransition,
 } from "@/utils/labels";
 import {
+  digitsFromNumber,
+  digitsFromPriceInput,
+  formatPriceInputFromDigits,
+  numberFromDigits,
+} from "@/utils/formatCurrency";
+import {
   SubscriptionSelect,
   type SubscriptionOption,
 } from "./SubscriptionSelect";
@@ -159,8 +165,12 @@ export function OwnershipFields({
   const [origin, setOrigin] = useState<PurchaseOrigin>(
     initial.purchase_origin ?? "nao_informado",
   );
-  const [price, setPrice] = useState<string>(
-    initial.purchase_price !== null ? String(initial.purchase_price) : "",
+  // Preço com máscara de centavos: estado guarda só dígitos ("4590"); o
+  // display vem de formatPriceInputFromDigits ("45,90"). User digita números,
+  // a vírgula aparece sozinha. Hidden input separado envia o valor numérico
+  // (45.9) pra action — assim sem precisar mudar o parsing do server.
+  const [priceDigits, setPriceDigits] = useState<string>(
+    digitsFromNumber(initial.purchase_price),
   );
 
   // Datas — todas em YYYY-MM-DD. Inputs do tipo date só aceitam esse formato.
@@ -196,9 +206,9 @@ export function OwnershipFields({
   ) => {
     setSubscriptionId(id);
     if (id && monthlyPrice !== null) {
-      setPrice(String(monthlyPrice));
+      setPriceDigits(digitsFromNumber(monthlyPrice));
     } else if (!id) {
-      setPrice("");
+      setPriceDigits("");
     }
   };
 
@@ -391,17 +401,28 @@ export function OwnershipFields({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {showPrice && (
-              <Input
-                label="Preço (opcional, R$)"
-                name="purchase_price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="Ex.: 45.90"
-                errorText={fieldErrors.purchase_price}
-              />
+              <>
+                <Input
+                  label="Preço (opcional, R$)"
+                  type="text"
+                  inputMode="decimal"
+                  value={formatPriceInputFromDigits(priceDigits)}
+                  onChange={(e) =>
+                    setPriceDigits(digitsFromPriceInput(e.target.value))
+                  }
+                  placeholder="0,00"
+                  errorText={fieldErrors.purchase_price}
+                />
+                <input
+                  type="hidden"
+                  name="purchase_price"
+                  value={
+                    numberFromDigits(priceDigits) !== null
+                      ? String(numberFromDigits(priceDigits))
+                      : ""
+                  }
+                />
+              </>
             )}
 
             {showAcquiredAt && (

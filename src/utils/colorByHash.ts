@@ -11,29 +11,30 @@
  * Hash simples (soma de char codes mod length): suficiente pra <100 entradas
  * únicas; colisões aceitáveis no rotation cíclico de 8.
  */
-// Paleta reordenada (post-feedback): tons de marrom (olive, cappuccino-soft,
-// ink-soft) puxavam o pie pra monocromia. Trocados pelas variantes "-soft"
-// que já existem no design system → mantém família semântica, ganha contraste.
+// Paleta "café & floresta" — predomina browns quentes (chestnut/caramel/
+// cinnamon/espresso) intercalados com green/red/blue/dark-green pra variação.
+// Cada cor vizinha foi posicionada com contraste forte pra evitar pizzas
+// com slices indistinguíveis. A ordem importa: o hash usa o índice direto.
 export const PIE_COLORS_HEX = [
+  "#6D3914", // roasted-chestnut — marrom escuro warm
+  "#173125", // forest — verde profundo
+  "#AB7843", // caramel-drizzle — marrom médio warm
   "#82393A", // burgundy
   "#5C6E47", // moss
+  "#4C2B08", // espresso-shot — marrom quase preto
   "#1E3A5F", // navy
-  "#BC6E48", // terracota
-  "#A0843E", // gold-deep
-  "#A24749", // burgundy-soft
-  "#6F8456", // moss-soft
-  "#2C5078", // navy-soft
+  "#B8957F", // cinnamon-latte — marrom claro warm
 ] as const;
 
 export const PIE_COLORS_TOKEN = [
+  "roasted-chestnut",
+  "forest",
+  "caramel-drizzle",
   "burgundy",
   "moss",
+  "espresso-shot",
   "navy",
-  "terracota",
-  "gold-deep",
-  "burgundy-soft",
-  "moss-soft",
-  "navy-soft",
+  "cinnamon-latte",
 ] as const;
 
 function hashIndex(name: string, mod = PIE_COLORS_HEX.length): number {

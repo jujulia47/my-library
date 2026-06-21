@@ -61,6 +61,7 @@ import type {
   CollectionItem,
 } from "@/services/collectionDetail";
 import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
+import { formatBRL } from "@/utils/formatCurrency";
 
 const UNSECTIONED = "__unsectioned__";
 
@@ -91,13 +92,6 @@ const STATUS_RANK: Record<string, number> = {
   wont_read: 5,
 };
 
-function formatBRL(value: number, withCents = false): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: withCents ? 2 : 0,
-  }).format(value);
-}
 
 function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR", {
@@ -1230,7 +1224,7 @@ function ItemCard({
           href={`/book/${item.book.slug}`}
           className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 rounded-md"
         >
-          <div className="rounded-md p-1.5 -m-1.5 border border-transparent hover:border-gold transition-colors">
+          <div className="rounded-md p-1.5 -m-1.5 border border-transparent hover:border-roasted-chestnut transition-colors">
             <div
               className="relative w-full overflow-hidden rounded-md border border-ink-deep/20 bg-paper"
               style={{ aspectRatio: "2 / 3" }}
@@ -1325,7 +1319,7 @@ function ItemCard({
         href={`/wishlist/${w.slug}`}
         className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 rounded-md"
       >
-        <div className="rounded-md p-1.5 -m-1.5 border border-transparent hover:border-gold transition-colors">
+        <div className="rounded-md p-1.5 -m-1.5 border border-transparent hover:border-roasted-chestnut transition-colors">
           <div
             className="relative w-full overflow-hidden rounded-md border-l-2 border-l-terracota border-r border-y border-ink-deep/15 bg-terracota/[0.08]"
             style={{ aspectRatio: "2 / 3" }}

@@ -143,9 +143,9 @@ export function YearBooksGrid({ books, year, goal: persistedGoal }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-1.5 text-xs font-body text-ink-soft">
-          <span className="inline-block w-3 h-3 rounded-sm bg-gold/30 border border-gold/60" />
+          <span className="inline-block w-3 h-3 rounded-sm bg-[#6D3914] border border-[#6D3914]" />
           <span>lido</span>
-          <span className="inline-block w-3 h-3 rounded-sm bg-moss/30 border border-moss/60 ml-2" />
+          <span className="inline-block w-3 h-3 rounded-sm bg-[#AB7843] border border-[#AB7843] ml-2" />
           <span>bônus</span>
           <span className="inline-block w-3 h-3 rounded-sm border border-dashed border-ink-fade/50 ml-2" />
           <span>a ler</span>
@@ -270,16 +270,16 @@ function BookSlot({
         baseClasses,
         "border font-medium transition-transform hover:scale-110 hover:shadow-sm",
         isOverGoal
-          ? "bg-moss/15 border-moss/60 text-moss"
-          : "bg-gold/15 border-gold/50 text-ink-deep",
+          ? "bg-[#AB7843] border-[#AB7843] text-ivory"
+          : "bg-[#6D3914] border-[#6D3914] text-ivory",
       )}
     >
       <span>{ordinal}</span>
       {book.is_favorite && (
-        <StarSolidIcon className="absolute -top-1 -right-1 w-3 h-3 text-gold" />
+        <StarSolidIcon className="absolute top-1 right-1 w-3 h-3 text-gold" />
       )}
       {book.rating === 5 && !book.is_favorite && (
-        <StarOutlineIcon className="absolute -top-1 -right-1 w-3 h-3 text-gold" />
+        <StarOutlineIcon className="absolute top-1 right-1 w-3 h-3 text-gold" />
       )}
     </Link>
   );

@@ -17,6 +17,7 @@ import {
   parsePagination,
   paginateArray,
 } from "@/utils/typings/pagination";
+import { formatBRL } from "@/utils/formatCurrency";
 
 const VALID_SORTS = new Set<WishlistListSort>([
   "newest",
@@ -47,13 +48,6 @@ function parseList(v: string | string[] | undefined): string[] {
 
 function pickFirst(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
-}
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
 }
 
 export default async function WishlistPage({

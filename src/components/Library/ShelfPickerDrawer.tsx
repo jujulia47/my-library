@@ -79,7 +79,7 @@ function DroppableShelfMini({
           ? "border-gold bg-gold/15 scale-105"
           : isCurrent
             ? "border-gold/20 opacity-50"
-            : "hover:border-gold/60"
+            : "hover:border-roasted-chestnut/60"
       }`}
       style={{
         borderColor: isOver
@@ -117,7 +117,7 @@ function DroppableNewShelf() {
       className={`flex items-center gap-3 px-3 py-2 rounded border-2 border-dashed transition-all ${
         isOver
           ? "border-gold bg-gold/10 scale-105"
-          : "border-gold/30 hover:border-gold/60"
+          : "border-gold/30 hover:border-roasted-chestnut/60"
       }`}
       style={{ color: "rgba(240,192,64,0.8)" }}
     >

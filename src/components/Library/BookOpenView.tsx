@@ -293,7 +293,7 @@ const rootClass = embedded
       <button
         type="button"
         onClick={close}
-        className="fixed top-4 right-4 z-50 px-4 py-2 text-sm border border-gold/30 hover:border-gold rounded-md transition-colors flex items-center gap-1.5"
+        className="fixed top-4 right-4 z-50 px-4 py-2 text-sm border border-gold/30 hover:border-roasted-chestnut rounded-md transition-colors flex items-center gap-1.5"
         style={{ color: "rgba(245, 232, 208, 0.9)" }}
       >
         <XMarkIcon className="w-4 h-4" />

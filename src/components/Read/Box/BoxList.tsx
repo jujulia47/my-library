@@ -11,6 +11,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { Card, Button } from "@/components/ui";
 import { updatePurchaseGroup } from "@/actions/updatePurchaseGroup";
+import { formatBRL } from "@/utils/formatCurrency";
+import { colorHexForName } from "@/utils/colorByHash";
 
 export type BoxRow = {
   id: string;
@@ -21,13 +23,6 @@ export type BoxRow = {
   notes: string | null;
   books: { id: string; slug: string; title: string }[];
 };
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
 
 function formatDateBR(iso: string | null): string {
   if (!iso) return "—";
@@ -133,11 +128,19 @@ function BoxItem({
     setError(null);
   };
 
+  // Cor hash-based pelo nome do box — cada box vira um "marcador" único.
+  // Estável entre renders (mesmo nome → mesma cor sempre).
+  const accentColor = colorHexForName(row.name);
+
   return (
-    <Card className="border-l-[3px] border-l-burgundy">
+    <Card
+      className="border-l-[3px]"
+      style={{ borderLeftColor: accentColor }}
+    >
       <div className="flex items-start gap-4 flex-wrap">
         <CubeIcon
-          className="w-6 h-6 text-burgundy flex-shrink-0 mt-1"
+          className="w-6 h-6 flex-shrink-0 mt-1"
+          style={{ color: accentColor }}
           aria-hidden
         />
 

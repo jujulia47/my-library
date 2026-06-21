@@ -46,7 +46,7 @@ export function ChallengeArc({ challenge, currentYear }: Props) {
   return (
     <Link
       href={`/collection/${challenge.slug}`}
-      className="block bg-paper border border-paper-soft rounded-lg p-3.5 text-center hover:border-gold transition-colors duration-150"
+      className="block bg-paper border border-paper-soft rounded-lg p-3.5 text-center hover:border-roasted-chestnut transition-colors duration-150"
     >
       <p className="text-xs uppercase tracking-wider text-ink-fade mb-2">
         Desafio {currentYear}

@@ -276,30 +276,38 @@ export async function serieListQuery(
       return ad.localeCompare(bd);
     });
   } else if (sort === "reading_first") {
-    // Séries com volumes pendentes (não completas) no topo, ordenadas por
-    // last_activity desc. Séries concluídas/abandonadas no fim, também por
-    // last_activity. Cobre o caso "estou no meio dessas séries" — o que o
-    // user quer ver primeiro.
-    const isIncomplete = (s: SerieListItem): boolean => {
-      // Status explícito reading/paused → sempre conta como incompleta.
-      if (s.status === "reading" || s.status === "paused") return true;
-      // Status tbr/finished/abandoned: deriva do progresso. tbr com leituras
-      // (ex.: user começou mas não atualizou o status) também conta.
+    // Ordem: Lendo → Lido → Quero ler → Abandonado.
+    // - Lendo: status reading/paused OU qualquer livro com reading/paused
+    //   ativa (cobre o caso "tbr mas comecei e não atualizei o status").
+    // - Lido: status finished, OU read_count cobre todos os volumes.
+    // - Abandonado: SEMPRE por último, mesmo com atividade recente.
+    // - Quero ler / sem leitura: o resto.
+    // Dentro do grupo, tie-break por last_activity desc + nome asc.
+    const rank = (s: SerieListItem): number => {
+      const hasActiveReading =
+        s.status === "reading" ||
+        s.status === "paused" ||
+        s.books.some((b) =>
+          b.readings.some(
+            (r) => r.status === "reading" || r.status === "paused",
+          ),
+        );
+      if (hasActiveReading) return 0; // Lendo
+
       const total = s.qty_volumes;
-      if (total != null && total > 0) return s.read_count < total;
-      // Sem total declarado: incompleta se há leitura em andamento entre os
-      // livros cadastrados.
-      return s.books.some((b) =>
-        b.readings.some(
-          (r) => r.status === "reading" || r.status === "paused",
-        ),
-      );
+      const isFullyRead =
+        s.status === "finished" ||
+        (total != null && total > 0 && s.read_count >= total);
+      if (isFullyRead) return 1; // Lido
+
+      if (s.status === "abandoned") return 3; // Abandonado
+      return 2; // Quero ler / outros
     };
 
     series = series.slice().sort((a, b) => {
-      const ai = isIncomplete(a) ? 0 : 1;
-      const bi = isIncomplete(b) ? 0 : 1;
-      if (ai !== bi) return ai - bi;
+      const ra = rank(a);
+      const rb = rank(b);
+      if (ra !== rb) return ra - rb;
       const ad = a.last_activity ?? "";
       const bd = b.last_activity ?? "";
       if (ad !== bd) return bd.localeCompare(ad);

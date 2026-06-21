@@ -24,7 +24,7 @@ export function YearEmptyState({ year, availableYears }: Props) {
               <Link
                 key={y}
                 href={`/year/${y}`}
-                className="text-sm px-3 py-1.5 border border-border rounded-md text-ink-soft hover:border-gold hover:text-ink-deep transition-colors"
+                className="text-sm px-3 py-1.5 border border-border rounded-md text-ink-soft hover:border-roasted-chestnut hover:text-ink-deep transition-colors"
               >
                 {y}
               </Link>

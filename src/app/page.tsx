@@ -60,9 +60,10 @@ export default async function HomePage() {
         <SectionLabel>Resumo de {data.current_year}</SectionLabel>
         <StatsStrip stats={data.stats} />
 
-        {/* Grid 4 cols pra acomodar: challenge (opcional, 1/4) + chart (1/2)
-            + nextreads (1/4 ou 1/2). Em mobile, tudo empilha. */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-6">
+        {/* Grid 5 cols: challenge (1/5) + chart (2/5) + nextreads (2/5).
+            Próximas leituras precisa de espaço pro carrossel — chart cede
+            um pouco. Sem challenge: chart (2/5) + nextreads (3/5). */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-6">
           {data.active_challenge && (
             <div className="md:col-span-1">
               <ChallengeArc
@@ -71,11 +72,7 @@ export default async function HomePage() {
               />
             </div>
           )}
-          <div
-            className={
-              data.active_challenge ? "md:col-span-2" : "md:col-span-2"
-            }
-          >
+          <div className="md:col-span-2">
             <BooksPerMonthChart
               data={data.books_per_month_chart}
               currentMonth={currentMonth}
@@ -83,7 +80,7 @@ export default async function HomePage() {
           </div>
           <div
             className={
-              data.active_challenge ? "md:col-span-1" : "md:col-span-2"
+              data.active_challenge ? "md:col-span-2" : "md:col-span-3"
             }
           >
             <NextReads data={data.next_reads} />

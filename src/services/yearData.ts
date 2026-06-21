@@ -34,6 +34,10 @@ export type FinishedBookEntry = {
   finish_date: string;
   rating: number | null;
   is_favorite: boolean;
+  /** Nome da assinatura/clube (ex.: "Tag Livros", "Vitorianos") se o livro
+   *  veio de uma. Usado na listagem mensal pra mostrar a origem. */
+  subscription_name: string | null;
+  purchase_origin: PurchaseOrigin | null;
 };
 
 /**
@@ -313,7 +317,9 @@ type FinishedRaw = {
     pages: number | null;
     is_favorite: boolean;
     cover: string | null;
+    purchase_origin: PurchaseOrigin | null;
     book_author: { author: { name: string } | null }[] | null;
+    subscription: { id: string; name: string } | null;
   } | null;
 };
 
@@ -330,8 +336,9 @@ async function fetchFinishedReadings(
     .from("reading")
     .select(
       `id, start_date, finish_date, rating, current_page,
-       book:book_id(id, slug, title, pages, is_favorite, cover,
-         book_author(author(name)))`,
+       book:book_id(id, slug, title, pages, is_favorite, cover, purchase_origin,
+         book_author(author(name)),
+         subscription(id, name))`,
     )
     .eq("user_id", userId)
     .eq("status", "finished")
@@ -419,6 +426,8 @@ function computeFinishedBooks(rows: FinishedRaw[]): FinishedBookEntry[] {
         finish_date: r.finish_date as string,
         rating: r.rating,
         is_favorite: book.is_favorite,
+        subscription_name: book.subscription?.name ?? null,
+        purchase_origin: book.purchase_origin,
       };
     });
 }
@@ -623,8 +632,19 @@ async function fetchSeriesTrackers(
 
     for (const b of books) {
       const readings = b.reading ?? [];
-      // Prefere finished pra computar status base; senão o estado em curso.
-      const finished = readings.find(
+      // Releitura: se o livro tem QUALQUER leitura finalizada DENTRO do ano,
+      // marca como read_this_year — mesmo que também exista uma leitura
+      // antiga de anos passados. Antes pegávamos só a primeira finished
+      // (`.find`), o que dava read_other_year pra releitura quando a leitura
+      // original era a primeira da lista.
+      const finishedThisYear = readings.find(
+        (r) =>
+          r.status === "finished" &&
+          r.finish_date &&
+          r.finish_date >= yearStartISO &&
+          r.finish_date <= yearEndISO,
+      );
+      const finishedAnyYear = readings.find(
         (r) => r.status === "finished" && r.finish_date,
       );
       const inProgress = readings.find((r) => r.status === "reading");
@@ -635,17 +655,17 @@ async function fetchSeriesTrackers(
       let finishDate: string | null = null;
       let rating: number | null = null;
 
-      if (finished) {
-        finishDate = finished.finish_date as string;
-        rating = finished.rating ?? null;
-        if (finishDate >= yearStartISO && finishDate <= yearEndISO) {
-          status = "read_this_year";
-          readThisYear += 1;
-          totalRead += 1;
-        } else {
-          status = "read_other_year";
-          totalRead += 1;
-        }
+      if (finishedThisYear) {
+        finishDate = finishedThisYear.finish_date as string;
+        rating = finishedThisYear.rating ?? null;
+        status = "read_this_year";
+        readThisYear += 1;
+        totalRead += 1;
+      } else if (finishedAnyYear) {
+        finishDate = finishedAnyYear.finish_date as string;
+        rating = finishedAnyYear.rating ?? null;
+        status = "read_other_year";
+        totalRead += 1;
       } else if (inProgress) {
         status = "in_progress";
       } else if (paused) {

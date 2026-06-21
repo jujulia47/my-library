@@ -73,7 +73,7 @@ function ReadingNowCard({
   onUpdate: () => void;
 }) {
   return (
-    <div className="flex gap-2.5 p-2.5 bg-paper border border-paper-soft rounded-lg hover:border-gold transition-colors duration-150">
+    <div className="flex gap-2.5 p-2.5 bg-paper border border-paper-soft rounded-lg hover:border-roasted-chestnut transition-colors duration-150">
       <Link
         href={`/book/${item.slug}`}
         className="flex-shrink-0 w-11 relative"

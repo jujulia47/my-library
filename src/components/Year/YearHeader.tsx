@@ -61,7 +61,7 @@ export function YearHeader({
                     active
                       ? // Ano selecionado: wash gold pra "estou aqui".
                         "bg-gold/20 text-gold-deep border-gold/40 cursor-default pointer-events-none"
-                      : "bg-paper-soft text-ink-soft border-border hover:border-gold hover:text-ink-deep",
+                      : "bg-paper-soft text-ink-soft border-border hover:border-roasted-chestnut hover:text-ink-deep",
                   )}
                 >
                   {y}

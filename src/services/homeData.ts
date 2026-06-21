@@ -97,24 +97,20 @@ export type RatingBucket = {
  * Sugestão de próxima leitura. `origin` indica a regra que selecionou esse
  * livro; o `origin_label` é o texto pronto exibido no card.
  *  - priority_high   → book.priority === 'high', e ainda TBR
- *  - priority_medium → book.priority === 'medium', e ainda TBR
- *  - series_next     → próximo volume TBR de série já em curso (com pelo menos
- *                      um livro `finished`).
- * "TBR" = sem `reading` ou todas as readings sem status active/finished.
+ *
+ * Curadoria manual: o user adiciona/remove livros via UI (carrossel + slot
+ * vazio sempre no fim). Persistido em `home_next_read`. A ordem segue a
+ * coluna `position`.
  */
-export type NextReadOrigin =
-  | "priority_high"
-  | "priority_medium"
-  | "series_next";
-
 export type NextReadItem = {
+  /** ID da linha em `home_next_read` — necessário pra `removeHomeNextRead`. */
+  entry_id: string;
+  /** ID do livro referenciado. */
   id: string;
   slug: string;
   title: string;
   author_name: string | null;
   cover_url: string | null;
-  origin: NextReadOrigin;
-  origin_label: string;
 };
 
 export type FavoriteCollection = {
@@ -839,190 +835,55 @@ async function fetchRatingDistribution(
   }));
 }
 
-type ReadingStatus = Database["public"]["Enums"]["reading_status"];
-
-/**
- * "TBR" do ponto de vista da home: o livro nunca teve uma reading que saiu de
- * `tbr` (não está/foi `reading`/`paused`/`finished`/`abandoned`). Como o
- * próprio enum não inclui `tbr` — sem reading = TBR — a checagem é
- * "não há reading com nenhum desses 4 status".
- */
-function isTbrFromReadings(
-  readings: { status: ReadingStatus }[] | null | undefined,
-): boolean {
-  if (!readings || readings.length === 0) return true;
-  const ACTIVE: ReadingStatus[] = [
-    "reading",
-    "paused",
-    "finished",
-    "abandoned",
-  ];
-  return !readings.some((r) => ACTIVE.includes(r.status));
-}
-
-type NextReadBookRaw = {
+type HomeNextReadRaw = {
   id: string;
-  slug: string;
-  title: string;
-  cover: string | null;
-  serie_id: string | null;
-  volume: number | null;
-  book_author: { author: { name: string } | null }[] | null;
-  reading: { status: ReadingStatus }[] | null;
+  position: number;
+  book: {
+    id: string;
+    slug: string;
+    title: string;
+    cover: string | null;
+    book_author: { author: { name: string } | null }[] | null;
+  } | null;
 };
 
-function bookToNextReadItem(
-  book: NextReadBookRaw,
-  origin: NextReadOrigin,
-  origin_label: string,
-): NextReadItem {
-  const author =
-    book.book_author?.find((ba) => ba.author?.name)?.author?.name ?? null;
-  return {
-    id: book.id,
-    slug: book.slug,
-    title: book.title,
-    author_name: author,
-    cover_url: book.cover ? imagesUrl(book.cover) : null,
-    origin,
-    origin_label,
-  };
-}
-
 /**
- * Sugestões compostas:
- *   1. Books com `priority='high'` ainda TBR (até 5)
- *   2. Books com `priority='medium'` ainda TBR (preenche até 5)
- *   3. Próximo volume TBR de séries em curso (preenche até 5)
- * Sem dedup hardcoded — o mesmo livro pode satisfazer (1) e (3) mas o set
- * `usedIds` impede duplicar.
+ * Lê a curadoria manual de "próximas leituras" da home, ordenada por
+ * `position asc`. Cada entrada referencia um book — se o book foi deletado
+ * (ON DELETE CASCADE deletaria a entry, mas defensivamente filtramos null
+ * pra cobrir qualquer race), pula.
  */
 async function fetchNextReads(
   supabase: SupabaseServer,
   userId: string,
 ): Promise<NextReadItem[]> {
-  const result: NextReadItem[] = [];
-  const usedIds = new Set<string>();
-  const TARGET = 5;
-
-  const fetchByPriority = async (
-    priority: "high" | "medium",
-    limit: number,
-  ): Promise<NextReadBookRaw[]> => {
-    const { data } = await supabase
-      .from("book")
-      .select(
-        `id, slug, title, cover, serie_id, volume,
-         book_author(author(name)),
-         reading(status)`,
-      )
-      .eq("user_id", userId)
-      .eq("priority", priority)
-      .order("updated_at", { ascending: false })
-      .limit(limit);
-    return (data as unknown as NextReadBookRaw[] | null) ?? [];
-  };
-
-  // Buffer × 2 porque uma fração dos prioritários pode já estar lida.
-  const high = await fetchByPriority("high", TARGET * 2);
-  for (const book of high) {
-    if (result.length >= TARGET) break;
-    if (usedIds.has(book.id)) continue;
-    if (!isTbrFromReadings(book.reading)) continue;
-    result.push(
-      bookToNextReadItem(book, "priority_high", "TBR · prioridade alta"),
-    );
-    usedIds.add(book.id);
-  }
-
-  if (result.length < TARGET) {
-    const medium = await fetchByPriority("medium", (TARGET - result.length) * 2);
-    for (const book of medium) {
-      if (result.length >= TARGET) break;
-      if (usedIds.has(book.id)) continue;
-      if (!isTbrFromReadings(book.reading)) continue;
-      result.push(
-        bookToNextReadItem(book, "priority_medium", "TBR · prioridade média"),
-      );
-      usedIds.add(book.id);
-    }
-  }
-
-  if (result.length < TARGET) {
-    const remaining = TARGET - result.length;
-    const seriesNext = await findNextVolumesInProgressSeries(
-      supabase,
-      userId,
-      remaining,
-    );
-    for (const item of seriesNext) {
-      if (result.length >= TARGET) break;
-      if (usedIds.has(item.id)) continue;
-      result.push(item);
-      usedIds.add(item.id);
-    }
-  }
-
-  return result;
-}
-
-type SerieRaw = {
-  id: string;
-  name: string;
-  book: NextReadBookRaw[] | null;
-};
-
-async function findNextVolumesInProgressSeries(
-  supabase: SupabaseServer,
-  userId: string,
-  limit: number,
-): Promise<NextReadItem[]> {
   const { data } = await supabase
-    .from("serie")
+    .from("home_next_read")
     .select(
-      `id, name,
-       book(id, slug, title, cover, serie_id, volume,
-         book_author(author(name)),
-         reading(status))`,
+      `id, position,
+       book(id, slug, title, cover, book_author(author(name)))`,
     )
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .order("position", { ascending: true });
 
-  const series = (data as unknown as SerieRaw[] | null) ?? [];
-  const result: NextReadItem[] = [];
+  const rows = (data as unknown as HomeNextReadRaw[] | null) ?? [];
 
-  for (const serie of series) {
-    if (result.length >= limit) break;
-    const books = serie.book ?? [];
-    if (books.length === 0) continue;
-
-    // Em curso = ao menos 1 livro `finished`.
-    const hasFinished = books.some((b) =>
-      b.reading?.some((r) => r.status === "finished"),
-    );
-    if (!hasFinished) continue;
-
-    // Volume sem ordem cai no fim da lista. Empate vira tie-break por título.
-    const sorted = books.slice().sort((a, b) => {
-      const av = a.volume ?? Number.POSITIVE_INFINITY;
-      const bv = b.volume ?? Number.POSITIVE_INFINITY;
-      if (av !== bv) return av - bv;
-      return a.title.localeCompare(b.title, "pt-BR");
+  return rows
+    .filter((r): r is HomeNextReadRaw & { book: NonNullable<HomeNextReadRaw["book"]> } =>
+      r.book !== null,
+    )
+    .map((r) => {
+      const author =
+        r.book.book_author?.find((ba) => ba.author?.name)?.author?.name ?? null;
+      return {
+        entry_id: r.id,
+        id: r.book.id,
+        slug: r.book.slug,
+        title: r.book.title,
+        author_name: author,
+        cover_url: r.book.cover ? imagesUrl(r.book.cover) : null,
+      };
     });
-
-    const next = sorted.find((b) => isTbrFromReadings(b.reading));
-    if (!next) continue;
-
-    const volumeLabel = next.volume ? ` vol. ${next.volume}` : "";
-    result.push(
-      bookToNextReadItem(
-        next,
-        "series_next",
-        `Próximo · ${serie.name}${volumeLabel}`,
-      ),
-    );
-  }
-
-  return result;
 }
 
 /**

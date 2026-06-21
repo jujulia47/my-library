@@ -6,15 +6,8 @@ import {
   ShoppingBagIcon,
   StarIcon,
 } from "@heroicons/react/24/outline";
+import { formatBRL } from "@/utils/formatCurrency";
 import type { TodayActivityItem } from "@/services/todayData";
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 type Props = {
   activities: TodayActivityItem[];

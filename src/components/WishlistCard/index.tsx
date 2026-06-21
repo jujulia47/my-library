@@ -52,7 +52,7 @@ export default function WishlistCard({ item }: { item: WishlistRow }) {
       href={`/wishlist/${item.slug}`}
       className={clsx(
         "group relative flex gap-4 rounded-md border border-border border-l-[3px] border-l-terracota bg-ivory-light",
-        "p-3 transition-colors duration-150 hover:border-gold",
+        "p-3 transition-colors duration-150 hover:border-roasted-chestnut",
       )}
     >
       <div className="flex-shrink-0">

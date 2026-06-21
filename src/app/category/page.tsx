@@ -56,7 +56,7 @@ export default async function CategoryPage() {
               <Card
                 key={c.id}
                 size="sm"
-                className="relative flex items-center justify-between gap-2 transition-colors hover:border-gold has-[a:focus-visible]:border-gold"
+                className="relative flex items-center justify-between gap-2 transition-colors hover:border-roasted-chestnut has-[a:focus-visible]:border-gold"
               >
                 <Link
                   href={`/category/${c.slug}`}

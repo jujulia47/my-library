@@ -174,7 +174,7 @@ function EmptySlot({
       className={`flex-shrink-0 h-full flex items-center justify-center text-base transition-all ${
         isOver
           ? "border-2 border-gold bg-gold/15 scale-110 text-gold"
-          : "border border-dashed border-gold/30 hover:border-gold/60 text-gold/50 hover:text-gold animate-pulse-slow"
+          : "border border-dashed border-gold/30 hover:border-roasted-chestnut/60 text-gold/50 hover:text-gold animate-pulse-slow"
       }`}
       style={{ width: 40 }}
       aria-label="Adicionar livro à estante"

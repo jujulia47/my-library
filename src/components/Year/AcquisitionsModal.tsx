@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import Modal from "@/components/forms/Modal";
 import { BookCoverFallback } from "@/components/ui";
 import { labelForPurchaseOrigin } from "@/utils/labels";
+import { formatBRL } from "@/utils/formatCurrency";
 import type {
   AcquisitionItem,
   AcquisitionsBreakdown,
@@ -27,14 +28,6 @@ const MONTH_NAMES_PT = [
   "Novembro",
   "Dezembro",
 ];
-
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatShortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
@@ -341,7 +334,7 @@ function FilterChip({
       className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
         active
           ? "bg-ink-deep text-ivory-light border-ink-deep"
-          : "bg-ivory-light text-ink-soft border-border hover:border-gold hover:text-ink-deep"
+          : "bg-ivory-light text-ink-soft border-border hover:border-roasted-chestnut hover:text-ink-deep"
       }`}
     >
       {children}
