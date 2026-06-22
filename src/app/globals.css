@@ -280,13 +280,18 @@
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+/* Thumb em roasted-chestnut com transparência — visível sobre fundos
+   creme/paper sem ficar pesado. Escurece levemente no hover. */
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: rgba(109, 57, 20, 0.45);
   border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(109, 57, 20, 0.7);
 }
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  scrollbar-color: rgba(109, 57, 20, 0.5) transparent;
 }
 
 /* Hover do BookCard na listagem: livro "levanta" com sombra quente.

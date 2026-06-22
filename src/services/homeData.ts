@@ -844,6 +844,7 @@ type HomeNextReadRaw = {
     title: string;
     cover: string | null;
     book_author: { author: { name: string } | null }[] | null;
+    reading: { status: string }[] | null;
   } | null;
 };
 
@@ -852,6 +853,12 @@ type HomeNextReadRaw = {
  * `position asc`. Cada entrada referencia um book — se o book foi deletado
  * (ON DELETE CASCADE deletaria a entry, mas defensivamente filtramos null
  * pra cobrir qualquer race), pula.
+ *
+ * Filtro adicional: livros com leitura ativa em `status='reading'` somem
+ * do carrossel — eles aparecem em "Hoje na sua mesa". A linha permanece em
+ * `home_next_read`; se o user pausa/abandona/finaliza, o livro reaparece
+ * automaticamente no carrossel. Outros status (paused, finished, abandoned,
+ * sem leitura) seguem visíveis.
  */
 async function fetchNextReads(
   supabase: SupabaseServer,
@@ -861,7 +868,9 @@ async function fetchNextReads(
     .from("home_next_read")
     .select(
       `id, position,
-       book(id, slug, title, cover, book_author(author(name)))`,
+       book(id, slug, title, cover,
+         book_author(author(name)),
+         reading(status))`,
     )
     .eq("user_id", userId)
     .order("position", { ascending: true });
@@ -869,9 +878,17 @@ async function fetchNextReads(
   const rows = (data as unknown as HomeNextReadRaw[] | null) ?? [];
 
   return rows
-    .filter((r): r is HomeNextReadRaw & { book: NonNullable<HomeNextReadRaw["book"]> } =>
-      r.book !== null,
+    .filter(
+      (r): r is HomeNextReadRaw & {
+        book: NonNullable<HomeNextReadRaw["book"]>;
+      } => r.book !== null,
     )
+    .filter((r) => {
+      // Se há QUALQUER reading com status="reading", o livro está em curso —
+      // não pertence ao carrossel de próximas leituras.
+      const readings = r.book.reading ?? [];
+      return !readings.some((rd) => rd.status === "reading");
+    })
     .map((r) => {
       const author =
         r.book.book_author?.find((ba) => ba.author?.name)?.author?.name ?? null;

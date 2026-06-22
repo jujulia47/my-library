@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRightIcon,
   PlusIcon,
@@ -74,9 +75,10 @@ export function NextReads({ data }: Props) {
       icon={<ArrowRightIcon className="w-3.5 h-3.5" />}
     >
       <div
-        className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1"
-        // Scroll suave + esconde scrollbar visual mas mantém funcional
-        style={{ scrollbarWidth: "thin" }}
+        // `custom-scrollbar` (definida em globals.css): scrollbar fina,
+        // track transparente, thumb na cor border-bege. Consistente com
+        // outros containers scrollable do app.
+        className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 custom-scrollbar"
       >
         {items.map((item) => (
           <NextReadCard
@@ -114,15 +116,25 @@ function NextReadCard({
         className="block hover:-translate-y-px transition-transform duration-150"
       >
         <div
-          className="w-full relative shadow-sm rounded overflow-hidden"
+          className="w-full relative shadow-sm rounded overflow-hidden border border-ink-deep/15"
           style={{ aspectRatio: "2 / 3" }}
           aria-hidden
         >
-          <BookCoverFallback
-            title={item.title}
-            size="sm"
-            className="w-full h-full"
-          />
+          {item.cover_url ? (
+            <Image
+              src={item.cover_url}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="88px"
+            />
+          ) : (
+            <BookCoverFallback
+              title={item.title}
+              size="sm"
+              className="w-full h-full"
+            />
+          )}
         </div>
         <p className="mt-1.5 text-xs font-medium text-ink-deep leading-snug line-clamp-2 group-hover:text-gold-deep transition-colors">
           {item.title}
@@ -133,6 +145,8 @@ function NextReadCard({
           </p>
         )}
       </Link>
+      {/* X dentro da capa (top-1 right-1) — antes extravasava com -top/-right
+          negativo e era cortado pelo `overflow-x-auto` do carrossel. */}
       <button
         type="button"
         onClick={(e) => {
@@ -141,10 +155,10 @@ function NextReadCard({
         }}
         disabled={isPending}
         className={clsx(
-          "absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-ivory-light border border-border",
-          "flex items-center justify-center text-ink-fade hover:text-burgundy hover:border-burgundy",
+          "absolute top-1 right-1 w-5 h-5 rounded-full bg-ivory-light/95 border border-border",
+          "flex items-center justify-center text-ink-soft hover:text-burgundy hover:border-burgundy",
           "opacity-0 group-hover:opacity-100 transition-opacity",
-          "shadow-sm",
+          "shadow-sm backdrop-blur-[2px]",
         )}
         title="Remover de Próximas leituras"
         aria-label={`Remover ${item.title} de Próximas leituras`}
