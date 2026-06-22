@@ -268,7 +268,7 @@ export default function AuthorFilters({
                       has_books: e.target.checked ? "true" : null,
                     })
                   }
-                  className="w-4 h-4 rounded border-border text-ink-deep focus:ring-gold/30"
+                  className="w-4 h-4 rounded border-border accent-[#6D3914] focus:ring-2 focus:ring-[#6D3914]/30 cursor-pointer"
                 />
                 <span>Apenas autores com livros</span>
               </label>
@@ -291,7 +291,7 @@ export default function AuthorFilters({
                             onChange={() =>
                               toggleListItem("country", countries, opt.value)
                             }
-                            className="w-4 h-4 rounded border-border text-ink-deep focus:ring-gold/30"
+                            className="w-4 h-4 rounded border-border accent-[#6D3914] focus:ring-2 focus:ring-[#6D3914]/30 cursor-pointer"
                           />
                           <span>{opt.label}</span>
                         </label>

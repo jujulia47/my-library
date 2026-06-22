@@ -66,18 +66,36 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Validação leve de string YYYY-MM-DD — defensiva contra query param malformado. */
+function isValidISODate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime());
+}
+
 /**
  * Carrega tudo do dia pra alimentar a página `/today` — "diário do dia".
- *  - Leituras ativas (status=reading) pra alimentar o input rápido
- *  - Atividades de hoje: páginas registradas, anotações, citações criadas,
- *    livros concluídos, livros adquiridos
+ *  - Leituras ativas (status=reading) pra alimentar o input rápido (só faz
+ *    sentido no dia atual; quando navegando o histórico vem vazio)
+ *  - Atividades do dia: páginas registradas, anotações, citações criadas,
+ *    livros concluídos, livros adquiridos.
+ *
+ * `dateParam` opcional — quando omitido ou inválido, cai em hoje (UTC).
  */
-export async function getTodayData(userId: string): Promise<TodayData> {
+export async function getTodayData(
+  userId: string,
+  dateParam?: string,
+): Promise<TodayData> {
   const supabase = await createClient();
-  const date = todayISO();
+  const today = todayISO();
+  const date =
+    dateParam && isValidISODate(dateParam) ? dateParam : today;
+  const isToday = date === today;
   const dayStart = `${date}T00:00:00Z`;
   const dayEnd = `${date}T23:59:59.999Z`;
 
+  // active_readings só importa pro form (que só aparece em "hoje").
+  // Em dias passados, evita a query desnecessária.
   const [
     activeRes,
     progressLogRes,
@@ -85,7 +103,7 @@ export async function getTodayData(userId: string): Promise<TodayData> {
     finishedRes,
     acquiredRes,
   ] = await Promise.all([
-    fetchActiveReadings(supabase, userId),
+    isToday ? fetchActiveReadings(supabase, userId) : Promise.resolve([]),
     fetchTodayProgressLog(supabase, userId, date),
     fetchTodayQuotes(supabase, userId, dayStart, dayEnd),
     fetchTodayFinishedReadings(supabase, userId, date),

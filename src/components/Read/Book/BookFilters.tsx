@@ -510,7 +510,7 @@ function CheckboxList({
                 type="checkbox"
                 checked={checked}
                 onChange={() => onToggle(o.value)}
-                className="w-4 h-4 rounded border-border text-ink-deep focus:ring-gold/30"
+                className="w-4 h-4 rounded border-border accent-[#6D3914] focus:ring-2 focus:ring-[#6D3914]/30 cursor-pointer"
               />
               <span>{o.label}</span>
             </label>

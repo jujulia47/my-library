@@ -53,33 +53,43 @@ export default async function CategoryPage() {
               // pointer-events-none pra deixar o clique passar; os botões de
               // editar/deletar ficam num stacking context acima (z-10) e
               // capturam o clique deles sem disparar navegação.
+              // Layout interno (nome + ações) num div próprio com flex —
+              // assim não depende do Card propagar flex pros filhos.
               <Card
                 key={c.id}
                 size="sm"
-                className="relative flex items-center justify-between gap-2 transition-colors hover:border-roasted-chestnut has-[a:focus-visible]:border-gold"
+                className="relative transition-colors hover:border-roasted-chestnut has-[a:focus-visible]:border-gold"
               >
-                <Link
-                  href={`/category/${c.slug}`}
-                  className="absolute inset-0 rounded-lg focus:outline-none"
-                  aria-label={`Ver livros de ${c.name}`}
-                />
-                <div className="min-w-0 flex-1 pointer-events-none">
-                  <p className="font-display text-lg font-medium text-ink-deep truncate">
-                    {c.name}
-                  </p>
-                  <p className="text-xs text-ink-fade italic">
-                    {count} {count === 1 ? "livro" : "livros"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0 relative z-10">
+                <div className="flex items-center justify-between gap-2">
                   <Link
-                    href={`/category/edit/${c.id}`}
-                    className="p-1.5 rounded text-ink-soft hover:text-ink-deep hover:bg-paper-soft transition-colors"
-                    aria-label={`Editar ${c.name}`}
-                  >
-                    <PencilSquareIcon className="w-5 h-5" />
-                  </Link>
-                  <DeleteCategoryBtn id={c.id} name={c.name} count={count} />
+                    href={`/category/${c.slug}`}
+                    className="absolute inset-0 rounded-lg focus:outline-none"
+                    aria-label={`Ver livros de ${c.name}`}
+                  />
+                  <div className="min-w-0 flex-1 pointer-events-none">
+                    <p className="font-display text-lg font-medium text-ink-deep truncate">
+                      {c.name}
+                    </p>
+                    <p className="text-xs text-ink-fade italic">
+                      {count} {count === 1 ? "livro" : "livros"}
+                    </p>
+                  </div>
+                  {/* `relative` sem z-index — apenas pra empilhar acima do
+                      Link absoluto (DOM order garante isso entre elementos
+                      posicionados). Não usar `z-10` aqui: isso criaria um
+                      stacking context que aprisionaria o `fixed z-50` do
+                      ConfirmDialog interno, fazendo outros cards aparecerem
+                      por cima do modal. */}
+                  <div className="flex items-center gap-1 flex-shrink-0 relative">
+                    <Link
+                      href={`/category/edit/${c.id}`}
+                      className="p-1.5 rounded text-ink-soft hover:text-ink-deep hover:bg-paper-soft transition-colors"
+                      aria-label={`Editar ${c.name}`}
+                    >
+                      <PencilSquareIcon className="w-5 h-5" />
+                    </Link>
+                    <DeleteCategoryBtn id={c.id} name={c.name} count={count} />
+                  </div>
                 </div>
               </Card>
             );

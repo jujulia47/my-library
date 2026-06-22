@@ -5,25 +5,15 @@ import { useRouter } from "next/navigation";
 import { TagIcon } from "@heroicons/react/24/outline";
 import { HomeCard, HomeCardEmpty } from "./HomeCard";
 import type { GenreDistribution } from "@/services/homeData";
+import { PIE_COLORS_HEX } from "@/utils/colorByHash";
 
-// Paleta posicional (não hash) — garante contraste entre fatias adjacentes
-// alternando warm/cool/light/dark. Cíclica: depois de 8 gêneros volta ao
-// início, mas como a primeira fatia é sempre a maior, colisões só atingem
-// fatias minoritárias. Antes a paleta vinha de `colorHexForName` (hash do
-// nome) — com poucos gêneros os hashes colidiam em verde/marrom.
-const SLICE_COLORS = [
-  "#82393A", // burgundy — vermelho profundo
-  "#1E3A5F", // navy — azul escuro
-  "#BC6E48", // terracota — laranja
-  "#5C6E47", // moss — verde
-  "#A0843E", // gold-deep — dourado
-  "#A24749", // burgundy-soft — vermelho claro
-  "#2C5078", // navy-soft — azul médio
-  "#6F8456", // moss-soft — verde claro
-] as const;
-
+// Paleta posicional (não hash) — usa a mesma rotação café+verde+azul+vinho
+// de `colorByHash.PIE_COLORS_HEX` pra manter coerência visual com Box/
+// CollectionCard. Aqui é por índice (não hash do nome) pra garantir que
+// fatias adjacentes não colidam — a primeira fatia é sempre a maior, então
+// duplicatas só caem em minoritárias se passar de 8 gêneros.
 function colorForIndex(idx: number): string {
-  return SLICE_COLORS[idx % SLICE_COLORS.length];
+  return PIE_COLORS_HEX[idx % PIE_COLORS_HEX.length];
 }
 
 const VIEW = 160;

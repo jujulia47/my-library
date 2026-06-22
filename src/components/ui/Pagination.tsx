@@ -161,7 +161,7 @@ export default function Pagination({
               {p === page ? (
                 <span
                   aria-current="page"
-                  className="inline-flex items-center justify-center min-w-[36px] h-9 rounded-md border border-gold bg-gold/15 text-ink-deep font-medium text-sm px-2"
+                  className="inline-flex items-center justify-center min-w-[36px] h-9 rounded-md border border-[#6D3914] bg-[#6D3914]/15 text-[#6D3914] font-medium text-sm px-2"
                 >
                   {p}
                 </span>

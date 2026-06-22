@@ -102,7 +102,11 @@ export default function SearchableCheckboxList({
                     type="checkbox"
                     checked={checked}
                     onChange={() => onToggle(o.value)}
-                    className="w-4 h-4 rounded border-border text-ink-deep focus:ring-gold/30 flex-shrink-0"
+                    // accent-color pinta o "miolo" do checkbox nativo com a
+                    // cor de marca (chestnut). Mais leve que reescrever do
+                    // zero com appearance-none e funciona consistente em
+                    // todos browsers modernos.
+                    className="w-4 h-4 rounded border-border accent-[#6D3914] focus:ring-2 focus:ring-[#6D3914]/30 flex-shrink-0 cursor-pointer"
                   />
                   <span className="truncate" title={o.label}>
                     {o.label}

@@ -96,14 +96,12 @@ export default function SerieRow({ serie }: Props) {
   }
 
   return (
-    <div
+    <Card
       className={clsx(
-        "relative group rounded-lg p-2 -m-2",
-        "border border-transparent transition-colors duration-150",
+        "relative transition-colors duration-150",
         "hover:border-roasted-chestnut",
       )}
     >
-      <Card className="relative">
         {/* Stretched link cobre o card inteiro. z-[1] fica acima do header
             (que é fluxo normal, sem z-index) e abaixo do carrossel (z-10),
             garantindo que cliques em qualquer área do header disparem
@@ -198,7 +196,6 @@ export default function SerieRow({ serie }: Props) {
             />
           </div>
         )}
-      </Card>
-    </div>
+    </Card>
   );
 }

@@ -239,8 +239,9 @@ function BookSlot({
   // Tamanho fixo (56×56) — funciona com flex-wrap pra empacotar os
   // quadradinhos um do lado do outro como num diário. Era pra ser
   // `aspect-square` em grid mas o cálculo dava célula gigante esticada.
+  // flex-col + items-center coloca a estrela acima do número quando há.
   const baseClasses =
-    "w-14 h-14 flex-shrink-0 rounded-md flex items-center justify-center text-sm font-body select-none relative";
+    "w-14 h-14 flex-shrink-0 rounded-md flex flex-col items-center justify-center text-sm font-body select-none relative";
 
   if (!isFilled) {
     return (
@@ -274,13 +275,13 @@ function BookSlot({
           : "bg-[#6D3914] border-[#6D3914] text-ivory",
       )}
     >
-      <span>{ordinal}</span>
       {book.is_favorite && (
-        <StarSolidIcon className="absolute top-1 right-1 w-3 h-3 text-gold" />
+        <StarSolidIcon className="w-3 h-3 text-gold mb-0.5" />
       )}
       {book.rating === 5 && !book.is_favorite && (
-        <StarOutlineIcon className="absolute top-1 right-1 w-3 h-3 text-gold" />
+        <StarOutlineIcon className="w-3 h-3 text-gold mb-0.5" />
       )}
+      <span>{ordinal}</span>
     </Link>
   );
 }

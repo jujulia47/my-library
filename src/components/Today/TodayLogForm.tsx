@@ -101,7 +101,7 @@ export function TodayLogForm({ readings }: Props) {
                 onClick={() => setSelectedId(r.reading_id)}
                 className={`flex items-center gap-2 rounded-md border pl-1.5 pr-3 py-1 text-xs transition-colors ${
                   active
-                    ? "border-gold bg-gold/15 text-ink-deep"
+                    ? "border-[#6D3914] bg-[#6D3914]/12 text-[#6D3914]"
                     : "border-border bg-ivory-light text-ink-soft hover:bg-paper-soft"
                 }`}
               >
@@ -175,7 +175,7 @@ export function TodayLogForm({ readings }: Props) {
             )}
             <p className="text-[11px] text-ink-fade font-body mt-0.5 inline-flex items-center gap-1">
               <BookmarkIcon
-                className="w-3 h-3 text-gold-deep/70"
+                className="w-3 h-3 text-[#6D3914]/80"
                 aria-hidden
               />
               página {selected.current_page}
