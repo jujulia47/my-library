@@ -144,6 +144,7 @@ export type Database = {
           formats_owned: Database["public"]["Enums"]["book_format"][] | null
           id: string
           is_favorite: boolean
+          is_tbr: boolean
           isbn: string | null
           language: Database["public"]["Enums"]["book_language"] | null
           lent_out_at: string | null
@@ -185,6 +186,7 @@ export type Database = {
           formats_owned?: Database["public"]["Enums"]["book_format"][] | null
           id?: string
           is_favorite?: boolean
+          is_tbr?: boolean
           isbn?: string | null
           language?: Database["public"]["Enums"]["book_language"] | null
           lent_out_at?: string | null
@@ -228,6 +230,7 @@ export type Database = {
           formats_owned?: Database["public"]["Enums"]["book_format"][] | null
           id?: string
           is_favorite?: boolean
+          is_tbr?: boolean
           isbn?: string | null
           language?: Database["public"]["Enums"]["book_language"] | null
           lent_out_at?: string | null

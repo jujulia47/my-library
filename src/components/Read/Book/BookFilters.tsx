@@ -27,11 +27,17 @@ const STATUS_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] 
   { value: "wont_read", label: "Não vou ler", variant: "cappuccino" },
 ];
 
+// Grupos lógicos pro filtro de posse — cada chave expande pra um conjunto
+// de `ownership_status` no service (ver `OWNERSHIP_GROUPS` em bookList.ts).
+// Os valores antigos `disposed`/`lent`/`never_owned` foram removidos da
+// migração 17.2 (que dividiu pose em 8 estados granulares); manter aqui
+// chaves novas que casam com a nova realidade.
 const OWNERSHIP_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] = [
-  { value: "owned", label: "Na estante", variant: "moss" },
-  { value: "disposed", label: "Doado", variant: "fade" },
-  { value: "lent", label: "Emprestado", variant: "olive" },
-  { value: "never_owned", label: "Nunca tive", variant: "fade" },
+  { value: "na_estante", label: "Na estante", variant: "moss" },
+  { value: "fora_estante", label: "Fora da estante", variant: "cappuccino" },
+  { value: "doado_vendido", label: "Doado/Vendido", variant: "fade" },
+  { value: "emprestado", label: "Emprestado", variant: "olive" },
+  { value: "perdido", label: "Perdido", variant: "burgundy" },
 ];
 
 const FORMAT_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] = [

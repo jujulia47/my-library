@@ -230,6 +230,7 @@ export default async function Page({
           formats_owned: book.formats_owned,
           comments: book.comments,
           is_favorite: book.is_favorite,
+          is_tbr: book.is_tbr,
           wont_read: book.wont_read,
           purchase_origin: book.purchase_origin,
           purchase_price:

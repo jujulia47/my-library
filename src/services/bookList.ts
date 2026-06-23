@@ -37,17 +37,17 @@ const READING_STATUSES: ReadingStatus[] = [
   "finished",
   "abandoned",
 ];
-const OWNERSHIP_STATUSES: OwnershipStatus[] = [
-  // Sessão 17.2 — 8 estados granulares (substituiu owned/disposed/lent/never_owned).
-  "owned",
-  "lent_out",
-  "borrowed",
-  "returned",
-  "donated",
-  "sold",
-  "traded",
-  "lost",
-];
+// Grupos lógicos exibidos no filtro de "Posse" — cada grupo expande pra um
+// conjunto de `ownership_status`. UI passa as chaves de grupo; o service
+// expande aqui. Mantém o vocabulário do user separado do schema do banco.
+const OWNERSHIP_GROUPS: Record<string, OwnershipStatus[]> = {
+  na_estante: ["owned"], // + tem que ter formato físico (checado abaixo)
+  doado_vendido: ["donated", "sold", "traded"],
+  emprestado: ["lent_out", "borrowed"],
+  perdido: ["lost"],
+  // `fora_estante` é tratado como negação em memória (não cabe num IN list).
+};
+const OWNERSHIP_OUT_OF_SHELF = "fora_estante";
 const FORMATS: BookFormat[] = ["physical", "ebook", "audiobook"];
 
 export const ALL_STATUS_VALUES: LegacyStatus[] = [
@@ -128,22 +128,32 @@ export async function bookListQuery(
     .from("book")
     .select(`*, book_author(author(name)), reading(*)`);
 
-  // Ownerships: filtro nativo.
-  const validOwnerships = (params.ownerships ?? []).filter(
-    (o): o is OwnershipStatus =>
-      OWNERSHIP_STATUSES.includes(o as OwnershipStatus),
+  // Ownerships: grupos vindos da UI. Quando há `fora_estante` na lista, o
+  // filtro vira "NOT (owned + physical)" — não cabe em IN/EQ, então cai pra
+  // memória depois do fetch. Quando só há grupos "positivos", expandimos pros
+  // ownership_status correspondentes e usamos IN nativo do PostgREST.
+  const ownershipsParam = params.ownerships ?? [];
+  const wantsOutOfShelf = ownershipsParam.includes(OWNERSHIP_OUT_OF_SHELF);
+  const positiveGroups = ownershipsParam.filter(
+    (g) => g !== OWNERSHIP_OUT_OF_SHELF && OWNERSHIP_GROUPS[g],
   );
-  if (validOwnerships.length === 1) {
-    query = query.eq("ownership_status", validOwnerships[0]);
-  } else if (validOwnerships.length > 1) {
-    query = query.in("ownership_status", validOwnerships);
-  }
 
-  // "Na estante" (owned) implica formato físico — um livro só ocupa estante
-  // se é físico. Kindle/audiobook que você possui são "em casa" mas não
-  // estão na estante. Mesma definição usada pela página /library.
-  if (validOwnerships.includes("owned")) {
-    query = query.overlaps("formats_owned", ["physical"]);
+  if (!wantsOutOfShelf && positiveGroups.length > 0) {
+    const expanded = [
+      ...new Set(positiveGroups.flatMap((g) => OWNERSHIP_GROUPS[g])),
+    ];
+    if (expanded.length === 1) {
+      query = query.eq("ownership_status", expanded[0]);
+    } else if (expanded.length > 1) {
+      query = query.in("ownership_status", expanded);
+    }
+    // "Na estante" sozinho exige formato físico — sem isso, kindle/audible
+    // "owned" entrariam no resultado. Aplica só quando `na_estante` é o
+    // único grupo (com mais grupos, IN já cobre o restante e não dá pra
+    // restringir physical sem excluir os outros).
+    if (positiveGroups.length === 1 && positiveGroups[0] === "na_estante") {
+      query = query.overlaps("formats_owned", ["physical"]);
+    }
   }
 
   // Formats: array overlap com `&&`. Valor especial "none" = livro sem
@@ -221,6 +231,29 @@ export async function bookListQuery(
 
   let books = (data ?? []).map((row) => flatten(row as RawBookFromQuery));
 
+  // Ownership: filtro em memória quando `fora_estante` foi pedido. Tem que
+  // ser aqui (não na query) porque é uma NEGAÇÃO composta (não-owned OU
+  // owned-sem-físico). Quando combinado com grupos positivos, faz OR entre
+  // eles — "Fora da estante OU Emprestado" mostra ambos. "Fora da estante OU
+  // Na estante" cobre tudo (no-op).
+  if (wantsOutOfShelf) {
+    const positiveStatuses = new Set(
+      positiveGroups.flatMap((g) => OWNERSHIP_GROUPS[g]),
+    );
+    const wantsNaEstanteToo = positiveGroups.includes("na_estante");
+    books = books.filter((b) => {
+      const status = b.ownership_status;
+      const hasPhysical = (b.formats_owned ?? []).includes("physical");
+      const isOnShelf = status === "owned" && hasPhysical;
+      if (!isOnShelf) return true; // satisfaz fora_estante
+      if (wantsNaEstanteToo) return true; // OR com na_estante = aceita
+      // Caso de borda: positiveGroups poderia incluir 'owned' por outro
+      // grupo (não existe hoje, mas defensivo). Em geral, na_estante é o
+      // único grupo que contém 'owned'.
+      return positiveStatuses.has(status);
+    });
+  }
+
   // Statuses: união entre leitura mais recente e "tbr".
   const requested = (params.statuses ?? []).filter((s): s is LegacyStatus =>
     (ALL_STATUS_VALUES as readonly string[]).includes(s),
@@ -236,8 +269,11 @@ export async function bookListQuery(
     books = books.filter((b) => {
       const last = b.latest_reading?.status as ReadingStatus | undefined;
       if (last && readingSet.has(last)) return true;
-      // Sem leitura registrada: distingue "não vou ler" (flag wont_read)
-      // de "quero ler" (tbr) pela coluna `wont_read` do livro.
+      // TBR explícito (flag `is_tbr`): entra na lista independente do
+      // histórico — cobre "livro já lido que quero reler".
+      if (wantsTbr && b.is_tbr) return true;
+      // Sem leitura registrada: TBR derivado (default). Distingue "não vou
+      // ler" (flag wont_read) de "quero ler" pela coluna `wont_read`.
       if (b.reading.length === 0) {
         if (wantsWontRead && b.wont_read) return true;
         if (wantsTbr && !b.wont_read) return true;

@@ -42,12 +42,15 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   HeartIcon as HeartOutlineIcon,
+  BookmarkIcon as BookmarkOutlineIcon,
 } from "@heroicons/react/24/outline";
 import {
   BookmarkIcon,
   HeartIcon as HeartSolidIcon,
+  BookmarkIcon as BookmarkSolidIcon,
 } from "@heroicons/react/24/solid";
 import { toggleBookFavorite } from "@/actions/toggleBookFavorite";
+import { toggleBookTbr } from "@/actions/toggleBookTbr";
 import type { Database } from "@/utils/typings/supabase";
 
 type ReadingStatus = Database["public"]["Enums"]["reading_status"];
@@ -78,6 +81,7 @@ export type BookDetail = {
   formats_owned: BookFormat[] | null;
   comments: string | null;
   is_favorite: boolean;
+  is_tbr: boolean;
   wont_read: boolean;
   purchase_origin: PurchaseOrigin | null;
   purchase_price: number | null;
@@ -342,6 +346,9 @@ export default function BookDetailClient({
   // Estado otimista do coração — mesmo pattern do BookCard.
   const [favorite, setFavorite] = useState(book.is_favorite);
   const [favPending, setFavPending] = useState(false);
+  // Estado otimista do TBR ("quero ler") — mesmo pattern do favorito.
+  const [tbr, setTbr] = useState(book.is_tbr);
+  const [tbrPending, setTbrPending] = useState(false);
 
   const handleFavoriteToggle = async () => {
     const previous = favorite;
@@ -351,6 +358,19 @@ export default function BookDetailClient({
     setFavPending(false);
     if (!result.ok) {
       setFavorite(previous);
+      return;
+    }
+    router.refresh();
+  };
+
+  const handleTbrToggle = async () => {
+    const previous = tbr;
+    setTbr(!previous);
+    setTbrPending(true);
+    const result = await toggleBookTbr(book.id);
+    setTbrPending(false);
+    if (!result.ok) {
+      setTbr(previous);
       return;
     }
     router.refresh();
@@ -619,6 +639,31 @@ export default function BookDetailClient({
               <HeartSolidIcon className="w-5 h-5" />
             ) : (
               <HeartOutlineIcon className="w-5 h-5" />
+            )}
+          </button>
+          <button
+            type="button"
+            aria-label={
+              tbr ? "Remover da lista de leitura" : "Adicionar à lista de leitura"
+            }
+            aria-pressed={tbr}
+            disabled={tbrPending}
+            onClick={handleTbrToggle}
+            title={
+              tbr
+                ? "Na lista de leitura (quero ler)"
+                : "Adicionar à lista de leitura (quero ler)"
+            }
+            className={`p-2 rounded-md border border-border bg-ivory-light transition-colors ${
+              tbr
+                ? "text-[#6D3914] hover:bg-[#6D3914]/10"
+                : "text-ink-soft hover:text-ink-deep hover:bg-paper"
+            } ${tbrPending ? "opacity-60 cursor-wait" : ""}`}
+          >
+            {tbr ? (
+              <BookmarkSolidIcon className="w-5 h-5" />
+            ) : (
+              <BookmarkOutlineIcon className="w-5 h-5" />
             )}
           </button>
           <Button
