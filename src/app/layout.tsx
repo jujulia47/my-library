@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import "@fontsource/cormorant-garamond/400.css";
 import "@fontsource/cormorant-garamond/500.css";
 import "@fontsource/eb-garamond/400.css";
@@ -56,6 +57,7 @@ export default function RootLayout({
       </head>
       <body className="font-body bg-ivory text-ink-deep min-h-screen">
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
