@@ -12,6 +12,12 @@ import {
 } from "@/components/ui";
 import createWishlist from "@/actions/createWishlist";
 import updateWishlist from "@/actions/updateWishlist";
+import {
+  digitsFromNumber,
+  digitsFromPriceInput,
+  formatPriceInputFromDigits,
+  numberFromDigits,
+} from "@/utils/formatCurrency";
 import type { Database } from "@/utils/typings/supabase";
 
 type WishlistPriority = Database["public"]["Enums"]["wishlist_priority"];
@@ -85,6 +91,14 @@ export default function WishlistForm(props: Props) {
 
   const [priority, setPriority] = useState<WishlistPriority | "none">(
     initialPriority,
+  );
+  // Preço com máscara de centavos — mesmo padrão do OwnershipFields. Estado
+  // guarda só dígitos ("5990"); o display vem de formatPriceInputFromDigits
+  // ("59,90"). Hidden input separado envia o valor numérico (59.9) pra action.
+  const [priceDigits, setPriceDigits] = useState<string>(
+    props.mode === "edit"
+      ? digitsFromNumber(props.initial.estimated_price)
+      : "",
   );
   const [linkError, setLinkError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -211,21 +225,31 @@ export default function WishlistForm(props: Props) {
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Preço estimado"
-              name="estimated_price"
-              type="number"
-              min={0}
-              step={0.01}
-              defaultValue={
-                props.mode === "edit"
-                  ? (props.initial.estimated_price ?? "")
-                  : ""
-              }
-              placeholder="Ex.: 45,90"
-              leftIcon={<span className="text-ink-fade">R$</span>}
-              errorText={fieldErrors.estimated_price}
-            />
+            <div>
+              <Input
+                label="Preço estimado"
+                type="text"
+                inputMode="decimal"
+                value={formatPriceInputFromDigits(priceDigits)}
+                onChange={(e) =>
+                  setPriceDigits(digitsFromPriceInput(e.target.value))
+                }
+                placeholder="0,00"
+                leftIcon={<span className="text-ink-fade">R$</span>}
+                errorText={fieldErrors.estimated_price}
+              />
+              {/* Hidden input envia o valor numérico (ex.: 59.9) pra action,
+                  mantendo o contrato do server inalterado. */}
+              <input
+                type="hidden"
+                name="estimated_price"
+                value={
+                  numberFromDigits(priceDigits) !== null
+                    ? String(numberFromDigits(priceDigits))
+                    : ""
+                }
+              />
+            </div>
 
             <Input
               label="Data de lançamento"
