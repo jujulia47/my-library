@@ -18,6 +18,9 @@ import {
 import BookshelfDecoration from "@/components/ui/BookshelfDecoration";
 import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
 import ReadingFormModal from "@/components/forms/ReadingFormModal";
+import UpdateProgressModal, {
+  type UpdateProgressTarget,
+} from "@/components/forms/UpdateProgressModal";
 import QuoteFormModal from "@/components/forms/QuoteFormModal";
 import DisposeBookModal from "@/components/forms/DisposeBookModal";
 import PauseReadingModal from "@/components/forms/PauseReadingModal";
@@ -332,6 +335,9 @@ export default function BookDetailClient({
   const [resumeTarget, setResumeTarget] = useState<string | null>(null);
   const [finishTarget, setFinishTarget] = useState<string | null>(null);
   const [abandonTarget, setAbandonTarget] = useState<string | null>(null);
+  // Modal "Atualizar progresso" — mesmo componente do card da home.
+  const [progressTarget, setProgressTarget] =
+    useState<UpdateProgressTarget | null>(null);
   const [readingActionsOpen, setReadingActionsOpen] = useState<string | null>(
     null,
   );
@@ -1290,6 +1296,23 @@ export default function BookDetailClient({
                           <>
                             <button
                               type="button"
+                              onClick={() =>
+                                setProgressTarget({
+                                  reading_id: r.id,
+                                  book_slug: book.slug,
+                                  book_title: book.title,
+                                  current_page: r.current_page ?? 0,
+                                  pages_count: book.pages ?? 0,
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-gold-deep hover:bg-gold/10 transition-colors"
+                              title="Atualizar página"
+                            >
+                              <BookmarkIcon className="w-4 h-4" />
+                              Atualizar
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setPauseTarget(r.id)}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-olive hover:bg-olive/10 transition-colors"
                               title="Pausar leitura"
@@ -1533,6 +1556,14 @@ export default function BookDetailClient({
         onClose={() => setAbandonTarget(null)}
         readingId={abandonTarget ?? ""}
         bookSlug={book.slug}
+      />
+
+      {/* Mesmo modal de "Atualizar progresso" do card da home — atualiza a
+          página atual (e, ao chegar em 100%, segue pro fluxo de conclusão). */}
+      <UpdateProgressModal
+        open={progressTarget !== null}
+        onClose={() => setProgressTarget(null)}
+        target={progressTarget}
       />
 
       <ConfirmDialog

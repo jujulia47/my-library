@@ -44,17 +44,35 @@ export function ReadingNow({ items }: Props) {
     );
   }
 
+  // 1–2 leituras: grid (ocupa a largura toda). 3+: carrossel horizontal pra
+  // não espremer nem empilhar demais — cada card tem largura mínima e a barra
+  // rola. Mostra todas as leituras ativas (sem limite).
+  const useCarousel = items.length > 2;
+
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        {items.map((item) => (
-          <ReadingNowCard
-            key={item.reading_id}
-            item={item}
-            onUpdate={() => handleOpen(item)}
-          />
-        ))}
-      </div>
+      {useCarousel ? (
+        <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1 custom-scrollbar">
+          {items.map((item) => (
+            <div
+              key={item.reading_id}
+              className="flex-shrink-0 w-[300px] max-w-[85vw]"
+            >
+              <ReadingNowCard item={item} onUpdate={() => handleOpen(item)} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          {items.map((item) => (
+            <ReadingNowCard
+              key={item.reading_id}
+              item={item}
+              onUpdate={() => handleOpen(item)}
+            />
+          ))}
+        </div>
+      )}
 
       <UpdateProgressModal
         open={open}

@@ -230,8 +230,7 @@ async function fetchReadingNow(
     )
     .eq("user_id", userId)
     .eq("status", "reading")
-    .order("updated_at", { ascending: false })
-    .limit(2);
+    .order("updated_at", { ascending: false });
 
   return ((data as unknown as ReadingNowRaw[] | null) ?? [])
     .map((r): ReadingNowItem | null => {
