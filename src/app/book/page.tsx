@@ -106,7 +106,10 @@ export default async function BookPage({
     year !== undefined ||
     month !== undefined ||
     favorite;
-  const isNaEstante = ownerships.includes("owned");
+  // "Na estante" agora é o grupo lógico `na_estante` (antes era o valor cru
+  // `owned`). Mantém a contagem que deduplica exemplares físicos (volumes
+  // bundled contam 1).
+  const isNaEstante = ownerships.includes("na_estante");
   const filteredVolumes = books.length;
   const filteredPhysical = isNaEstante
     ? countPhysicalCopies(books)
