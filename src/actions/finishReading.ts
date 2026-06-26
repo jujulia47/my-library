@@ -64,9 +64,22 @@ export async function finishReading(
     await maybeCompleteChallengesForBook(supabase, user.id, bookIdForReading);
   }
 
+  // Ao concluir, o livro sai da curadoria "Próximas leituras" (home). Sem
+  // isso, um livro que estava na lista voltaria pro carrossel ao deixar o
+  // status "reading" — o filtro do carrossel só esconde leituras ativas.
+  // Reler é um ato deliberado: o user adiciona de novo se quiser.
+  if (bookIdForReading) {
+    await supabase
+      .from("home_next_read")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("book_id", bookIdForReading);
+  }
+
   const slug = formData.get("book_slug") as string | null;
   if (slug) revalidatePath(`/book/${slug}`);
   revalidatePath("/book");
   revalidatePath("/collection");
+  revalidatePath("/");
   return { ok: true };
 }
