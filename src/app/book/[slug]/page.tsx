@@ -45,6 +45,7 @@ export default async function Page({
     { data: bundledBooksRaw },
     { data: groupRaw },
     { data: groupBookCountRaw },
+    { data: collectionItemsRaw },
   ] = await Promise.all([
     supabase
       .from("book_author")
@@ -93,6 +94,14 @@ export default async function Page({
           .select("id")
           .eq("purchase_group_id", book.purchase_group_id)
       : Promise.resolve({ data: [] }),
+    // Coleções que contêm este livro — exclui arquivadas e o tipo "shelf"
+    // (estante física da /library, mostrada em outro contexto).
+    supabase
+      .from("collection_item")
+      .select(
+        "section, collection:collection_id(id, slug, name, type, is_archived)",
+      )
+      .eq("book_id", book.id),
   ]);
 
   const authors = (bookAuthors ?? [])
@@ -101,6 +110,34 @@ export default async function Page({
   const categories = (bookCategories ?? [])
     .map((row) => row.category)
     .filter((c): c is { id: string; name: string } => !!c);
+
+  // Coleções que contêm o livro. Achata o join, exclui arquivadas e o tipo
+  // "shelf" (estante da /library). `section` é o sub-grupo opcional dentro da
+  // coleção (ex.: "Hercule Poirot" numa coleção "Agatha Christie").
+  type CollectionItemRaw = {
+    section: string | null;
+    collection: {
+      id: string;
+      slug: string;
+      name: string;
+      type: Database["public"]["Enums"]["collection_type"];
+      is_archived: boolean;
+    } | null;
+  };
+  const inCollections = ((collectionItemsRaw ?? []) as CollectionItemRaw[])
+    .filter(
+      (row) =>
+        row.collection &&
+        !row.collection.is_archived &&
+        row.collection.type !== "shelf",
+    )
+    .map((row) => ({
+      id: row.collection!.id,
+      slug: row.collection!.slug,
+      name: row.collection!.name,
+      type: row.collection!.type,
+      section: row.section,
+    }));
 
   type ReadingWithEvents = ReadingRow & {
     reading_event?:
@@ -248,6 +285,7 @@ export default async function Page({
         }}
         authors={authors}
         categories={categories}
+        collections={inCollections}
         readings={readingItems}
         quotes={quoteItems}
         statusHistory={statusHistory}

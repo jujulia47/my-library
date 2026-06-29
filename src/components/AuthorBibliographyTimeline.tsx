@@ -121,7 +121,13 @@ export default function AuthorBibliographyTimeline({
     const observer = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width;
       setContainerWidth(w);
-      if (w < 500) setItemsPerRow(3);
+      // Cada coluna ocupa ITEM_WIDTH (110) + PADDING*2 de margem. A largura
+      // mínima (itemsPerRow*ITEM_WIDTH + PADDING*2) precisa caber no container
+      // pra não forçar scroll horizontal interno. Em telas estreitas (celular
+      // ~312px de conteúdo), 3 colunas dariam 378px > tela → 2 colunas (268px)
+      // cabem e eliminam o scroll.
+      if (w < 380) setItemsPerRow(2);
+      else if (w < 500) setItemsPerRow(3);
       else if (w < 800) setItemsPerRow(4);
       else if (w < 1100) setItemsPerRow(5);
       else setItemsPerRow(6);

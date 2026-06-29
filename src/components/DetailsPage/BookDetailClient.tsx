@@ -8,6 +8,7 @@ import {
   Card,
   Badge,
   StatusBadge,
+  CollectionTypeBadge,
   Button,
   BackButton,
   ConfirmDialog,
@@ -140,6 +141,15 @@ export type BookStatusHistoryItem = {
   status: OwnershipStatus;
   changed_at: string;
   notes: string | null;
+};
+
+export type BookCollectionRef = {
+  id: string;
+  slug: string;
+  name: string;
+  type: Database["public"]["Enums"]["collection_type"];
+  /** Sub-grupo opcional dentro da coleção (ex.: "Hercule Poirot"). */
+  section: string | null;
 };
 
 export type QuoteItem = {
@@ -309,6 +319,7 @@ export default function BookDetailClient({
   book,
   authors,
   categories,
+  collections = [],
   readings,
   quotes,
   statusHistory = [],
@@ -316,6 +327,7 @@ export default function BookDetailClient({
   book: BookDetail;
   authors: { id: string; name: string }[];
   categories: { id: string; name: string }[];
+  collections?: BookCollectionRef[];
   readings: ReadingItem[];
   quotes: QuoteItem[];
   statusHistory?: BookStatusHistoryItem[];
@@ -628,7 +640,7 @@ export default function BookDetailClient({
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-nowrap flex-shrink-0">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
           <button
             type="button"
             aria-label={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
@@ -970,6 +982,34 @@ export default function BookDetailClient({
                 </Badge>
               ))}
             </div>
+          </div>
+        )}
+
+        {collections.length > 0 && (
+          <div className="mb-5">
+            <p className="text-xs uppercase tracking-wider text-ink-fade mb-2">
+              {collections.length === 1 ? "Coleção" : "Coleções"}
+            </p>
+            <ul className="flex flex-col gap-1.5">
+              {collections.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`/collection/${c.slug}`}
+                    className="group inline-flex items-center gap-2 text-sm"
+                  >
+                    <CollectionTypeBadge type={c.type} size="sm" />
+                    <span className="text-ink-deep group-hover:text-gold-deep transition-colors">
+                      {c.name}
+                    </span>
+                    {c.section && (
+                      <span className="text-xs italic text-ink-fade">
+                        · {c.section}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
