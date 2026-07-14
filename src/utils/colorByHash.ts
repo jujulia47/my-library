@@ -37,6 +37,24 @@ export const PIE_COLORS_TOKEN = [
   "cinnamon-latte",
 ] as const;
 
+// Paleta pro calendário do plano de leitura — cores distintas por HUE (não só
+// marrons) pra livros vizinhos não se confundirem. Atribuída por índice (não
+// hash) pra garantir contraste entre livros adjacentes na lista.
+export const PLAN_BOOK_COLORS = [
+  "#6D3914", // chestnut — marrom
+  "#4A6B4E", // verde-musgo
+  "#2C5078", // azul-navy
+  "#9B4722", // ferrugem / terracota
+  "#7A4A6E", // ameixa
+  "#386661", // teal profundo
+  "#8C6E1C", // ocre / gold-deep
+  "#82393A", // burgundy
+] as const;
+
+export function planBookColor(index: number): string {
+  return PLAN_BOOK_COLORS[index % PLAN_BOOK_COLORS.length];
+}
+
 function hashIndex(name: string, mod = PIE_COLORS_HEX.length): number {
   let hash = 0;
   for (let i = 0; i < name.length; i += 1) {

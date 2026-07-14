@@ -777,6 +777,94 @@ export type Database = {
         }
         Relationships: []
       }
+      reading_plan_book: {
+        Row: {
+          book_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          month: number
+          pages_per_day: number | null
+          pages_this_month: number | null
+          position: number
+          start_date: string | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          month: number
+          pages_per_day?: number | null
+          pages_this_month?: number | null
+          position?: number
+          start_date?: string | null
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          month?: number
+          pages_per_day?: number | null
+          pages_this_month?: number | null
+          position?: number
+          start_date?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_plan_book_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "book"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_plan_day_override: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          pages: number
+          plan_book_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          pages: number
+          plan_book_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          pages?: number
+          plan_book_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_plan_day_override_plan_book_id_fkey"
+            columns: ["plan_book_id"]
+            isOneToOne: false
+            referencedRelation: "reading_plan_book"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reading_progress_log: {
         Row: {
           created_at: string
