@@ -16,7 +16,6 @@ import {
   pickBookCoverColor,
   RatingStars,
 } from "@/components/ui";
-import BookshelfDecoration from "@/components/ui/BookshelfDecoration";
 import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
 import ReadingFormModal from "@/components/forms/ReadingFormModal";
 import UpdateProgressModal, {
@@ -1085,11 +1084,6 @@ export default function BookDetailClient({
           devolução, doação, etc.). O estado atual + contexto (adquirido em,
           origem, preço…) agora vivem no hero; aqui ficou só a história. */}
       <Card className="mt-6 relative overflow-hidden">
-        {book.ownership_status === "owned" && (
-          <BookshelfDecoration
-            className="hidden lg:block absolute right-5 bottom-5 pointer-events-none"
-          />
-        )}
         <div className="relative z-10">
           <h2 className="font-display text-xl font-medium text-ink-deep mb-4 pb-3 border-b border-border">
             Histórico do acervo
