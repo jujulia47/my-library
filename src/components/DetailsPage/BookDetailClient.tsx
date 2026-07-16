@@ -39,6 +39,7 @@ import { labelForPurchaseOrigin } from "@/utils/labels";
 import {
   EllipsisVerticalIcon,
   PencilSquareIcon,
+  PlusIcon,
   TrashIcon,
   PauseIcon,
   PlayIcon,
@@ -54,6 +55,7 @@ import {
 } from "@heroicons/react/24/solid";
 import { toggleBookFavorite } from "@/actions/toggleBookFavorite";
 import { toggleBookTbr } from "@/actions/toggleBookTbr";
+import AddToCollectionModal from "./AddToCollectionModal";
 import type { Database } from "@/utils/typings/supabase";
 
 type ReadingStatus = Database["public"]["Enums"]["reading_status"];
@@ -149,6 +151,13 @@ export type BookCollectionRef = {
   type: Database["public"]["Enums"]["collection_type"];
   /** Sub-grupo opcional dentro da coleção (ex.: "Hercule Poirot"). */
   section: string | null;
+};
+
+export type AvailableCollection = {
+  id: string;
+  slug: string;
+  name: string;
+  type: Database["public"]["Enums"]["collection_type"];
 };
 
 export type QuoteItem = {
@@ -319,6 +328,7 @@ export default function BookDetailClient({
   authors,
   categories,
   collections = [],
+  availableCollections = [],
   readings,
   quotes,
   statusHistory = [],
@@ -327,6 +337,7 @@ export default function BookDetailClient({
   authors: { id: string; name: string }[];
   categories: { id: string; name: string }[];
   collections?: BookCollectionRef[];
+  availableCollections?: AvailableCollection[];
   readings: ReadingItem[];
   quotes: QuoteItem[];
   statusHistory?: BookStatusHistoryItem[];
@@ -366,6 +377,7 @@ export default function BookDetailClient({
   // Estado otimista do TBR ("quero ler") — mesmo pattern do favorito.
   const [tbr, setTbr] = useState(book.is_tbr);
   const [tbrPending, setTbrPending] = useState(false);
+  const [addCollectionOpen, setAddCollectionOpen] = useState(false);
 
   const handleFavoriteToggle = async () => {
     const previous = favorite;
@@ -969,6 +981,17 @@ export default function BookDetailClient({
           <p className="text-ink-fade italic mb-5">Sem sinopse.</p>
         )}
 
+        {book.comments && (
+          <div className="mb-5 rounded-md border-l-[3px] border-l-gold bg-paper-soft/60 px-3 py-2">
+            <p className="text-xs uppercase tracking-wider text-ink-fade mb-1">
+              Anotações
+            </p>
+            <p className="text-sm text-ink-deep whitespace-pre-line leading-relaxed">
+              {book.comments}
+            </p>
+          </div>
+        )}
+
         {categories.length > 0 && (
           <div className="mb-5">
             <p className="text-xs uppercase tracking-wider text-ink-fade mb-2">
@@ -984,31 +1007,49 @@ export default function BookDetailClient({
           </div>
         )}
 
-        {collections.length > 0 && (
+        {(collections.length > 0 || availableCollections.length > 0) && (
           <div className="mb-5">
-            <p className="text-xs uppercase tracking-wider text-ink-fade mb-2">
-              {collections.length === 1 ? "Coleção" : "Coleções"}
-            </p>
-            <ul className="flex flex-col gap-1.5">
-              {collections.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={`/collection/${c.slug}`}
-                    className="group inline-flex items-center gap-2 text-sm"
-                  >
-                    <CollectionTypeBadge type={c.type} size="sm" />
-                    <span className="text-ink-deep group-hover:text-gold-deep transition-colors">
-                      {c.name}
-                    </span>
-                    {c.section && (
-                      <span className="text-xs italic text-ink-fade">
-                        · {c.section}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-xs uppercase tracking-wider text-ink-fade">
+                {collections.length <= 1 ? "Coleção" : "Coleções"}
+              </p>
+              {availableCollections.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAddCollectionOpen(true)}
+                  className="text-xs text-gold-deep hover:text-ink-deep transition-colors inline-flex items-center gap-1"
+                >
+                  <PlusIcon className="w-3.5 h-3.5" />
+                  Adicionar a coleção
+                </button>
+              )}
+            </div>
+            {collections.length > 0 ? (
+              <ul className="flex flex-col gap-1.5">
+                {collections.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/collection/${c.slug}`}
+                      className="group inline-flex items-center gap-2 text-sm"
+                    >
+                      <CollectionTypeBadge type={c.type} size="sm" />
+                      <span className="text-ink-deep group-hover:text-gold-deep transition-colors">
+                        {c.name}
                       </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                      {c.section && (
+                        <span className="text-xs italic text-ink-fade">
+                          · {c.section}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm italic text-ink-fade">
+                Ainda não está em nenhuma coleção.
+              </p>
+            )}
           </div>
         )}
 
@@ -1599,6 +1640,14 @@ export default function BookDetailClient({
         onClose={() => setProgressTarget(null)}
         target={progressTarget}
       />
+
+      {addCollectionOpen && (
+        <AddToCollectionModal
+          bookId={book.id}
+          collections={availableCollections}
+          onClose={() => setAddCollectionOpen(false)}
+        />
+      )}
 
       <ConfirmDialog
         open={deleteBookOpen}

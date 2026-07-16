@@ -147,6 +147,7 @@ export async function updateBookFull(
     ? Number(publicationYearRaw) || null
     : null;
   const synopsis = (formData.get("synopsis") as string)?.trim() || null;
+  const comments = (formData.get("comments") as string)?.trim() || null;
   const pagesRaw = formData.get("pages") as string | null;
   const pages = pagesRaw ? Number(pagesRaw) || null : null;
   const language = pickEnum(formData.get("language"), allowedLanguages);
@@ -385,6 +386,7 @@ export async function updateBookFull(
     publisher,
     publication_year,
     synopsis,
+    comments,
     pages,
     language,
     serie_id,

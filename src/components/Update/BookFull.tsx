@@ -273,6 +273,13 @@ export default function BookFull({
                 placeholder="Resumo, contracapa, etc."
               />
 
+              <Textarea
+                label="Anotações / info da edição"
+                name="comments"
+                defaultValue={book.comments ?? ""}
+                placeholder="Ex.: Caixinha de agosto da TAG (caixinha 12), edição especial, autografado…"
+              />
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
                   <SerieSelect

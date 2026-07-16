@@ -46,6 +46,7 @@ export default async function Page({
     { data: groupRaw },
     { data: groupBookCountRaw },
     { data: collectionItemsRaw },
+    { data: allCollectionsRaw },
   ] = await Promise.all([
     supabase
       .from("book_author")
@@ -102,6 +103,14 @@ export default async function Page({
         "section, collection:collection_id(id, slug, name, type, is_archived)",
       )
       .eq("book_id", book.id),
+    // Coleções do user pra oferecer no seletor "adicionar a coleção" — só as
+    // que aceitam livros (não wishlist, não shelf) e não arquivadas.
+    supabase
+      .from("collection")
+      .select("id, slug, name, type")
+      .eq("is_archived", false)
+      .not("type", "in", "(wishlist,shelf)")
+      .order("name", { ascending: true }),
   ]);
 
   const authors = (bookAuthors ?? [])
@@ -138,6 +147,17 @@ export default async function Page({
       type: row.collection!.type,
       section: row.section,
     }));
+
+  // Coleções onde o livro AINDA não está — pro seletor de "adicionar".
+  const inCollectionIds = new Set(inCollections.map((c) => c.id));
+  const availableCollections = (
+    (allCollectionsRaw ?? []) as {
+      id: string;
+      slug: string;
+      name: string;
+      type: Database["public"]["Enums"]["collection_type"];
+    }[]
+  ).filter((c) => !inCollectionIds.has(c.id));
 
   type ReadingWithEvents = ReadingRow & {
     reading_event?:
@@ -286,6 +306,7 @@ export default async function Page({
         authors={authors}
         categories={categories}
         collections={inCollections}
+        availableCollections={availableCollections}
         readings={readingItems}
         quotes={quoteItems}
         statusHistory={statusHistory}
