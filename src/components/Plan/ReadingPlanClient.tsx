@@ -8,6 +8,7 @@ import clsx from "clsx";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   TrashIcon,
   ClockIcon,
   BookOpenIcon,
@@ -20,6 +21,7 @@ import {
   deriveSchedule,
   formatReadingTime,
   monthNamePT,
+  monthWeeks,
   SECONDS_PER_PAGE,
   type DayCell,
 } from "@/utils/readingPlan";
@@ -27,7 +29,9 @@ import type { ReadingPlanData, PlanBookRow } from "@/services/readingPlanData";
 import { upsertPlanBookSchedule } from "@/actions/upsertPlanBookSchedule";
 import { removePlanBook } from "@/actions/removePlanBook";
 import { replanFromToday } from "@/actions/replanFromToday";
+import { setPlanWeekPages } from "@/actions/setPlanWeekPages";
 import DayLogModal from "./DayLogModal";
+import WeeklyPlanner from "./WeeklyPlanner";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -54,6 +58,43 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [dayModalCell, setDayModalCell] = useState<DayCell | null>(null);
+  const [view, setView] = useState<"week" | "calendar">("week");
+  const weeks = useMemo(() => monthWeeks(year, month), [year, month]);
+
+  // Planejamento por semana (otimista): distribui `pages` nos dias da semana
+  // como overrides (uniforme, resto nos primeiros dias) e persiste.
+  const handleSetWeek = (bookId: string, days: string[], pages: number) => {
+    prevBooksRef.current = books;
+    const n = days.length;
+    const base = Math.floor(Math.max(0, pages) / n);
+    let rem = Math.max(0, pages) - base * n;
+    setBooks((prev) =>
+      prev.map((b) => {
+        if (b.book_id !== bookId) return b;
+        const next = { ...(b.overrides ?? {}) };
+        for (const d of days) {
+          if (pages <= 0) {
+            delete next[d];
+          } else {
+            const extra = rem > 0 ? 1 : 0;
+            if (rem > 0) rem -= 1;
+            next[d] = base + extra;
+          }
+        }
+        return { ...b, overrides: next };
+      }),
+    );
+    startTransition(async () => {
+      const res = await setPlanWeekPages({
+        year,
+        month,
+        book_id: bookId,
+        days,
+        pages,
+      });
+      if (!res.ok) setBooks(prevBooksRef.current);
+    });
+  };
 
   // Atualiza o real local (otimista) quando registra leitura de um dia.
   const patchActual = (bookId: string, iso: string, pages: number) => {
@@ -162,51 +203,91 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
         </div>
       ) : (
         <>
-          {/* Visão rápida — resumo do planejamento sem precisar clicar */}
-          <PlanOverview books={books} />
-
-          {/* Calendário — largura total */}
-          <section className="mt-8">
+          {/* Área de planejamento: alterna entre semana e calendário */}
+          <section className="mt-6">
             <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-              <h2 className="text-sm uppercase tracking-wider text-ink-fade">
-                Calendário · {monthNamePT(month)} {year}
-                {isCurrentMonth && (
-                  <span className="ml-2 normal-case tracking-normal text-ink-fade/80 italic">
-                    clique num dia pra planejar e registrar
-                  </span>
-                )}
-              </h2>
+              <div className="inline-flex rounded-lg border border-border bg-ivory-light p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setView("week")}
+                  className={clsx(
+                    "px-3 py-1.5 rounded-md text-sm transition-colors",
+                    view === "week"
+                      ? "bg-[#6D3914] text-ivory"
+                      : "text-ink-soft hover:text-ink-deep",
+                  )}
+                >
+                  Por semana
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("calendar")}
+                  className={clsx(
+                    "px-3 py-1.5 rounded-md text-sm transition-colors",
+                    view === "calendar"
+                      ? "bg-[#6D3914] text-ivory"
+                      : "text-ink-soft hover:text-ink-deep",
+                  )}
+                >
+                  Mês inteiro
+                </button>
+              </div>
               {isCurrentMonth && summary.balance < 0 && (
                 <button
                   type="button"
                   onClick={handleReplan}
                   className="text-sm px-2.5 py-1 rounded-md border border-[#6D3914]/40 bg-[#6D3914]/10 text-[#6D3914] hover:bg-[#6D3914]/15 transition-colors"
-                  title="Zera o déficit: redistribui o que falta pelos dias restantes"
+                  title="Redistribui o que falta pelos dias restantes, a partir de hoje"
                 >
                   Re-planejar a partir de hoje
                 </button>
               )}
             </div>
-            <MonthCalendar
-              summary={summary}
-              todayISO={todayISO}
-              onDayClick={isCurrentMonth ? setDayModalCell : undefined}
-              className="hidden md:block"
-            />
-            <MonthAgenda
-              summary={summary}
-              todayISO={todayISO}
-              onDayClick={isCurrentMonth ? setDayModalCell : undefined}
-              className="md:hidden"
-            />
+
+            {view === "week" ? (
+              <>
+                <p className="text-sm text-ink-fade italic mb-3">
+                  Diga quantas páginas de cada livro quer ler em cada semana — o
+                  app divide pelos dias.
+                </p>
+                <WeeklyPlanner
+                  books={books}
+                  weeks={weeks}
+                  summary={summary}
+                  todayISO={todayISO}
+                  onSetWeek={handleSetWeek}
+                />
+              </>
+            ) : (
+              <>
+                {isCurrentMonth && (
+                  <p className="text-sm text-ink-fade italic mb-3">
+                    Clique num dia pra planejar e registrar o que leu.
+                  </p>
+                )}
+                <MonthCalendar
+                  summary={summary}
+                  todayISO={todayISO}
+                  onDayClick={isCurrentMonth ? setDayModalCell : undefined}
+                  className="hidden md:block"
+                />
+                <MonthAgenda
+                  summary={summary}
+                  todayISO={todayISO}
+                  onDayClick={isCurrentMonth ? setDayModalCell : undefined}
+                  className="md:hidden"
+                />
+              </>
+            )}
           </section>
 
-          {/* Livros — cards maiores, 2–3 por linha */}
-          <section className="mt-8">
-            <h2 className="text-sm uppercase tracking-wider text-ink-fade mb-3">
-              Livros do mês · ritmo de cada um
-            </h2>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* Ajustes por livro — colapsável, pra não poluir */}
+          <details className="mt-8 group">
+            <summary className="text-sm uppercase tracking-wider text-ink-fade cursor-pointer hover:text-ink-deep list-none flex items-center gap-1.5">
+              <ChevronDownIcon className="w-4 h-4 transition-transform group-open:rotate-180" />
+              Ajustes por livro (início, restante do mês, ritmo)
+            </summary>
+            <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {books.map((b) => (
                 <PlanBookCard
                   key={b.book_id}
@@ -218,7 +299,7 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
                 />
               ))}
             </ul>
-          </section>
+          </details>
         </>
       )}
 
@@ -422,93 +503,6 @@ function StatCard({
 }
 
 // ============================================================================
-// Visão rápida do planejamento — tabela compacta, sem precisar clicar
-// ============================================================================
-function PlanOverview({ books }: { books: PlanBookRow[] }) {
-  const rows = books
-    .map((b) => ({ book: b, schedule: deriveSchedule(b) }))
-    .filter((r) => r.schedule !== null);
-  if (rows.length === 0) return null;
-
-  return (
-    <section className="mt-6">
-      <h2 className="text-sm uppercase tracking-wider text-ink-fade mb-3">
-        Resumo do planejamento
-      </h2>
-      <div className="rounded-lg border border-border bg-ivory-light overflow-x-auto custom-scrollbar">
-        <table className="w-full text-sm min-w-[560px]">
-          <thead>
-            <tr className="text-[11px] uppercase tracking-wider text-ink-fade border-b border-border">
-              <th className="text-left font-normal px-3 py-2">Livro</th>
-              <th className="text-left font-normal px-3 py-2">Período</th>
-              <th className="text-right font-normal px-3 py-2">Ritmo</th>
-              <th className="text-right font-normal px-3 py-2">Progresso</th>
-              <th className="text-right font-normal px-3 py-2">Falta</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ book, schedule }) => {
-              const s = schedule!;
-              const read = book.pages_read;
-              const total = book.total_pages ?? 0;
-              const pct =
-                total > 0 ? Math.min(100, Math.round((read / total) * 100)) : 0;
-              return (
-                <tr
-                  key={book.book_id}
-                  className="border-b border-border/50 last:border-0"
-                >
-                  <td className="px-3 py-2">
-                    <span className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: book.color }}
-                        aria-hidden
-                      />
-                      <span className="text-ink-deep truncate max-w-[180px]">
-                        {book.title}
-                      </span>
-                      {book.is_continuation && (
-                        <span className="text-[11px] text-[#6D3914] italic flex-shrink-0">
-                          (continuação)
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-ink-soft whitespace-nowrap">
-                    {ddmm(s.start_date)} → {ddmm(s.end_date)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-ink-soft whitespace-nowrap">
-                    {s.pages_per_day}p/dia
-                  </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-12 h-1 rounded-full bg-paper-soft overflow-hidden">
-                        <span
-                          className="block h-full rounded-full"
-                          style={{
-                            width: `${pct}%`,
-                            backgroundColor: book.color,
-                          }}
-                        />
-                      </span>
-                      <span className="text-ink-fade text-sm">{pct}%</span>
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right text-ink-deep font-medium whitespace-nowrap">
-                    {book.pages ?? 0}p
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-// ============================================================================
 // Banner de saldo (plano × real, cumulativo até hoje)
 // ============================================================================
 function BalanceBanner({
@@ -695,11 +689,7 @@ function PlanBookCard({
   return (
     <li className="rounded-lg border border-border bg-ivory-light p-4">
       <div className="flex gap-3">
-        <div
-          className="w-14 flex-shrink-0 relative rounded overflow-hidden border-l-[4px] shadow-sm"
-          style={{ aspectRatio: "2 / 3", borderLeftColor: book.color }}
-          aria-hidden
-        >
+        <div className="w-14 h-[84px] flex-shrink-0 relative rounded overflow-hidden shadow-sm">
           {book.cover_url ? (
             <Image
               src={book.cover_url}

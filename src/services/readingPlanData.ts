@@ -155,6 +155,9 @@ export async function getReadingPlan(
     const ptm = fields.pages_this_month ?? null;
     // `pages` (efetivo do mês) = campo do usuário, senão o restante real.
     const effective = ptm !== null ? ptm : remaining;
+    // Início: o que estiver salvo no plano; senão, se a leitura já começou,
+    // pré-preenche com a data de início da leitura.
+    const readingStart = reading.readingStartByBook.get(book.id) ?? null;
     return {
       book_id: book.id,
       title: book.title,
@@ -171,6 +174,7 @@ export async function getReadingPlan(
       is_continuation: false,
       continuation_from: null,
       ...fields,
+      start_date: fields.start_date ?? readingStart,
     };
   };
 
@@ -263,6 +267,8 @@ type ReadingInfo = {
   pagesReadByBook: Map<string, number>;
   /** book_id → id de uma leitura ativa (reading/paused), pra registrar. */
   activeReadingByBook: Map<string, string>;
+  /** book_id → start_date da leitura ativa (pra pré-preencher o início). */
+  readingStartByBook: Map<string, string>;
   /** reading_id → book_id (todas as leituras dos livros do plano). */
   readingToBook: Map<string, string>;
 };
@@ -278,13 +284,19 @@ async function fetchReadingInfo(
 ): Promise<ReadingInfo> {
   const pagesReadByBook = new Map<string, number>();
   const activeReadingByBook = new Map<string, string>();
+  const readingStartByBook = new Map<string, string>();
   const readingToBook = new Map<string, string>();
   if (bookIds.length === 0)
-    return { pagesReadByBook, activeReadingByBook, readingToBook };
+    return {
+      pagesReadByBook,
+      activeReadingByBook,
+      readingStartByBook,
+      readingToBook,
+    };
 
   const { data } = await supabase
     .from("reading")
-    .select("id, book_id, current_page, status")
+    .select("id, book_id, current_page, status, start_date")
     .eq("user_id", userId)
     .in("book_id", bookIds);
 
@@ -293,15 +305,21 @@ async function fetchReadingInfo(
     const page = row.current_page ?? 0;
     const prev = pagesReadByBook.get(row.book_id) ?? 0;
     if (page > prev) pagesReadByBook.set(row.book_id, page);
-    // Prefere leitura ativa pra registrar progresso.
+    // Prefere leitura ativa pra registrar progresso e pré-preencher o início.
     if (
       (row.status === "reading" || row.status === "paused") &&
       !activeReadingByBook.has(row.book_id)
     ) {
       activeReadingByBook.set(row.book_id, row.id);
+      if (row.start_date) readingStartByBook.set(row.book_id, row.start_date);
     }
   }
-  return { pagesReadByBook, activeReadingByBook, readingToBook };
+  return {
+    pagesReadByBook,
+    activeReadingByBook,
+    readingStartByBook,
+    readingToBook,
+  };
 }
 
 /**

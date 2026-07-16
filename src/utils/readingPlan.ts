@@ -32,6 +32,40 @@ export function inclusiveDays(aISO: string, bISO: string): number {
   return Math.floor((b - a) / 86_400_000) + 1;
 }
 
+export type PlanWeek = {
+  index: number;
+  /** ISOs dos dias da semana que caem dentro do mês. */
+  days: string[];
+  /** Rótulo curto, ex.: "01–06". */
+  label: string;
+};
+
+/**
+ * Semanas do mês alinhadas ao calendário (domingo→sábado), recortadas ao mês.
+ * A primeira e a última podem ser parciais.
+ */
+export function monthWeeks(year: number, month: number): PlanWeek[] {
+  const total = daysInMonth(year, month);
+  const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const weeks: PlanWeek[] = [];
+  let day = 1;
+  let idx = 0;
+  while (day <= total) {
+    const len = idx === 0 ? 7 - firstWeekday : 7;
+    const days: string[] = [];
+    for (let i = 0; i < len && day <= total; i += 1, day += 1) {
+      days.push(isoForDay(year, month, day));
+    }
+    weeks.push({
+      index: idx,
+      days,
+      label: `${days[0].slice(8, 10)}–${days[days.length - 1].slice(8, 10)}`,
+    });
+    idx += 1;
+  }
+  return weeks;
+}
+
 export type PlanBookInput = {
   book_id: string;
   title: string;

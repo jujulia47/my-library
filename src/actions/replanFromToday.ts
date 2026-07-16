@@ -26,20 +26,22 @@ export async function replanFromToday(
 
   const today = todayISO();
 
-  // Só faz sentido no mês corrente. Busca as linhas com início no passado.
+  // Re-planeja todo livro AGENDADO (tem ritmo ou data fim) do mês pra começar
+  // hoje — redistribui o que falta pelos dias restantes. Livros sem ritmo não
+  // têm o que redistribuir.
   const { data: rows } = await supabase
     .from("reading_plan_book")
-    .select("id, start_date, end_date")
+    .select("id, start_date, end_date, pages_per_day")
     .eq("user_id", user.id)
     .eq("year", year)
     .eq("month", month);
 
-  const toUpdate = (rows ?? []).filter(
-    (r) => r.start_date && r.start_date < today,
+  const scheduled = (rows ?? []).filter(
+    (r) => r.pages_per_day != null || r.end_date != null,
   );
-  if (toUpdate.length === 0) return { ok: true, data: null };
+  if (scheduled.length === 0) return { ok: true, data: null };
 
-  for (const r of toUpdate) {
+  for (const r of scheduled) {
     // Se a data fim ficou no passado, limpa (inválida) — cai pro ritmo.
     const clearEnd = r.end_date && r.end_date < today;
     const { error } = await supabase
