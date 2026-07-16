@@ -15,6 +15,7 @@ import {
   CalendarDaysIcon,
   CubeIcon,
   ClipboardDocumentListIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 import { BookOpenIcon as BookOpenSolid } from "@heroicons/react/24/solid";
 
@@ -46,6 +47,7 @@ const items: NavItem[] = [
   { href: "/year", label: "Resumo do ano", Icon: CalendarDaysIcon },
   { href: "/category", label: "Categorias", Icon: TagIcon },
   { href: "/box", label: "Boxes / kits", Icon: CubeIcon },
+  { href: "/assinaturas", label: "Assinaturas", Icon: CreditCardIcon },
 ];
 
 function isActive(pathname: string, href: string) {
