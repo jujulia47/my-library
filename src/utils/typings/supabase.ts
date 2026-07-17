@@ -715,6 +715,80 @@ export type Database = {
           },
         ]
       }
+      reading_capacity: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          pages_per_day: number
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          pages_per_day: number
+          start_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          pages_per_day?: number
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reading_target: {
+        Row: {
+          book_id: string
+          carried_over: boolean
+          created_at: string
+          end_date: string
+          id: string
+          page_from: number
+          page_to: number
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          carried_over?: boolean
+          created_at?: string
+          end_date: string
+          id?: string
+          page_from: number
+          page_to: number
+          start_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          carried_over?: boolean
+          created_at?: string
+          end_date?: string
+          id?: string
+          page_from?: number
+          page_to?: number
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_target_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "book"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reading_event: {
         Row: {
           created_at: string

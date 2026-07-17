@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import { PageHeader } from "@/components/ui";
 import { createClient } from "@/utils/supabase/server";
+import { getReadingPlan } from "@/services/readingPlanData";
+import { todayISO } from "@/utils/dates";
+import ReadingPlanClient from "@/components/Plan/ReadingPlanClient";
 
 export const metadata: Metadata = {
   title: "Plano de leitura · My Library",
 };
 
+// Sensível à data (tudo deriva de "hoje") — sempre recalcula.
 export const dynamic = "force-dynamic";
 
-// Página em reconstrução — a implementação anterior foi removida e o novo
-// modelo (metas + capacidade + fila) será construído do zero.
 export default async function PlanoPage() {
   const supabase = await createClient();
   const {
@@ -19,12 +20,11 @@ export default async function PlanoPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const data = await getReadingPlan(user.id);
+
   return (
     <AppShell>
-      <PageHeader
-        title="Plano de leitura"
-        subtitle="Em reconstrução — voltamos já."
-      />
+      <ReadingPlanClient data={data} todayISO={todayISO()} />
     </AppShell>
   );
 }
