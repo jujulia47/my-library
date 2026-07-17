@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Modal from "./Modal";
 import { Input, Textarea, Button } from "@/components/ui";
 import { abandonReading } from "@/actions/abandonReading";
+import { todayISO } from "@/utils/dates";
 
 export type AbandonReadingModalProps = {
   open: boolean;
@@ -54,7 +55,7 @@ export default function AbandonReadingModal({
           label="Data"
           name="finish_date"
           type="date"
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={todayISO()}
           errorText={dateError ?? undefined}
         />
 

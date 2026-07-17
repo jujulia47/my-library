@@ -12,13 +12,9 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/**
- * Hoje em ISO `YYYY-MM-DD` (UTC). Igual ao que vem de `<input type="date">`
- * em PT-BR. Não usa `toISOString` porque ele dá hora também.
- */
-export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+// Hoje em ISO `YYYY-MM-DD` no fuso do Brasil (re-export pra manter os
+// callers das actions de leitura).
+export { todayISO } from "@/utils/dates";
 
 /**
  * Insere um event no histórico de uma reading. Inputs típicos vêm de actions

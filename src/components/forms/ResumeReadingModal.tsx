@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Modal from "./Modal";
 import { Input, Button } from "@/components/ui";
 import { resumeReading } from "@/actions/resumeReading";
+import { todayISO } from "@/utils/dates";
 
 export type ResumeReadingModalProps = {
   open: boolean;
@@ -54,7 +55,7 @@ export default function ResumeReadingModal({
           label="Data em que retomou"
           name="resumed_date"
           type="date"
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={todayISO()}
           errorText={dateError ?? undefined}
         />
 

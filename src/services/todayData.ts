@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { imagesUrl } from "@/services/images";
+import { todayISO } from "@/utils/dates";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -56,15 +57,11 @@ export type TodayActivityItem =
   | TodayBookAcquired;
 
 export type TodayData = {
-  /** Data de hoje em ISO YYYY-MM-DD (UTC). */
+  /** Data de hoje em ISO YYYY-MM-DD (fuso do Brasil). */
   date: string;
   active_readings: TodayActiveReading[];
   activities: TodayActivityItem[];
 };
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** Validação leve de string YYYY-MM-DD — defensiva contra query param malformado. */
 function isValidISODate(s: string): boolean {

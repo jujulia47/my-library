@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Modal from "./Modal";
 import { Input, Button } from "@/components/ui";
 import { pauseReading } from "@/actions/pauseReading";
+import { todayISO } from "@/utils/dates";
 
 export type PauseReadingModalProps = {
   open: boolean;
@@ -54,7 +55,7 @@ export default function PauseReadingModal({
           label="Data da pausa"
           name="paused_date"
           type="date"
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={todayISO()}
           errorText={dateError ?? undefined}
         />
 

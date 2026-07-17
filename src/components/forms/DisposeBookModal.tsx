@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Modal from "./Modal";
 import { Input, Button } from "@/components/ui";
 import { markBookDisposed } from "@/actions/createQuoteForBook";
+import { todayISO } from "@/utils/dates";
 
 export type DisposeBookModalProps = {
   open: boolean;
@@ -66,7 +67,7 @@ export default function DisposeBookModal({
           label="Data"
           name="disposed_date"
           type="date"
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={todayISO()}
           errorText={dateError ?? undefined}
         />
 

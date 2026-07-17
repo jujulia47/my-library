@@ -6,6 +6,7 @@ import Modal from "./Modal";
 import { Input, Textarea, Button } from "@/components/ui";
 import StarRating from "@/components/FormFields/StarRating";
 import { finishReading } from "@/actions/finishReading";
+import { todayISO } from "@/utils/dates";
 
 export type FinishReadingModalProps = {
   open: boolean;
@@ -56,7 +57,7 @@ export default function FinishReadingModal({
           label="Data de fim"
           name="finish_date"
           type="date"
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={todayISO()}
           errorText={dateError ?? undefined}
         />
 

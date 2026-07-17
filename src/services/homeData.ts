@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { collectionListQuery } from "@/services/collectionList";
 import { imagesUrl } from "@/services/images";
+import { todayISO as todayISOBrazil } from "@/utils/dates";
 import type { Database } from "@/utils/typings/supabase";
 
 type CollectionType = Database["public"]["Enums"]["collection_type"];
@@ -1063,10 +1064,10 @@ export async function getHomeData(): Promise<HomeData> {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const todayISO = today.toISOString().slice(0, 10);
-  const monthsElapsed = today.getMonth() + 1;
+  // Tudo derivado do "hoje" no fuso do Brasil (o servidor roda em UTC).
+  const todayISO = todayISOBrazil();
+  const currentYear = Number(todayISO.slice(0, 4));
+  const monthsElapsed = Number(todayISO.slice(5, 7));
 
   const [
     readingNow,

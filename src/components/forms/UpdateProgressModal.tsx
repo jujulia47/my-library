@@ -9,6 +9,7 @@ import StarRating from "@/components/FormFields/StarRating";
 import { updateReadingProgress } from "@/actions/updateReadingProgress";
 import { finishReading } from "@/actions/finishReading";
 import { playFinishChime, playPageTurn } from "@/utils/sounds";
+import { todayISO } from "@/utils/dates";
 
 export type UpdateProgressTarget = {
   reading_id: string;
@@ -23,10 +24,6 @@ type Props = {
   onClose: () => void;
   target: UpdateProgressTarget | null;
 };
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export default function UpdateProgressModal({ open, onClose, target }: Props) {
   const router = useRouter();
