@@ -1,6 +1,14 @@
 import AppShell from "@/components/AppShell";
+import { redirect } from "next/navigation";
 import { BookmarkIcon, FireIcon } from "@heroicons/react/24/solid";
+import { createClient } from "@/utils/supabase/server";
+import { todayISO } from "@/utils/dates";
 import { getHomeData } from "@/services/homeData";
+import { getReadingOverview } from "@/services/overviewData";
+import { HomeCard } from "@/components/Home/HomeCard";
+import { WorldMapChart } from "@/components/Overview/WorldMapChart";
+import { LanguageBars } from "@/components/Overview/LanguageBars";
+import { PagesHistogram } from "@/components/Overview/PagesHistogram";
 import { HomeHeader } from "@/components/Home/HomeHeader";
 import { ReadingNow } from "@/components/Home/ReadingNow";
 import { StatsStrip } from "@/components/Home/StatsStrip";
@@ -27,7 +35,16 @@ import { SectionLabel } from "@/components/Home/SectionLabel";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const data = await getHomeData();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const [data, overview] = await Promise.all([
+    getHomeData(),
+    getReadingOverview(user.id, Number(todayISO().slice(0, 4))),
+  ]);
   const currentMonth = new Date(`${data.today}T00:00:00`).getMonth() + 1;
 
   return (
@@ -112,6 +129,37 @@ export default async function HomePage() {
           <ReadingPaceSparkline data={data.pace_sparkline} />
         </div>
       </section>
+
+      {overview.read_books_total > 0 && (
+        <section className="home-section">
+          <SectionLabel>Volta ao mundo em {data.current_year}</SectionLabel>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6 items-stretch">
+            <div className="md:col-span-3">
+              <HomeCard title="Países dos autores lidos" className="h-full">
+                <WorldMapChart
+                  data={overview.countries}
+                  withoutCountry={overview.without_country}
+                />
+              </HomeCard>
+            </div>
+            <div className="md:col-span-2 flex flex-col gap-3">
+              <HomeCard title="Idiomas" className="flex-1">
+                <div className="h-full flex flex-col justify-center">
+                  <LanguageBars data={overview.languages} />
+                </div>
+              </HomeCard>
+              <HomeCard title="Páginas por livro lido" className="flex-1">
+                <div className="h-full flex flex-col justify-end">
+                  <PagesHistogram
+                    data={overview.page_buckets}
+                    heightClass="h-40"
+                  />
+                </div>
+              </HomeCard>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="home-section">
         <SectionLabel>Acervo</SectionLabel>

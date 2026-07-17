@@ -3,7 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { createClient } from "@/utils/supabase/server";
 import { getYearData } from "@/services/yearData";
+import { getReadingOverview } from "@/services/overviewData";
 import { SectionLabel } from "@/components/Home/SectionLabel";
+import { WorldMapChart } from "@/components/Overview/WorldMapChart";
+import { LanguageBars } from "@/components/Overview/LanguageBars";
+import { PagesHistogram } from "@/components/Overview/PagesHistogram";
 import { YearHeader } from "@/components/Year/YearHeader";
 import { YearRecords } from "@/components/Year/YearRecords";
 import { TopBooksOfYear } from "@/components/Year/TopBooksOfYear";
@@ -42,7 +46,10 @@ export default async function YearPage({ params }: Props) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const data = await getYearData(year, user.id);
+  const [data, overview] = await Promise.all([
+    getYearData(year, user.id),
+    getReadingOverview(user.id, year),
+  ]);
 
   if (
     data.total_books_finished === 0 &&
@@ -91,6 +98,35 @@ export default async function YearPage({ params }: Props) {
         <YearMilestones milestones={data.milestones} year={year} />
         <YearAcquisitions acquisitions={data.acquisitions} year={year} />
       </div>
+
+      {overview.countries.length > 0 && (
+        <>
+          <SectionLabel>Volta ao mundo em {year}</SectionLabel>
+          <div className="bg-paper border border-paper-soft rounded-lg p-4">
+            <WorldMapChart
+              data={overview.countries}
+              withoutCountry={overview.without_country}
+            />
+          </div>
+        </>
+      )}
+
+      {overview.read_books_total > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 items-stretch">
+          <div className="flex flex-col">
+            <SectionLabel>Idiomas lidos em {year}</SectionLabel>
+            <div className="bg-paper border border-paper-soft rounded-lg p-4 flex-1 flex flex-col justify-center">
+              <LanguageBars data={overview.languages} />
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <SectionLabel>Tamanho dos livros lidos</SectionLabel>
+            <div className="bg-paper border border-paper-soft rounded-lg p-4 flex-1">
+              <PagesHistogram data={overview.page_buckets} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {data.countries.length > 0 && (
         <>
