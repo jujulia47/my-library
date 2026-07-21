@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { countPhysicalCopies } from "@/services/bookList";
 import type { Database } from "@/utils/typings/supabase";
 import type { BookLanguage } from "@/utils/languageLabels";
 
@@ -65,7 +66,10 @@ export type NamedCount = { label: string; count: number };
 export type ShelfOverview = {
   /** Todos os livros cadastrados. */
   total_books: number;
-  /** Na estante hoje: owned + lent_out (emprestar não tira da coleção). */
+  /**
+   * Livros na estante — mesma definição da página de Livros: `owned` com
+   * formato físico, deduplicando volumes que dividem exemplar (bundled).
+   */
   on_shelf: number;
   /** Vendidos + trocados (juntos num número só). */
   sold_or_traded: number;
@@ -378,7 +382,7 @@ export async function getShelfOverview(userId: string): Promise<ShelfOverview> {
       supabase
         .from("book")
         .select(
-          "id, pages, ownership_status, publisher, publication_year, purchase_price, purchase_origin, is_favorite",
+          "id, pages, ownership_status, formats_owned, bundled_with, publisher, publication_year, purchase_price, purchase_origin, is_favorite",
         )
         .eq("user_id", userId),
       supabase
@@ -392,17 +396,23 @@ export async function getShelfOverview(userId: string): Promise<ShelfOverview> {
   const books = booksRaw ?? [];
   const readIds = new Set((finishedRaw ?? []).map((r) => r.book_id));
 
+  // "Na estante" = owned + formato físico (mesma regra da página de Livros).
+  const isOnShelf = (b: (typeof books)[number]) =>
+    b.ownership_status === "owned" &&
+    (b.formats_owned ?? []).includes("physical");
+
   const withPages = books
     .map((b) => b.pages)
     .filter((p): p is number => p !== null && p > 0);
-  const onShelf = books.filter(
-    (b) => b.ownership_status === "owned" || b.ownership_status === "lent_out",
-  ).length;
+  // Deduplica volumes que dividem exemplar (bundled contam 1) — bate com o
+  // "N livros na estante" da página de Livros.
+  const onShelf = countPhysicalCopies(books.filter(isOnShelf));
   const soldOrTraded = books.filter(
     (b) => b.ownership_status === "sold" || b.ownership_status === "traded",
   ).length;
 
-  // Progresso: páginas totais, lidas e as que faltam na estante.
+  // Progresso: páginas totais, lidas e as que faltam na estante. Páginas NÃO
+  // deduplicam bundled — cada título tem seu próprio texto a ler.
   const totalPagesAll = withPages.reduce((s, p) => s + p, 0);
   let totalPagesRead = 0;
   let unreadShelfPages = 0;
@@ -411,10 +421,7 @@ export async function getShelfOverview(userId: string): Promise<ShelfOverview> {
     if (p <= 0) continue;
     if (readIds.has(b.id)) {
       totalPagesRead += p;
-    } else if (
-      b.ownership_status === "owned" ||
-      b.ownership_status === "lent_out"
-    ) {
+    } else if (isOnShelf(b)) {
       unreadShelfPages += p;
     }
   }
