@@ -751,6 +751,8 @@ export type Database = {
           id: string
           page_from: number
           page_to: number
+          replan_from_date: string | null
+          replan_from_page: number | null
           start_date: string
           updated_at: string
           user_id: string
@@ -763,6 +765,8 @@ export type Database = {
           id?: string
           page_from: number
           page_to: number
+          replan_from_date?: string | null
+          replan_from_page?: number | null
           start_date: string
           updated_at?: string
           user_id: string
@@ -775,6 +779,8 @@ export type Database = {
           id?: string
           page_from?: number
           page_to?: number
+          replan_from_date?: string | null
+          replan_from_page?: number | null
           start_date?: string
           updated_at?: string
           user_id?: string

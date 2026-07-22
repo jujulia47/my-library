@@ -84,6 +84,12 @@ export type TargetInput = {
    * seguinte. Sem o clique, a vencida fica só marcada (nada transborda).
    */
   carried_over: boolean;
+  /**
+   * Recalculo MANUAL: dia/página em que o usuário mandou redistribuir o que
+   * falta. Null = cronograma original (a partir de start_date/page_from).
+   */
+  replan_from_date: string | null;
+  replan_from_page: number | null;
 };
 
 export type CapacityPeriod = {
@@ -103,6 +109,11 @@ export type PlanBookInput = {
   total_pages: number | null;
   /** Página atual (0 se não começou). Vem da leitura ativa. */
   current_page: number;
+  /**
+   * Páginas lidas HOJE (reading_progress_log). É o que permite dizer "cota do
+   * dia cumprida" sem recalcular nada.
+   */
+  pages_read_today: number;
   /** Ordem na fila (home_next_read.position). */
   position: number;
   /** Metas do livro (vazio = livro de fila). */
@@ -124,7 +135,7 @@ export type TargetStats = {
   target: TargetInput;
   /** Total definido da meta (page_to − page_from + 1). */
   totalPages: number;
-  /** Páginas/dia do plano original (total ÷ dias do período). */
+  /** Páginas/dia do cronograma vigente (original ou pós-recálculo). */
   originalDaily: number;
   /**
    * Restante EFETIVO da meta. Assume que as metas anteriores serão cumpridas;
@@ -134,86 +145,158 @@ export type TargetStats = {
   remainingPages: number;
   /** Dias de hoje (ou do início, se futura) até o prazo. */
   remainingDays: number;
-  /** Páginas/dia pra cumprir DAQUI pra frente (o "re-planejar" automático). */
-  neededDaily: number | null;
+  /**
+   * Cota de hoje — FIXA durante o dia inteiro. Nunca sobe sozinha: no máximo
+   * é a cota do cronograma; cai quando você está adiantada. Null = nada a
+   * ler hoje (concluída, vencida ou futura).
+   */
+  todayQuota: number | null;
+  /** Páginas lidas hoje neste livro (do log). */
+  readToday: number;
+  /** Cota de hoje já cumprida. */
+  doneToday: boolean;
+  /** Páginas lidas hoje além da cota E do atraso — adiantamento real. */
+  aheadToday: number;
+  /**
+   * Páginas que ficaram de dias ANTERIORES (o "não li ontem"), já abatidas
+   * do que você leu a mais hoje. Mostrado separado — nunca é somado na cota
+   * de hoje sem você mandar.
+   */
+  backlog: number;
+  /** Página que o cronograma espera que você alcance até o fim de hoje. */
+  targetPageToday: number | null;
+  /** Cota dos dias DEPOIS de hoje (pro calendário). */
+  futureDaily: number;
   status: TargetStatus;
 };
 
 /**
- * Deriva o estado de uma meta.
+ * Deriva o estado de uma meta com CRONOGRAMA FIXO.
+ *
+ * Regra central (a que evita a confusão do "número que nunca fecha"): a cota
+ * do dia é constante ao longo do dia e **só pode diminuir** em relação ao
+ * cronograma — se você adianta, os próximos dias aliviam; se atrasa, a cota
+ * NÃO infla sozinha: o que ficou pra trás aparece como `backlog` e só entra
+ * na conta se você clicar em recalcular (replan_from_date/page).
  *
  * - concluída: página atual ≥ page_to.
- * - vencida:   prazo passou com restante > 0. Fica marcada; o restante só
- *              transborda pra meta seguinte se o usuário jogou (carried_over).
- * - ativa:     em_dia/atrasada conforme o neededDaily vs o plano original.
+ * - vencida:   prazo passou com restante > 0. Só transborda pra meta seguinte
+ *              se o usuário jogou (carried_over).
+ * - ativa:     atrasada quando há backlog; senão em dia.
  * - futura:    ainda não começou.
  *
- * `fromPage` é o ponteiro virtual de deriveBookTargets: até onde a leitura
- * chega ANTES desta meta, assumindo que as anteriores serão cumpridas. Use
- * deriveBookTargets — é ela que encadeia as metas sem contar página duas
- * vezes.
+ * `fromPage` é o ponteiro virtual de deriveBookTargets (ver lá).
  */
 export function deriveTarget(
   target: TargetInput,
   currentPage: number,
   todayISO: string,
   fromPage: number = currentPage,
+  pagesReadToday: number = 0,
 ): TargetStats {
   const totalPages = target.page_to - target.page_from + 1;
-  const periodDays = inclusiveDays(target.start_date, target.end_date);
-  const originalDaily = Math.ceil(totalPages / periodDays);
+
+  // Cronograma vigente: original, ou reiniciado no ponto do recálculo manual.
+  const baseDate = target.replan_from_date ?? target.start_date;
+  const basePage = target.replan_from_page ?? target.page_from - 1;
+  const scheduleDays = Math.max(1, inclusiveDays(baseDate, target.end_date));
+  const scheduledPages = Math.max(0, target.page_to - basePage);
+  const originalDaily = Math.ceil(scheduledPages / scheduleDays);
 
   // Restante efetivo a partir do ponteiro (herda só o que foi jogado pra cá).
   const remainingPages = Math.max(0, target.page_to - fromPage);
 
+  const base = {
+    target,
+    totalPages,
+    originalDaily,
+    remainingPages,
+    todayQuota: null,
+    readToday: pagesReadToday,
+    doneToday: false,
+    aheadToday: 0,
+    backlog: 0,
+    targetPageToday: null,
+    futureDaily: 0,
+  };
+
   if (currentPage >= target.page_to) {
     return {
-      target,
-      totalPages,
-      originalDaily,
+      ...base,
       remainingPages: 0,
       remainingDays: 0,
-      neededDaily: null,
       status: "concluida",
     };
   }
 
   if (todayISO > target.end_date) {
-    // Vencida: "faltaram X" / "X foram pra meta seguinte" (se carried_over).
-    return {
-      target,
-      totalPages,
-      originalDaily,
-      remainingPages,
-      remainingDays: 0,
-      neededDaily: null,
-      status: "vencida",
-    };
+    return { ...base, remainingDays: 0, status: "vencida" };
   }
 
-  if (todayISO < target.start_date) {
+  if (todayISO < baseDate) {
     return {
-      target,
-      totalPages,
-      originalDaily,
-      remainingPages,
-      remainingDays: periodDays,
-      neededDaily: Math.ceil(remainingPages / periodDays),
+      ...base,
+      remainingDays: scheduleDays,
+      futureDaily: originalDaily,
       status: "futura",
     };
   }
 
-  // Ativa.
+  // --- Meta ativa ---------------------------------------------------------
   const remainingDays = inclusiveDays(todayISO, target.end_date);
-  const neededDaily = Math.ceil(remainingPages / remainingDays);
+
+  // Onde a leitura estava no COMEÇO de hoje (o log diz o que foi lido hoje).
+  const pageAtStartOfToday = Math.max(0, currentPage - pagesReadToday);
+  const pagesLeftStartOfToday = Math.max(0, target.page_to - pageAtStartOfToday);
+
+  // Cota do dia: no máximo a do cronograma; menor se está adiantada. Ambos os
+  // insumos são constantes durante o dia → a cota não se mexe.
+  const relieved = Math.ceil(pagesLeftStartOfToday / remainingDays);
+  const todayQuota = Math.max(0, Math.min(originalDaily, relieved));
+
+  // Atraso: onde o cronograma esperava que você estivesse no fim de ONTEM.
+  const daysBeforeToday = Math.max(
+    0,
+    inclusiveDays(baseDate, todayISO) - 1,
+  );
+  const expectedByYesterday = Math.min(
+    target.page_to,
+    basePage + originalDaily * daysBeforeToday,
+  );
+  const debtAtStartOfToday = Math.max(
+    0,
+    expectedByYesterday - pageAtStartOfToday,
+  );
+  // O que você leu HOJE além da cota abate a dívida dos dias anteriores antes
+  // de contar como adiantamento — senão apareceria "atrasada" e "adiantada"
+  // ao mesmo tempo.
+  const surplusToday = Math.max(0, pagesReadToday - todayQuota);
+  const backlog = Math.max(0, debtAtStartOfToday - surplusToday);
+
+  const doneToday = todayQuota > 0 && pagesReadToday >= todayQuota;
+  const targetPageToday = Math.min(
+    target.page_to,
+    pageAtStartOfToday + todayQuota,
+  );
+  const daysAfterToday = remainingDays - 1;
+  const futureDaily =
+    daysAfterToday > 0
+      ? Math.min(
+          originalDaily,
+          Math.ceil((target.page_to - targetPageToday) / daysAfterToday),
+        )
+      : 0;
+
   return {
-    target,
-    totalPages,
-    originalDaily,
-    remainingPages,
+    ...base,
     remainingDays,
-    neededDaily,
-    status: neededDaily > originalDaily ? "atrasada" : "em_dia",
+    todayQuota,
+    doneToday,
+    aheadToday: Math.max(0, surplusToday - debtAtStartOfToday),
+    backlog,
+    targetPageToday,
+    futureDaily,
+    status: backlog > 0 ? "atrasada" : "em_dia",
   };
 }
 
@@ -232,12 +315,19 @@ export function deriveBookTargets(
   targets: TargetInput[],
   currentPage: number,
   todayISO: string,
+  pagesReadToday: number = 0,
 ): TargetStats[] {
   const sorted = targets.slice().sort((a, z) => a.page_from - z.page_from);
   let virtualPage = currentPage;
   const out: TargetStats[] = [];
   for (const t of sorted) {
-    const stats = deriveTarget(t, currentPage, todayISO, virtualPage);
+    const stats = deriveTarget(
+      t,
+      currentPage,
+      todayISO,
+      virtualPage,
+      pagesReadToday,
+    );
     out.push(stats);
     if (!(stats.status === "vencida" && t.carried_over)) {
       virtualPage = Math.max(virtualPage, t.page_to);
@@ -345,12 +435,17 @@ export function buildMonthPlan(
   // Metas derivadas por livro (em cadeia — ver deriveBookTargets).
   const targetStats = new Map<string, TargetStats[]>();
   for (const b of readable) {
-    const stats = deriveBookTargets(b.targets, b.current_page, todayISO);
+    const stats = deriveBookTargets(
+      b.targets,
+      b.current_page,
+      todayISO,
+      b.pages_read_today,
+    );
     if (stats.length > 0) targetStats.set(b.book_id, stats);
   }
 
-  // Contribuição diária de cada meta (só dias >= hoje; passado não é planejável).
-  // Ativa → neededDaily de hoje até o prazo. Futura → neededDaily no período.
+  // Contribuição diária de cada meta (só dias >= hoje; passado não é
+  // planejável). Hoje usa a cota fixa do dia; os dias seguintes, futureDaily.
   const bookMeta = new Map(readable.map((b) => [b.book_id, b]));
   const targetDaily = (iso: string): DayEntry[] => {
     if (iso < todayISO) return [];
@@ -359,14 +454,16 @@ export function buildMonthPlan(
       const b = bookMeta.get(bookId)!;
       for (const s of stats) {
         if (s.status === "concluida" || s.status === "vencida") continue;
-        if (s.neededDaily === null) continue;
         const from = s.status === "futura" ? s.target.start_date : todayISO;
         if (iso < from || iso > s.target.end_date) continue;
+        const pages =
+          iso === todayISO ? (s.todayQuota ?? 0) : s.futureDaily;
+        if (pages <= 0) continue;
         entries.push({
           book_id: bookId,
           title: b.title,
           color: b.color,
-          pages: s.neededDaily,
+          pages,
           kind: "meta",
         });
       }

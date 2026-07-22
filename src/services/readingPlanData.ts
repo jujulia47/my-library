@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { imagesUrl } from "@/services/images";
+import { todayISO } from "@/utils/dates";
 import { planBookColor } from "@/utils/colorByHash";
 import type { CapacityPeriod, PlanBookInput } from "@/utils/readingPlan";
 
@@ -42,7 +43,7 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
       supabase
         .from("reading_target")
         .select(
-          "id, book_id, start_date, end_date, page_from, page_to, carried_over",
+          "id, book_id, start_date, end_date, page_from, page_to, carried_over, replan_from_date, replan_from_page",
         )
         .eq("user_id", userId)
         .order("page_from", { ascending: true }),
@@ -58,18 +59,41 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
     .filter((nr) => nr.book)
     .map((nr) => nr.book!.id);
 
-  // Página atual por livro (max current_page entre as leituras).
+  // Página atual por livro (max current_page entre as leituras) e páginas
+  // lidas HOJE (soma dos deltas do log). O "lido hoje" é o que permite dizer
+  // "cota do dia cumprida" sem recalcular a meta.
   const currentByBook = new Map<string, number>();
+  const readTodayByBook = new Map<string, number>();
   if (bookIds.length > 0) {
     const { data: readings } = await supabase
       .from("reading")
-      .select("book_id, current_page")
+      .select("id, book_id, current_page")
       .eq("user_id", userId)
       .in("book_id", bookIds);
+    const bookByReading = new Map<string, string>();
     for (const r of readings ?? []) {
+      bookByReading.set(r.id, r.book_id);
       const page = r.current_page ?? 0;
       if (page > (currentByBook.get(r.book_id) ?? 0)) {
         currentByBook.set(r.book_id, page);
+      }
+    }
+
+    const readingIds = [...bookByReading.keys()];
+    if (readingIds.length > 0) {
+      const { data: logs } = await supabase
+        .from("reading_progress_log")
+        .select("reading_id, pages_delta")
+        .eq("user_id", userId)
+        .eq("log_date", todayISO())
+        .in("reading_id", readingIds);
+      for (const l of logs ?? []) {
+        const bookId = bookByReading.get(l.reading_id);
+        if (!bookId) continue;
+        readTodayByBook.set(
+          bookId,
+          (readTodayByBook.get(bookId) ?? 0) + Math.max(0, l.pages_delta),
+        );
       }
     }
   }
@@ -86,6 +110,8 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
       page_from: t.page_from,
       page_to: t.page_to,
       carried_over: t.carried_over,
+      replan_from_date: t.replan_from_date,
+      replan_from_page: t.replan_from_page,
     });
     targetsByBook.set(t.book_id, list);
   }
@@ -100,6 +126,7 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
       cover_url: nr.book!.cover ? imagesUrl(nr.book!.cover) : null,
       total_pages: nr.book!.pages,
       current_page: currentByBook.get(nr.book!.id) ?? 0,
+      pages_read_today: readTodayByBook.get(nr.book!.id) ?? 0,
       position: nr.position,
       targets: targetsByBook.get(nr.book!.id) ?? [],
     }));

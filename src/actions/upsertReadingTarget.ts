@@ -101,9 +101,11 @@ export async function upsertReadingTarget(
         page_from,
         page_to,
         // Editou a meta = replanejou por conta própria; o "jogar na próxima"
-        // volta ao estado inicial (senão reapareceria como jogada se vencer
-        // de novo, sem clique).
+        // e o recálculo manual voltam ao estado inicial (senão o cronograma
+        // continuaria ancorado num ponto que não existe mais).
         carried_over: false,
+        replan_from_date: null,
+        replan_from_page: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", input.id)

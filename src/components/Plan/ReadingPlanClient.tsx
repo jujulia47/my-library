@@ -42,6 +42,7 @@ import {
 } from "@/actions/upsertReadingTarget";
 import { deleteReadingTarget } from "@/actions/deleteReadingTarget";
 import { carryOverReadingTarget } from "@/actions/carryOverReadingTarget";
+import { replanReadingTarget } from "@/actions/replanReadingTarget";
 import {
   upsertReadingCapacity,
   type ReadingCapacityInput,
@@ -97,6 +98,13 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
           {monthNamePT(month)} {year}
         </h1>
       </header>
+
+      <TodayPanel
+        books={books}
+        plan={plan}
+        todayISO={todayISO}
+        onChanged={refresh}
+      />
 
       <SummaryStrip plan={plan} totalBooks={books.length} />
 
@@ -157,6 +165,231 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
         />
       )}
     </div>
+  );
+}
+
+// ============================================================================
+// Hoje — a visão diária. Cota fixa: não se recalcula ao longo do dia.
+// ============================================================================
+type TodayRow = {
+  book: PlanBookInput;
+  /** Meta ativa do livro (null = livro de fila). */
+  stats: TargetStats | null;
+  /** Páginas planejadas pra hoje. */
+  quota: number;
+  readToday: number;
+  done: boolean;
+  ahead: number;
+  backlog: number;
+  targetPage: number | null;
+  kind: "meta" | "fila";
+};
+
+function buildTodayRows(
+  books: PlanBookInput[],
+  plan: ReturnType<typeof buildMonthPlan>,
+  todayISO: string,
+): TodayRow[] {
+  const rows: TodayRow[] = [];
+  const today = plan.days.find((d) => d.iso === todayISO);
+
+  for (const book of books) {
+    if (book.total_pages === null || book.total_pages <= 0) continue;
+    const stats = deriveBookTargets(
+      book.targets,
+      book.current_page,
+      todayISO,
+      book.pages_read_today,
+    );
+    const active = stats.find(
+      (s) => s.status === "em_dia" || s.status === "atrasada",
+    );
+
+    if (active) {
+      if ((active.todayQuota ?? 0) <= 0 && active.backlog <= 0) continue;
+      rows.push({
+        book,
+        stats: active,
+        quota: active.todayQuota ?? 0,
+        readToday: active.readToday,
+        done: active.doneToday,
+        ahead: active.aheadToday,
+        backlog: active.backlog,
+        targetPage: active.targetPageToday,
+        kind: "meta",
+      });
+      continue;
+    }
+
+    // Livro de fila: a cota de hoje vem do calendário (sobra da capacidade).
+    if (book.targets.length === 0 && today) {
+      const entry = today.entries.find(
+        (e) => e.book_id === book.book_id && e.kind === "fila",
+      );
+      if (!entry) continue;
+      rows.push({
+        book,
+        stats: null,
+        quota: entry.pages,
+        readToday: book.pages_read_today,
+        done: book.pages_read_today >= entry.pages,
+        ahead: Math.max(0, book.pages_read_today - entry.pages),
+        backlog: 0,
+        targetPage: null,
+        kind: "fila",
+      });
+    }
+  }
+  return rows;
+}
+
+function TodayPanel({
+  books,
+  plan,
+  todayISO,
+  onChanged,
+}: {
+  books: PlanBookInput[];
+  plan: ReturnType<typeof buildMonthPlan>;
+  todayISO: string;
+  onChanged: () => void;
+}) {
+  const [, startTransition] = useTransition();
+  const rows = buildTodayRows(books, plan, todayISO);
+
+  const totalQuota = rows.reduce((s, r) => s + r.quota, 0);
+  const totalRead = rows.reduce((s, r) => s + Math.min(r.readToday, r.quota), 0);
+  const allDone = rows.length > 0 && rows.every((r) => r.done);
+
+  const handleReplan = (targetId: string) => {
+    startTransition(async () => {
+      const res = await replanReadingTarget(targetId);
+      if (res.ok) onChanged();
+    });
+  };
+
+  if (rows.length === 0) {
+    return (
+      <section className="mt-5 rounded-lg border border-border bg-ivory-light p-4">
+        <p className="text-xs uppercase tracking-wider text-ink-fade">
+          Hoje · {ddmm(todayISO)}
+        </p>
+        <p className="text-sm text-ink-fade italic mt-2">
+          Nada planejado pra hoje. Defina uma capacidade ou crie uma meta.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-5 rounded-lg border border-[#6D3914]/30 bg-ivory-light p-4">
+      <div className="flex items-baseline justify-between gap-2 flex-wrap">
+        <p className="text-xs uppercase tracking-wider text-ink-fade">
+          Hoje · {ddmm(todayISO)}
+        </p>
+        <p className="text-sm">
+          {allDone ? (
+            <span className="text-moss font-medium">
+              tudo de hoje cumprido ✓
+            </span>
+          ) : (
+            <span className="text-ink-soft">
+              <span className="font-medium text-ink-deep">{totalRead}</span> de{" "}
+              {totalQuota} páginas · ~
+              {formatReadingTime(
+                Math.max(0, totalQuota - totalRead) * SECONDS_PER_PAGE,
+              )}{" "}
+              restantes
+            </span>
+          )}
+        </p>
+      </div>
+
+      <ul className="mt-3 space-y-2">
+        {rows.map((r) => (
+          <li
+            key={r.book.book_id}
+            className={clsx(
+              "rounded-md border px-3 py-2",
+              r.done
+                ? "border-moss/30 bg-moss/[0.05]"
+                : "border-border bg-paper-soft/40",
+            )}
+          >
+            <div className="flex items-start gap-2">
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
+                style={{ backgroundColor: r.book.color }}
+                aria-hidden
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                  <Link
+                    href={`/book/${r.book.slug}`}
+                    className="text-sm text-ink-deep hover:text-[#6D3914] transition-colors truncate"
+                  >
+                    {r.book.title}
+                  </Link>
+                  {r.kind === "fila" && (
+                    <span className="text-[11px] text-ink-fade italic">
+                      fila
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-sm mt-0.5">
+                  {r.done ? (
+                    <span className="text-moss">
+                      cota de hoje cumprida ✓ · leu {r.readToday}p
+                      {r.ahead > 0 && (
+                        <span className="text-ink-soft">
+                          {" "}
+                          ({r.ahead}p adiantada)
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-ink-soft">
+                      ler{" "}
+                      <span className="font-medium text-[#6D3914]">
+                        {Math.max(0, r.quota - r.readToday)} páginas
+                      </span>
+                      {r.targetPage !== null && (
+                        <> · até a página {r.targetPage}</>
+                      )}
+                      {r.readToday > 0 && (
+                        <span className="text-ink-fade">
+                          {" "}
+                          (já leu {r.readToday}p de {r.quota})
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </p>
+
+                {r.backlog > 0 && (
+                  <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-burgundy">
+                      ⚠ atrasado: {r.backlog}p de dias anteriores
+                    </span>
+                    {r.stats && (
+                      <button
+                        type="button"
+                        onClick={() => handleReplan(r.stats!.target.id)}
+                        className="inline-flex items-center gap-1 text-xs text-gold-deep hover:text-ink-deep transition-colors underline underline-offset-2"
+                      >
+                        <ArrowUturnRightIcon className="w-3.5 h-3.5" />
+                        recalcular nos dias restantes
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -495,19 +728,20 @@ function BookCard({
     book.targets,
     book.current_page,
     todayISO,
+    book.pages_read_today,
   );
 
   // Resumo pro acordeon fechado: a meta "corrente" (primeira não concluída) e
-  // o total de páginas/dia das metas ativas hoje.
+  // a cota de hoje (fixa — não recalcula ao longo do dia).
   const currentStat = stats.find((s) => s.status !== "concluida") ?? null;
   const summaryChip = !currentStat
     ? { label: "todas cumpridas ✓", cls: "bg-moss/15 text-moss" }
     : currentStat.status === "vencida" && currentStat.target.carried_over
       ? { label: "não cumprida", cls: "bg-burgundy/15 text-burgundy" }
       : STATUS_CONFIG[currentStat.status];
-  const todayDaily = stats
-    .filter((s) => s.status === "em_dia" || s.status === "atrasada")
-    .reduce((sum, s) => sum + (s.neededDaily ?? 0), 0);
+  const activeStat =
+    stats.find((s) => s.status === "em_dia" || s.status === "atrasada") ?? null;
+  const todayDaily = activeStat?.todayQuota ?? 0;
 
   const proj = plan.queue.find((q) => q.book_id === book.book_id) ?? null;
 
@@ -538,6 +772,13 @@ function BookCard({
   const handleCarryOver = (id: string, carried: boolean) => {
     startTransition(async () => {
       const res = await carryOverReadingTarget(id, carried);
+      if (res.ok) onChanged();
+    });
+  };
+
+  const handleReplan = (id: string, reset: boolean) => {
+    startTransition(async () => {
+      const res = await replanReadingTarget(id, reset);
       if (res.ok) onChanged();
     });
   };
@@ -727,13 +968,18 @@ function BookCard({
                   >
                     {summaryChip.label}
                   </span>
-                  {todayDaily > 0 && (
-                    <span className="truncate">
-                      hoje:{" "}
-                      <span className="font-medium text-[#6D3914]">
-                        {todayDaily} pág/dia
+                  {activeStat?.doneToday ? (
+                    <span className="truncate text-moss">hoje cumprido ✓</span>
+                  ) : (
+                    todayDaily > 0 && (
+                      <span className="truncate">
+                        hoje:{" "}
+                        <span className="font-medium text-[#6D3914]">
+                          {Math.max(0, todayDaily - (activeStat?.readToday ?? 0))}
+                          p
+                        </span>
                       </span>
-                    </span>
+                    )
                   )}
                 </span>
                 <ChevronDownIcon
@@ -756,6 +1002,8 @@ function BookCard({
                         onCarryOver={(carried) =>
                           handleCarryOver(s.target.id, carried)
                         }
+                        onReplan={() => handleReplan(s.target.id, false)}
+                        onResetReplan={() => handleReplan(s.target.id, true)}
                       />
                     ))}
                   </ul>
@@ -794,6 +1042,8 @@ function TargetRow({
   onEdit,
   onDelete,
   onCarryOver,
+  onReplan,
+  onResetReplan,
 }: {
   stats: TargetStats;
   /** Existe meta seguinte neste livro (pra receber o restante da vencida). */
@@ -801,6 +1051,9 @@ function TargetRow({
   onEdit: () => void;
   onDelete: () => void;
   onCarryOver: (carried: boolean) => void;
+  /** Redistribui o atraso nos dias restantes (só com backlog). */
+  onReplan: () => void;
+  onResetReplan: () => void;
 }) {
   const t = stats.target;
   const carried = stats.status === "vencida" && t.carried_over;
@@ -852,27 +1105,63 @@ function TargetRow({
           )}
           {(stats.status === "em_dia" || stats.status === "atrasada") && (
             <span className="text-ink-soft">
-              faltam{" "}
-              <span className="font-medium text-ink-deep">
-                {stats.remainingPages}p
-              </span>{" "}
-              em {stats.remainingDays}{" "}
-              {stats.remainingDays === 1 ? "dia" : "dias"} →{" "}
-              <span className="font-medium text-[#6D3914]">
-                {stats.neededDaily} pág/dia
-              </span>{" "}
-              (~
-              {formatReadingTime((stats.neededDaily ?? 0) * SECONDS_PER_PAGE)}
-              /dia)
+              {stats.doneToday ? (
+                <span className="text-moss">
+                  hoje cumprido ✓ · leu {stats.readToday}p
+                  {stats.aheadToday > 0 && ` (${stats.aheadToday}p adiantada)`}
+                </span>
+              ) : (
+                <>
+                  hoje:{" "}
+                  <span className="font-medium text-[#6D3914]">
+                    {Math.max(0, (stats.todayQuota ?? 0) - stats.readToday)} pág
+                  </span>
+                  {stats.targetPageToday !== null && (
+                    <> (até a p. {stats.targetPageToday})</>
+                  )}
+                </>
+              )}
+              <span className="text-ink-fade">
+                {" "}
+                · faltam {stats.remainingPages}p em {stats.remainingDays}{" "}
+                {stats.remainingDays === 1 ? "dia" : "dias"}
+              </span>
             </span>
           )}
           {stats.status === "futura" && (
             <span className="text-ink-fade">
               {stats.remainingPages}p em {stats.remainingDays} dias →{" "}
-              {stats.neededDaily} pág/dia
+              {stats.originalDaily} pág/dia
             </span>
           )}
         </p>
+        {stats.backlog > 0 && (
+          <p className="text-sm mt-0.5 flex items-center gap-2 flex-wrap">
+            <span className="text-burgundy">
+              ⚠ atrasado: {stats.backlog}p de dias anteriores
+            </span>
+            <button
+              type="button"
+              onClick={onReplan}
+              className="inline-flex items-center gap-1 text-xs text-gold-deep hover:text-ink-deep transition-colors underline underline-offset-2"
+            >
+              <ArrowUturnRightIcon className="w-3.5 h-3.5" />
+              recalcular nos dias restantes
+            </button>
+          </p>
+        )}
+        {stats.target.replan_from_date && (
+          <p className="text-[11px] text-ink-fade italic mt-0.5">
+            recalculada em {ddmm(stats.target.replan_from_date)} ·{" "}
+            <button
+              type="button"
+              onClick={onResetReplan}
+              className="underline underline-offset-2 hover:text-ink-deep transition-colors"
+            >
+              voltar ao original
+            </button>
+          </p>
+        )}
         {stats.status === "vencida" &&
           !carried &&
           hasNext &&
