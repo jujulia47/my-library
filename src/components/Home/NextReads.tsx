@@ -38,11 +38,12 @@ export function NextReads({ data }: Props) {
     setItems(data);
   }, [data]);
 
-  const handleRemove = async (entryId: string) => {
+  const handleRemove = async (item: NextReadItem) => {
     // Otimismo: remove da UI antes da action confirmar.
     const before = items;
-    setItems((prev) => prev.filter((it) => it.entry_id !== entryId));
-    const result = await removeHomeNextRead(entryId);
+    setItems((prev) => prev.filter((it) => it.entry_id !== item.entry_id));
+    // A home é sempre o mês atual (default da action). Remove por book_id.
+    const result = await removeHomeNextRead(item.id);
     if (!result.ok) {
       // Reverte em caso de erro.
       setItems(before);
@@ -84,7 +85,7 @@ export function NextReads({ data }: Props) {
           <NextReadCard
             key={item.entry_id}
             item={item}
-            onRemove={() => handleRemove(item.entry_id)}
+            onRemove={() => handleRemove(item)}
           />
         ))}
         <EmptySlot onClick={() => setPickerOpen(true)} />

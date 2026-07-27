@@ -1,37 +1,51 @@
 import { createClient } from "@/utils/supabase/server";
 import { imagesUrl } from "@/services/images";
-import { todayISO } from "@/utils/dates";
+import { todayISO, currentMonthISO, addMonthsISO } from "@/utils/dates";
 import { planBookColor } from "@/utils/colorByHash";
 import type { CapacityPeriod, PlanBookInput } from "@/utils/readingPlan";
 
 export type ReadingPlanData = {
-  /** Livros do plano (= Próximas leituras), com metas e página atual. */
+  /** Mês visado (YYYY-MM-01). */
+  monthISO: string;
+  /** É o mês corrente? (habilita o painel "Hoje" e a edição). */
+  isCurrentMonth: boolean;
+  /** Livros do plano do mês: fila (home_next_read) + metas que cruzam o mês. */
   books: PlanBookInput[];
   /** Períodos de capacidade do usuário (todos — a lógica filtra por dia). */
   capacity: CapacityPeriod[];
 };
 
+type BookMeta = {
+  id: string;
+  slug: string;
+  title: string;
+  pages: number | null;
+  cover: string | null;
+};
+
 type NextReadRaw = {
   position: number;
-  book: {
-    id: string;
-    slug: string;
-    title: string;
-    pages: number | null;
-    cover: string | null;
-  } | null;
+  book: BookMeta | null;
 };
 
 /**
- * Carrega os dados do plano v2:
- *  - Livros: direto de home_next_read (Próximas leituras) — a fila é a ordem
- *    de lá; as duas listas são a MESMA lista.
- *  - Página atual: max(current_page) das leituras do livro (progresso vem do
- *    botão Atualizar, nada é registrado no plano).
- *  - Metas (reading_target) por livro e períodos de capacidade.
+ * Carrega os dados do plano de um MÊS. Um livro entra no plano do mês se:
+ *  - tem entrada na fila do mês (home_next_read.plan_month = mês), OU
+ *  - tem alguma meta (reading_target) cujo período cruza o mês.
+ * Livros de meta mostram TODAS as suas metas (a meta é um "todo").
+ *
+ * Página atual = max(current_page) das leituras; pages_read_today = soma dos
+ * deltas do log de hoje (só faz sentido no mês corrente).
  */
-export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
+export async function getReadingPlan(
+  userId: string,
+  monthISO?: string,
+): Promise<ReadingPlanData> {
   const supabase = await createClient();
+
+  const month = monthISO ?? currentMonthISO();
+  const nextMonth = addMonthsISO(month, 1);
+  const isCurrentMonth = month === currentMonthISO();
 
   const [{ data: nextReadsRaw }, { data: targetsRaw }, { data: capacityRaw }] =
     await Promise.all([
@@ -39,6 +53,7 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
         .from("home_next_read")
         .select(`position, book:book_id(id, slug, title, pages, cover)`)
         .eq("user_id", userId)
+        .eq("plan_month", month)
         .order("position", { ascending: true }),
       supabase
         .from("reading_target")
@@ -54,10 +69,48 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
         .order("start_date", { ascending: true }),
     ]);
 
-  const nextReads = (nextReadsRaw as unknown as NextReadRaw[] | null) ?? [];
-  const bookIds = nextReads
-    .filter((nr) => nr.book)
-    .map((nr) => nr.book!.id);
+  const filaRows = (nextReadsRaw as unknown as NextReadRaw[] | null) ?? [];
+  const allTargets = targetsRaw ?? [];
+
+  // Livros cujas metas cruzam o mês (period ∩ mês ≠ ∅).
+  const targetBookIds = new Set(
+    allTargets
+      .filter((t) => t.start_date < nextMonth && t.end_date >= month)
+      .map((t) => t.book_id),
+  );
+
+  // Metas dos livros que não estão na fila do mês precisam da capa/título.
+  const filaBookIds = new Set(
+    filaRows.filter((r) => r.book).map((r) => r.book!.id),
+  );
+  const missingBookIds = [...targetBookIds].filter(
+    (id) => !filaBookIds.has(id),
+  );
+  const extraBooks = new Map<string, BookMeta>();
+  if (missingBookIds.length > 0) {
+    const { data } = await supabase
+      .from("book")
+      .select("id, slug, title, pages, cover")
+      .eq("user_id", userId)
+      .in("id", missingBookIds);
+    for (const b of (data as BookMeta[] | null) ?? []) {
+      extraBooks.set(b.id, b);
+    }
+  }
+
+  // Ordem de exibição: fila (por position) primeiro, metas-sem-fila depois.
+  type Entry = { book: BookMeta; position: number };
+  const entries: Entry[] = [];
+  for (const r of filaRows) {
+    if (r.book) entries.push({ book: r.book, position: r.position });
+  }
+  let extraPos = 1000;
+  for (const id of missingBookIds) {
+    const b = extraBooks.get(id);
+    if (b) entries.push({ book: b, position: extraPos++ });
+  }
+
+  const bookIds = entries.map((e) => e.book.id);
 
   // Página atual por livro (max current_page entre as leituras) e páginas
   // lidas HOJE (soma dos deltas do log). O "lido hoje" é o que permite dizer
@@ -98,9 +151,9 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
     }
   }
 
-  // Metas agrupadas por livro.
+  // Metas agrupadas por livro (todas — o livro de meta mostra o "todo").
   const targetsByBook = new Map<string, ReadingPlanData["books"][0]["targets"]>();
-  for (const t of targetsRaw ?? []) {
+  for (const t of allTargets) {
     const list = targetsByBook.get(t.book_id) ?? [];
     list.push({
       id: t.id,
@@ -116,20 +169,18 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
     targetsByBook.set(t.book_id, list);
   }
 
-  const books: PlanBookInput[] = nextReads
-    .filter((nr) => nr.book)
-    .map((nr, index) => ({
-      book_id: nr.book!.id,
-      title: nr.book!.title,
-      slug: nr.book!.slug,
-      color: planBookColor(index),
-      cover_url: nr.book!.cover ? imagesUrl(nr.book!.cover) : null,
-      total_pages: nr.book!.pages,
-      current_page: currentByBook.get(nr.book!.id) ?? 0,
-      pages_read_today: readTodayByBook.get(nr.book!.id) ?? 0,
-      position: nr.position,
-      targets: targetsByBook.get(nr.book!.id) ?? [],
-    }));
+  const books: PlanBookInput[] = entries.map((e, index) => ({
+    book_id: e.book.id,
+    title: e.book.title,
+    slug: e.book.slug,
+    color: planBookColor(index),
+    cover_url: e.book.cover ? imagesUrl(e.book.cover) : null,
+    total_pages: e.book.pages,
+    current_page: currentByBook.get(e.book.id) ?? 0,
+    pages_read_today: readTodayByBook.get(e.book.id) ?? 0,
+    position: e.position,
+    targets: targetsByBook.get(e.book.id) ?? [],
+  }));
 
   const capacity: CapacityPeriod[] = (capacityRaw ?? []).map((c) => ({
     id: c.id,
@@ -138,5 +189,5 @@ export async function getReadingPlan(userId: string): Promise<ReadingPlanData> {
     pages_per_day: c.pages_per_day,
   }));
 
-  return { books, capacity };
+  return { monthISO: month, isCurrentMonth, books, capacity };
 }

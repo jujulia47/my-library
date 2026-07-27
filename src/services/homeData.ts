@@ -1,7 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
 import { collectionListQuery } from "@/services/collectionList";
 import { imagesUrl } from "@/services/images";
-import { todayISO as todayISOBrazil } from "@/utils/dates";
+import {
+  todayISO as todayISOBrazil,
+  currentMonthISO,
+} from "@/utils/dates";
 import type { Database } from "@/utils/typings/supabase";
 
 type CollectionType = Database["public"]["Enums"]["collection_type"];
@@ -849,16 +852,14 @@ type HomeNextReadRaw = {
 };
 
 /**
- * Lê a curadoria manual de "próximas leituras" da home, ordenada por
- * `position asc`. Cada entrada referencia um book — se o book foi deletado
- * (ON DELETE CASCADE deletaria a entry, mas defensivamente filtramos null
- * pra cobrir qualquer race), pula.
+ * Lê o plano do MÊS ATUAL como "próximas leituras" da home, ordenado por
+ * `position asc`. Só o mês corrente aparece aqui — planejar meses futuros no
+ * /plano não muda o carrossel até o mês chegar. Se o book foi deletado, pula.
  *
  * Filtro adicional: livros com leitura ativa em `status='reading'` somem
- * do carrossel — eles aparecem em "Hoje na sua mesa". A linha permanece em
- * `home_next_read`; se o user pausa/abandona/finaliza, o livro reaparece
- * automaticamente no carrossel. Outros status (paused, finished, abandoned,
- * sem leitura) seguem visíveis.
+ * do carrossel — eles aparecem em "Hoje na sua mesa". A linha permanece no
+ * plano; se o user pausa/abandona/finaliza, o livro reaparece automaticamente
+ * no carrossel. Outros status (paused, abandoned, sem leitura) seguem visíveis.
  */
 async function fetchNextReads(
   supabase: SupabaseServer,
@@ -873,6 +874,7 @@ async function fetchNextReads(
          reading(status))`,
     )
     .eq("user_id", userId)
+    .eq("plan_month", currentMonthISO())
     .order("position", { ascending: true });
 
   const rows = (data as unknown as HomeNextReadRaw[] | null) ?? [];

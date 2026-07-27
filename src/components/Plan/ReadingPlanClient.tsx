@@ -11,6 +11,8 @@ import {
   PencilSquareIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   FlagIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
@@ -19,6 +21,7 @@ import {
   ClockIcon,
   ArrowUturnRightIcon,
 } from "@heroicons/react/24/outline";
+import { addMonthsISO } from "@/utils/dates";
 import Modal from "@/components/forms/Modal";
 import { Button, BookCoverFallback } from "@/components/ui";
 import {
@@ -65,11 +68,15 @@ type Props = {
 };
 
 export default function ReadingPlanClient({ data, todayISO }: Props) {
-  const { books, capacity } = data;
+  const { books, capacity, monthISO, isCurrentMonth } = data;
   const router = useRouter();
 
-  const year = Number(todayISO.slice(0, 4));
-  const month = Number(todayISO.slice(5, 7));
+  const year = Number(monthISO.slice(0, 4));
+  const month = Number(monthISO.slice(5, 7));
+  const currentMonthISO = `${todayISO.slice(0, 7)}-01`;
+  const isPast = monthISO < currentMonthISO;
+  // Meses passados são só leitura (registro histórico).
+  const editable = !isPast;
 
   const plan = useMemo(
     () => buildMonthPlan(year, month, books, capacity, todayISO),
@@ -87,6 +94,9 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
   const [addBookOpen, setAddBookOpen] = useState(false);
 
   const refresh = () => router.refresh();
+  const goToMonth = (iso: string) => {
+    router.push(`/plano?mes=${iso.slice(0, 7)}`);
+  };
 
   return (
     <div className="font-body">
@@ -94,17 +104,53 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
         <p className="font-body text-xs uppercase tracking-[0.25em] text-ink-fade">
           Plano de leitura
         </p>
-        <h1 className="font-display text-3xl md:text-4xl text-ink-deep mt-1 leading-tight">
-          {monthNamePT(month)} {year}
-        </h1>
+        <div className="flex items-center justify-between gap-3 mt-1">
+          <h1 className="font-display text-3xl md:text-4xl text-ink-deep leading-tight">
+            {monthNamePT(month)} {year}
+          </h1>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => goToMonth(addMonthsISO(monthISO, -1))}
+              className="p-1.5 rounded-md text-ink-fade hover:text-ink-deep hover:bg-paper-soft transition-colors"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeftIcon className="w-5 h-5" />
+            </button>
+            {!isCurrentMonth && (
+              <button
+                type="button"
+                onClick={() => goToMonth(currentMonthISO)}
+                className="px-2 py-1 text-xs rounded-md text-gold-deep hover:bg-paper-soft transition-colors"
+              >
+                hoje
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => goToMonth(addMonthsISO(monthISO, 1))}
+              className="p-1.5 rounded-md text-ink-fade hover:text-ink-deep hover:bg-paper-soft transition-colors"
+              aria-label="Próximo mês"
+            >
+              <ChevronRightIcon className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        {isPast && (
+          <p className="mt-1 text-sm text-ink-fade italic">
+            Mês passado — só visualização.
+          </p>
+        )}
       </header>
 
-      <TodayPanel
-        books={books}
-        plan={plan}
-        todayISO={todayISO}
-        onChanged={refresh}
-      />
+      {isCurrentMonth && (
+        <TodayPanel
+          books={books}
+          plan={plan}
+          todayISO={todayISO}
+          onChanged={refresh}
+        />
+      )}
 
       <SummaryStrip plan={plan} totalBooks={books.length} />
 
@@ -112,6 +158,7 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
         capacity={capacity}
         plan={plan}
         todayISO={todayISO}
+        editable={editable}
         onAdd={() => setCapacityModal({ period: null })}
         onEdit={(period) => setCapacityModal({ period })}
         onDeleted={refresh}
@@ -121,6 +168,8 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
         books={books}
         plan={plan}
         todayISO={todayISO}
+        monthISO={monthISO}
+        editable={editable}
         onAddBook={() => setAddBookOpen(true)}
         onNewTarget={(book) => setTargetModal({ book, target: null })}
         onEditTarget={(book, target) => setTargetModal({ book, target })}
@@ -157,6 +206,7 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
       {addBookOpen && (
         <AddBookModal
           existingIds={new Set(books.map((b) => b.book_id))}
+          monthISO={monthISO}
           onClose={() => setAddBookOpen(false)}
           onAdded={() => {
             setAddBookOpen(false);
@@ -499,6 +549,7 @@ function CapacitySection({
   capacity,
   plan,
   todayISO,
+  editable,
   onAdd,
   onEdit,
   onDeleted,
@@ -506,6 +557,7 @@ function CapacitySection({
   capacity: CapacityPeriod[];
   plan: ReturnType<typeof buildMonthPlan>;
   todayISO: string;
+  editable: boolean;
   onAdd: () => void;
   onEdit: (period: CapacityPeriod) => void;
   onDeleted: () => void;
@@ -518,20 +570,25 @@ function CapacitySection({
     });
   };
 
+  // Sem capacidade e mês só-leitura: não polui com CTA.
+  if (!editable && capacity.length === 0) return null;
+
   return (
     <section className="mt-8">
       <div className="flex items-center justify-between gap-2 mb-3">
         <h2 className="text-sm uppercase tracking-wider text-ink-fade">
           Minha capacidade
         </h2>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="text-sm text-gold-deep hover:text-ink-deep transition-colors inline-flex items-center gap-1"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Adicionar período
-        </button>
+        {editable && (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="text-sm text-gold-deep hover:text-ink-deep transition-colors inline-flex items-center gap-1"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Adicionar período
+          </button>
+        )}
       </div>
 
       {capacity.length === 0 ? (
@@ -561,22 +618,26 @@ function CapacitySection({
                 <span className="text-ink-fade">
                   {ddmm(p.start_date)}–{ddmm(p.end_date)}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => onEdit(p)}
-                  className="text-ink-fade hover:text-ink-deep transition-colors"
-                  aria-label="Editar período"
-                >
-                  <PencilSquareIcon className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(p.id)}
-                  className="text-ink-fade hover:text-burgundy transition-colors"
-                  aria-label="Remover período"
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
+                {editable && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onEdit(p)}
+                      className="text-ink-fade hover:text-ink-deep transition-colors"
+                      aria-label="Editar período"
+                    >
+                      <PencilSquareIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(p.id)}
+                      className="text-ink-fade hover:text-burgundy transition-colors"
+                      aria-label="Remover período"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
               </li>
             );
           })}
@@ -593,6 +654,8 @@ function BooksSection({
   books,
   plan,
   todayISO,
+  monthISO,
+  editable,
   onAddBook,
   onNewTarget,
   onEditTarget,
@@ -601,6 +664,8 @@ function BooksSection({
   books: PlanBookInput[];
   plan: ReturnType<typeof buildMonthPlan>;
   todayISO: string;
+  monthISO: string;
+  editable: boolean;
   onAddBook: () => void;
   onNewTarget: (book: PlanBookInput) => void;
   onEditTarget: (book: PlanBookInput, target: TargetInput) => void;
@@ -618,25 +683,31 @@ function BooksSection({
         <h2 className="text-sm uppercase tracking-wider text-ink-fade">
           Livros do mês
         </h2>
-        <button
-          type="button"
-          onClick={onAddBook}
-          className="text-sm text-gold-deep hover:text-ink-deep transition-colors inline-flex items-center gap-1"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Adicionar livro
-        </button>
+        {editable && (
+          <button
+            type="button"
+            onClick={onAddBook}
+            className="text-sm text-gold-deep hover:text-ink-deep transition-colors inline-flex items-center gap-1"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Adicionar livro
+          </button>
+        )}
       </div>
 
       {books.length === 0 ? (
         <div className="rounded-lg border border-border bg-paper p-8 text-center">
           <p className="font-display italic text-ink-soft">
-            Nenhum livro no plano.
+            {editable
+              ? "Nenhum livro no plano deste mês."
+              : "Nenhum livro planejado neste mês."}
           </p>
-          <p className="text-sm text-ink-fade mt-1">
-            Adicione livros aqui ou em Próximas leituras na home — é a mesma
-            lista.
-          </p>
+          {editable && (
+            <p className="text-sm text-ink-fade mt-1">
+              Adicione livros aqui ou pela página de cada livro. Os do mês atual
+              aparecem em Próximas leituras na home.
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
@@ -652,6 +723,8 @@ function BooksSection({
                     book={b}
                     plan={plan}
                     todayISO={todayISO}
+                    monthISO={monthISO}
+                    editable={editable}
                     queueIndex={null}
                     queueLength={0}
                     onNewTarget={() => onNewTarget(b)}
@@ -678,6 +751,8 @@ function BooksSection({
                     book={b}
                     plan={plan}
                     todayISO={todayISO}
+                    monthISO={monthISO}
+                    editable={editable}
                     queueIndex={i}
                     queueLength={queue.length}
                     onNewTarget={() => onNewTarget(b)}
@@ -698,6 +773,8 @@ function BookCard({
   book,
   plan,
   todayISO,
+  monthISO,
+  editable,
   queueIndex,
   queueLength,
   onNewTarget,
@@ -707,6 +784,8 @@ function BookCard({
   book: PlanBookInput;
   plan: ReturnType<typeof buildMonthPlan>;
   todayISO: string;
+  monthISO: string;
+  editable: boolean;
   /** Índice na fila (null = livro com meta). */
   queueIndex: number | null;
   queueLength: number;
@@ -757,7 +836,7 @@ function BookCard({
 
   const handleRemoveBook = () => {
     startTransition(async () => {
-      const res = await removeHomeNextRead(book.book_id);
+      const res = await removeHomeNextRead(book.book_id, monthISO);
       if (res.ok) onChanged();
     });
   };
@@ -785,7 +864,7 @@ function BookCard({
 
   const handleMove = (direction: "up" | "down") => {
     startTransition(async () => {
-      const res = await moveNextRead(book.book_id, direction);
+      const res = await moveNextRead(book.book_id, direction, monthISO);
       if (res.ok) onChanged();
     });
   };
@@ -796,27 +875,35 @@ function BookCard({
         {/* Ordem na fila */}
         {queueIndex !== null && (
           <div className="flex flex-col items-center gap-0.5 flex-shrink-0 justify-center">
-            <button
-              type="button"
-              onClick={() => handleMove("up")}
-              disabled={queueIndex === 0}
-              className="p-0.5 text-ink-fade hover:text-ink-deep disabled:opacity-30 transition-colors"
-              aria-label="Subir na fila"
-            >
-              <ChevronUpIcon className="w-4 h-4" />
-            </button>
-            <span className="font-display text-lg text-[#6D3914] leading-none">
-              {queueIndex + 1}º
-            </span>
-            <button
-              type="button"
-              onClick={() => handleMove("down")}
-              disabled={queueIndex === queueLength - 1}
-              className="p-0.5 text-ink-fade hover:text-ink-deep disabled:opacity-30 transition-colors"
-              aria-label="Descer na fila"
-            >
-              <ChevronDownIcon className="w-4 h-4" />
-            </button>
+            {editable ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleMove("up")}
+                  disabled={queueIndex === 0}
+                  className="p-0.5 text-ink-fade hover:text-ink-deep disabled:opacity-30 transition-colors"
+                  aria-label="Subir na fila"
+                >
+                  <ChevronUpIcon className="w-4 h-4" />
+                </button>
+                <span className="font-display text-lg text-[#6D3914] leading-none">
+                  {queueIndex + 1}º
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleMove("down")}
+                  disabled={queueIndex === queueLength - 1}
+                  className="p-0.5 text-ink-fade hover:text-ink-deep disabled:opacity-30 transition-colors"
+                  aria-label="Descer na fila"
+                >
+                  <ChevronDownIcon className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <span className="font-display text-lg text-[#6D3914] leading-none">
+                {queueIndex + 1}º
+              </span>
+            )}
           </div>
         )}
 
@@ -846,14 +933,16 @@ function BookCard({
             >
               {book.title}
             </Link>
-            <button
-              type="button"
-              onClick={handleRemoveBook}
-              className="flex-shrink-0 p-1 -m-1 text-ink-fade hover:text-burgundy transition-colors"
-              title="Remover do plano (sai também de Próximas leituras)"
-            >
-              <TrashIcon className="w-4 h-4" />
-            </button>
+            {editable && (
+              <button
+                type="button"
+                onClick={handleRemoveBook}
+                className="flex-shrink-0 p-1 -m-1 text-ink-fade hover:text-burgundy transition-colors"
+                title="Remover deste mês do plano (não muda o status do livro)"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {noPages ? (
@@ -936,7 +1025,7 @@ function BookCard({
       </div>
 
       {/* Metas (acordeon) */}
-      {!noPages && (
+      {!noPages && (stats.length > 0 || editable) && (
         <div className="mt-3 pt-3 border-t border-border/60">
           {stats.length === 0 ? (
             <button
@@ -997,6 +1086,7 @@ function BookCard({
                         key={s.target.id}
                         stats={s}
                         hasNext={i < stats.length - 1}
+                        editable={editable}
                         onEdit={() => onEditTarget(s.target)}
                         onDelete={() => handleDeleteTarget(s.target.id)}
                         onCarryOver={(carried) =>
@@ -1007,14 +1097,16 @@ function BookCard({
                       />
                     ))}
                   </ul>
-                  <button
-                    type="button"
-                    onClick={onNewTarget}
-                    className="text-sm text-gold-deep hover:text-ink-deep transition-colors inline-flex items-center gap-1"
-                  >
-                    <PlusIcon className="w-4 h-4" />
-                    Nova meta
-                  </button>
+                  {editable && (
+                    <button
+                      type="button"
+                      onClick={onNewTarget}
+                      className="text-sm text-gold-deep hover:text-ink-deep transition-colors inline-flex items-center gap-1"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      Nova meta
+                    </button>
+                  )}
                 </div>
               )}
             </>
@@ -1039,6 +1131,7 @@ const STATUS_CONFIG: Record<
 function TargetRow({
   stats,
   hasNext,
+  editable,
   onEdit,
   onDelete,
   onCarryOver,
@@ -1048,6 +1141,7 @@ function TargetRow({
   stats: TargetStats;
   /** Existe meta seguinte neste livro (pra receber o restante da vencida). */
   hasNext: boolean;
+  editable: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onCarryOver: (carried: boolean) => void;
@@ -1140,29 +1234,37 @@ function TargetRow({
             <span className="text-burgundy">
               ⚠ atrasado: {stats.backlog}p de dias anteriores
             </span>
-            <button
-              type="button"
-              onClick={onReplan}
-              className="inline-flex items-center gap-1 text-xs text-gold-deep hover:text-ink-deep transition-colors underline underline-offset-2"
-            >
-              <ArrowUturnRightIcon className="w-3.5 h-3.5" />
-              recalcular nos dias restantes
-            </button>
+            {editable && (
+              <button
+                type="button"
+                onClick={onReplan}
+                className="inline-flex items-center gap-1 text-xs text-gold-deep hover:text-ink-deep transition-colors underline underline-offset-2"
+              >
+                <ArrowUturnRightIcon className="w-3.5 h-3.5" />
+                recalcular nos dias restantes
+              </button>
+            )}
           </p>
         )}
         {stats.target.replan_from_date && (
           <p className="text-[11px] text-ink-fade italic mt-0.5">
-            recalculada em {ddmm(stats.target.replan_from_date)} ·{" "}
-            <button
-              type="button"
-              onClick={onResetReplan}
-              className="underline underline-offset-2 hover:text-ink-deep transition-colors"
-            >
-              voltar ao original
-            </button>
+            recalculada em {ddmm(stats.target.replan_from_date)}
+            {editable && (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={onResetReplan}
+                  className="underline underline-offset-2 hover:text-ink-deep transition-colors"
+                >
+                  voltar ao original
+                </button>
+              </>
+            )}
           </p>
         )}
-        {stats.status === "vencida" &&
+        {editable &&
+          stats.status === "vencida" &&
           !carried &&
           hasNext &&
           stats.remainingPages > 0 && (
@@ -1176,24 +1278,26 @@ function TargetRow({
             </button>
           )}
       </div>
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <button
-          type="button"
-          onClick={onEdit}
-          className="p-1 text-ink-fade hover:text-ink-deep transition-colors"
-          aria-label="Editar meta"
-        >
-          <PencilSquareIcon className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="p-1 text-ink-fade hover:text-burgundy transition-colors"
-          aria-label="Remover meta"
-        >
-          <TrashIcon className="w-4 h-4" />
-        </button>
-      </div>
+      {editable && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="p-1 text-ink-fade hover:text-ink-deep transition-colors"
+            aria-label="Editar meta"
+          >
+            <PencilSquareIcon className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="p-1 text-ink-fade hover:text-burgundy transition-colors"
+            aria-label="Remover meta"
+          >
+            <TrashIcon className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </li>
   );
 }
@@ -1659,10 +1763,12 @@ function CapacityModal({
 // ============================================================================
 function AddBookModal({
   existingIds,
+  monthISO,
   onClose,
   onAdded,
 }: {
   existingIds: Set<string>;
+  monthISO: string;
   onClose: () => void;
   onAdded: () => void;
 }) {
@@ -1702,7 +1808,7 @@ function AddBookModal({
 
   const handleAdd = async (book: BookSearchOption) => {
     setAdding(true);
-    const res = await addHomeNextRead(book.id);
+    const res = await addHomeNextRead(book.id, monthISO);
     setAdding(false);
     if (res.ok) onAdded();
   };

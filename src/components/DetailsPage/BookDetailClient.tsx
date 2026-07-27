@@ -56,6 +56,7 @@ import {
 import { toggleBookFavorite } from "@/actions/toggleBookFavorite";
 import { toggleBookTbr } from "@/actions/toggleBookTbr";
 import AddToCollectionModal from "./AddToCollectionModal";
+import BookPlanSection from "./BookPlanSection";
 import type { Database } from "@/utils/typings/supabase";
 
 type ReadingStatus = Database["public"]["Enums"]["reading_status"];
@@ -332,6 +333,7 @@ export default function BookDetailClient({
   readings,
   quotes,
   statusHistory = [],
+  planMonths = [],
 }: {
   book: BookDetail;
   authors: { id: string; name: string }[];
@@ -341,6 +343,8 @@ export default function BookDetailClient({
   readings: ReadingItem[];
   quotes: QuoteItem[];
   statusHistory?: BookStatusHistoryItem[];
+  /** Meses (YYYY-MM-01) em que o livro está no plano de leitura. */
+  planMonths?: string[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1052,6 +1056,10 @@ export default function BookDetailClient({
             )}
           </div>
         )}
+
+        <div className="mb-5">
+          <BookPlanSection bookId={book.id} planMonths={planMonths} />
+        </div>
 
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           {book.language && (

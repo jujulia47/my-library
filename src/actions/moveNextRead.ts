@@ -2,14 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { currentMonthISO, normalizeMonthParam } from "@/utils/dates";
 import {
   translateSupabaseError,
   type ActionResult,
 } from "@/utils/translateSupabaseError";
 
 /**
- * Move um livro pra cima/baixo na fila de leitura (home_next_read.position —
- * a mesma ordem de Próximas leituras na home e da fila do plano).
+ * Move um livro pra cima/baixo na fila de leitura de um MÊS
+ * (home_next_read.position dentro de plan_month).
  *
  * Renumera as posições em sequência (0..n-1) pra manter a ordem limpa mesmo
  * com gaps históricos.
@@ -17,6 +18,7 @@ import {
 export async function moveNextRead(
   bookId: string,
   direction: "up" | "down",
+  monthISO?: string,
 ): Promise<ActionResult<null>> {
   const supabase = await createClient();
   const {
@@ -24,10 +26,13 @@ export async function moveNextRead(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Não autenticado." };
 
+  const planMonth = normalizeMonthParam(monthISO ?? null) ?? currentMonthISO();
+
   const { data: rows, error: fetchErr } = await supabase
     .from("home_next_read")
     .select("id, book_id, position")
     .eq("user_id", user.id)
+    .eq("plan_month", planMonth)
     .order("position", { ascending: true });
   if (fetchErr) return { ok: false, ...translateSupabaseError(fetchErr) };
 

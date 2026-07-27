@@ -47,6 +47,7 @@ export default async function Page({
     { data: groupBookCountRaw },
     { data: collectionItemsRaw },
     { data: allCollectionsRaw },
+    { data: planMonthsRaw },
   ] = await Promise.all([
     supabase
       .from("book_author")
@@ -111,6 +112,12 @@ export default async function Page({
       .eq("is_archived", false)
       .not("type", "in", "(wishlist,shelf)")
       .order("name", { ascending: true }),
+    // Meses em que este livro está no plano de leitura (home_next_read).
+    supabase
+      .from("home_next_read")
+      .select("plan_month")
+      .eq("book_id", book.id)
+      .order("plan_month", { ascending: true }),
   ]);
 
   const authors = (bookAuthors ?? [])
@@ -262,6 +269,10 @@ export default async function Page({
   const subscription =
     (book.subscription as { id: string; name: string } | null) ?? null;
 
+  const planMonths = ((planMonthsRaw ?? []) as { plan_month: string }[]).map(
+    (r) => r.plan_month,
+  );
+
   return (
     <AppShell>
       <BookDetailClient
@@ -310,6 +321,7 @@ export default async function Page({
         readings={readingItems}
         quotes={quoteItems}
         statusHistory={statusHistory}
+        planMonths={planMonths}
       />
     </AppShell>
   );
