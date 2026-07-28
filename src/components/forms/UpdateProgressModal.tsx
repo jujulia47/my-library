@@ -38,6 +38,9 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
   const [rating, setRating] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  // Confirmação de retrocesso: pediu pra salvar uma página MENOR que a atual.
+  // Não bloqueia (às vezes é correção de engano), mas exige confirmar.
+  const [confirmRegress, setConfirmRegress] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -48,6 +51,7 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
     setRating(0);
     setError(null);
     setFieldError(null);
+    setConfirmRegress(false);
   }, [open, target?.reading_id, target?.current_page, target]);
 
   if (!target) return null;
@@ -60,10 +64,11 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
       : 0;
   const reached100 = total > 0 && numericPage >= total;
   const todayMax = todayISO();
+  // Retrocesso: nova página menor que a já registrada (não pode "desler").
+  const isRegress =
+    Number.isFinite(numericPage) && numericPage < target.current_page;
 
-  const onSubmitProgress = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+  const doSaveProgress = (fd: FormData) => {
     setError(null);
     setFieldError(null);
     startTransition(async () => {
@@ -86,6 +91,17 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
         onClose();
       }
     });
+  };
+
+  const onSubmitProgress = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    // Primeiro clique num retrocesso: mostra a confirmação em vez de salvar.
+    if (isRegress && !confirmRegress) {
+      setConfirmRegress(true);
+      return;
+    }
+    doSaveProgress(fd);
   };
 
   const onSubmitFinish = (e: React.FormEvent<HTMLFormElement>) => {
@@ -136,7 +152,11 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
             min={0}
             max={total > 0 ? total : undefined}
             value={page}
-            onChange={(e) => setPage(e.target.value)}
+            onChange={(e) => {
+              setPage(e.target.value);
+              // Mexeu no número → cancela a confirmação pendente.
+              setConfirmRegress(false);
+            }}
             helperText={
               total > 0
                 ? `de ${total} páginas · ${validPercent}%`
@@ -175,10 +195,20 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
             />
           </div>
 
-          {reached100 && (
+          {reached100 && !isRegress && (
             <p className="text-sm italic text-moss bg-moss/10 border border-moss/30 rounded-md px-3 py-2">
               Você chegou na última página. Ao salvar, vou abrir a tela de
               conclusão pra adicionar estrelas e resenha.
+            </p>
+          )}
+
+          {confirmRegress && (
+            <p className="text-sm text-burgundy bg-burgundy/10 border border-burgundy/30 rounded-md px-3 py-2">
+              Você está registrando a página{" "}
+              <span className="font-medium">{numericPage}</span>, menor que a
+              página <span className="font-medium">{target.current_page}</span>{" "}
+              que já tinha registrado. Não dá pra “desler” — confirme só se for
+              uma correção.
             </p>
           )}
 
@@ -193,10 +223,10 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={onClose}
+              onClick={confirmRegress ? () => setConfirmRegress(false) : onClose}
               disabled={isPending}
             >
-              Cancelar
+              {confirmRegress ? "Voltar" : "Cancelar"}
             </Button>
             <Button
               type="submit"
@@ -204,7 +234,11 @@ export default function UpdateProgressModal({ open, onClose, target }: Props) {
               size="sm"
               loading={isPending}
             >
-              {reached100 ? "Salvar e concluir" : "Salvar"}
+              {confirmRegress
+                ? "Confirmar correção"
+                : reached100
+                  ? "Salvar e concluir"
+                  : "Salvar"}
             </Button>
           </div>
         </form>
