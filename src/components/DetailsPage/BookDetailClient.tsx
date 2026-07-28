@@ -428,6 +428,13 @@ export default function BookDetailClient({
     (latestReading?.status as LegacyReadingStatus | null) ??
     (book.wont_read ? "wont_read" : "tbr");
 
+  // Planejar só faz sentido pra livros que você ainda vai (ou está) lendo.
+  // Lido / abandonado / não vou ler ficam sem o bloco de plano.
+  const canPlan =
+    latestStatus === "reading" ||
+    latestStatus === "paused" ||
+    latestStatus === "tbr";
+
   // Leitura em andamento mais recente (start_date desc) — alimenta o bloco
   // "Leitura atual" no hero. Ignora "paused" e demais status.
   const activeReading =
@@ -1057,9 +1064,11 @@ export default function BookDetailClient({
           </div>
         )}
 
-        <div className="mb-5">
-          <BookPlanSection bookId={book.id} planMonths={planMonths} />
-        </div>
+        {canPlan && (
+          <div className="mb-5">
+            <BookPlanSection bookId={book.id} planMonths={planMonths} />
+          </div>
+        )}
 
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           {book.language && (
