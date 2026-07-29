@@ -30,6 +30,8 @@ import {
   formatReadingTime,
   inclusiveDays,
   isoForDay,
+  addDaysISO,
+  scheduledMetaPage,
   daysInMonth,
   monthNamePT,
   SECONDS_PER_PAGE,
@@ -46,6 +48,7 @@ import {
 import { deleteReadingTarget } from "@/actions/deleteReadingTarget";
 import { carryOverReadingTarget } from "@/actions/carryOverReadingTarget";
 import { replanReadingTarget } from "@/actions/replanReadingTarget";
+import { setPlanBookPages } from "@/actions/setPlanBookPages";
 import {
   upsertReadingCapacity,
   type ReadingCapacityInput,
@@ -454,7 +457,9 @@ function SummaryStrip({
   totalBooks: number;
 }) {
   const capDiff =
-    plan.capacityTotal !== null ? plan.capacityTotal - plan.totalRemaining : null;
+    plan.capacityTotal !== null
+      ? plan.capacityTotal - plan.monthPageTotal
+      : null;
 
   return (
     <section className="mt-5">
@@ -471,20 +476,20 @@ function SummaryStrip({
         />
         <StatCard
           icon={<DocumentTextIcon className="w-5 h-5" />}
-          label="Páginas a ler"
-          value={plan.totalRemaining.toLocaleString("pt-BR")}
-          hint="desconta o que já leu"
+          label="Páginas neste mês"
+          value={plan.monthPageTotal.toLocaleString("pt-BR")}
+          hint="metas contam só a fatia do mês"
         />
         <StatCard
           icon={<span className="font-display text-lg leading-none">÷</span>}
           label="Média necessária"
           value={`${plan.neededAvg} pág/dia`}
-          hint={`pra ler tudo em ${plan.remainingDaysInMonth} dias`}
+          hint={`pra ler o mês em ${plan.remainingDaysInMonth} dias`}
         />
         <StatCard
           icon={<ClockIcon className="w-5 h-5" />}
-          label="Tempo total"
-          value={formatReadingTime(plan.totalRemaining * SECONDS_PER_PAGE)}
+          label="Tempo do mês"
+          value={formatReadingTime(plan.monthPageTotal * SECONDS_PER_PAGE)}
           hint="pior caso · 1m20/pág"
         />
       </div>
@@ -796,8 +801,15 @@ function BookCard({
   const [, startTransition] = useTransition();
   const [metasOpen, setMetasOpen] = useState(false);
   const [daysOpen, setDaysOpen] = useState(false);
+  const [editingPages, setEditingPages] = useState(false);
+  const [pagesInput, setPagesInput] = useState("");
   const noPages = book.total_pages === null || book.total_pages <= 0;
   const remaining = Math.max(0, (book.total_pages ?? 0) - book.current_page);
+  // Fila: quantas páginas planejei pra este mês (default = restante).
+  const plannedThisMonth =
+    book.pages_planned != null
+      ? Math.min(remaining, book.pages_planned)
+      : remaining;
   const pct =
     book.total_pages && book.total_pages > 0
       ? Math.min(100, Math.round((book.current_page / book.total_pages) * 100))
@@ -834,6 +846,46 @@ function BookCard({
         )
       : [];
 
+  // Livro de meta: fatia do mês = soma das contribuições diárias das metas
+  // deste livro nos dias do mês visível.
+  const metaMonthPages =
+    queueIndex === null
+      ? plan.days.reduce(
+          (s, d) =>
+            s +
+            d.entries.reduce(
+              (t, e) =>
+                t + (e.book_id === book.book_id && e.kind === "meta"
+                  ? e.pages
+                  : 0),
+              0,
+            ),
+          0,
+        )
+      : 0;
+  // "Neste mês" = TODO o trecho lido/a ler no mês (não só o que falta).
+  // A faixa vem do cronograma puro das metas (começa do zero, ignora a
+  // página atual): posição no começo do mês → posição no fim do mês.
+  const monthStartISO = isoForDay(plan.year, plan.month, 1);
+  const monthEndISO = isoForDay(
+    plan.year,
+    plan.month,
+    daysInMonth(plan.year, plan.month),
+  );
+  const currentMonthView = monthISO === `${todayISO.slice(0, 7)}-01`;
+  // Página no INÍCIO do mês (fim do dia anterior) pelo cronograma.
+  const metaFromBase = scheduledMetaPage(
+    book.targets,
+    0,
+    addDaysISO(monthStartISO, -1),
+  );
+  // Página no FIM do mês: no mês atual usa o real (página atual + o que falta
+  // ler no mês); nos outros, o cronograma.
+  const metaToPage = currentMonthView
+    ? book.current_page + metaMonthPages
+    : scheduledMetaPage(book.targets, 0, monthEndISO);
+  const metaMonthTotal = Math.max(0, metaToPage - metaFromBase);
+
   const handleRemoveBook = () => {
     startTransition(async () => {
       const res = await removeHomeNextRead(book.book_id, monthISO);
@@ -866,6 +918,16 @@ function BookCard({
     startTransition(async () => {
       const res = await moveNextRead(book.book_id, direction, monthISO);
       if (res.ok) onChanged();
+    });
+  };
+
+  const handleSavePages = (pages: number | null) => {
+    startTransition(async () => {
+      const res = await setPlanBookPages(book.book_id, monthISO, pages);
+      if (res.ok) {
+        setEditingPages(false);
+        onChanged();
+      }
     });
   };
 
@@ -964,6 +1026,27 @@ function BookCard({
                 </span>{" "}
                 · ~{formatReadingTime(remaining * SECONDS_PER_PAGE)}
               </p>
+              {queueIndex === null && metaMonthTotal > 0 && (
+                <p className="text-sm text-ink-soft mt-0.5">
+                  neste mês:{" "}
+                  <span className="font-medium text-[#6D3914]">
+                    {metaMonthTotal} páginas
+                  </span>{" "}
+                  <span className="text-ink-fade">
+                    (~{formatReadingTime(metaMonthTotal * SECONDS_PER_PAGE)})
+                  </span>{" "}
+                  ·{" "}
+                  <span className="text-ink-deep">
+                    p. {metaFromBase + 1}–{metaToPage}
+                  </span>
+                  {metaMonthPages > 0 && metaMonthPages < metaMonthTotal && (
+                    <span className="text-ink-fade">
+                      {" "}
+                      · faltam {metaMonthPages}p
+                    </span>
+                  )}
+                </p>
+              )}
             </>
           )}
 
@@ -1018,6 +1101,79 @@ function BookCard({
                     </li>
                   ))}
                 </ul>
+              )}
+            </div>
+          )}
+
+          {/* Fila: páginas planejadas pra este mês (default = livro todo). */}
+          {queueIndex !== null && !noPages && (
+            <div className="mt-1.5 text-sm">
+              {editingPages ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-ink-soft">vou ler</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={remaining}
+                    value={pagesInput}
+                    onChange={(e) => setPagesInput(e.target.value)}
+                    className="w-20 rounded-md border border-border bg-ivory-light px-2 py-1 text-sm text-ink-deep focus:outline-none focus:border-[#6D3914]/50"
+                    autoFocus
+                  />
+                  <span className="text-ink-soft">páginas neste mês</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const n = Number(pagesInput);
+                      handleSavePages(
+                        Number.isFinite(n) && n > 0 ? n : null,
+                      );
+                    }}
+                    className="text-xs text-gold-deep hover:text-ink-deep transition-colors"
+                  >
+                    salvar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSavePages(null)}
+                    className="text-xs text-ink-fade hover:text-ink-deep transition-colors"
+                  >
+                    livro todo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPages(false)}
+                    className="text-xs text-ink-fade hover:text-ink-deep transition-colors"
+                  >
+                    cancelar
+                  </button>
+                </div>
+              ) : (
+                <p className="text-ink-soft">
+                  neste mês:{" "}
+                  <span className="font-medium text-ink-deep">
+                    {plannedThisMonth} páginas
+                  </span>
+                  {book.pages_planned == null && (
+                    <span className="text-ink-fade"> (livro todo)</span>
+                  )}
+                  {editable && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPagesInput(
+                          book.pages_planned != null
+                            ? String(book.pages_planned)
+                            : "",
+                        );
+                        setEditingPages(true);
+                      }}
+                      className="ml-2 text-xs text-gold-deep hover:text-ink-deep transition-colors"
+                    >
+                      editar
+                    </button>
+                  )}
+                </p>
               )}
             </div>
           )}
@@ -1128,6 +1284,36 @@ const STATUS_CONFIG: Record<
   futura: { label: "futura", cls: "bg-paper-soft text-ink-fade" },
 };
 
+/** Valor rotulado (rótulo pequeno em cima, número em destaque) — escaneável. */
+function MetaStat({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: React.ReactNode;
+  tone?: "default" | "accent" | "moss" | "burgundy";
+}) {
+  const color =
+    tone === "accent"
+      ? "text-[#6D3914]"
+      : tone === "moss"
+        ? "text-moss"
+        : tone === "burgundy"
+          ? "text-burgundy"
+          : "text-ink-deep";
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wider text-ink-fade leading-none mb-1">
+        {label}
+      </div>
+      <div className={clsx("text-sm font-semibold leading-none", color)}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function TargetRow({
   stats,
   hasNext,
@@ -1154,84 +1340,138 @@ function TargetRow({
   const cfg = carried
     ? { label: "não cumprida", cls: "bg-burgundy/15 text-burgundy" }
     : STATUS_CONFIG[stats.status];
+  const active = stats.status === "em_dia" || stats.status === "atrasada";
+  const daysLabel = `${stats.remainingDays} ${
+    stats.remainingDays === 1 ? "dia" : "dias"
+  }`;
+
   return (
-    <li className="flex items-start gap-2 rounded-md border border-border bg-paper-soft/50 px-3 py-2">
-      <FlagIcon className="w-4 h-4 text-[#6D3914] flex-shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0 text-sm">
-        <p className="text-ink-deep">
-          p. {t.page_from}–{t.page_to}{" "}
-          <span className="text-ink-fade">
-            · {ddmm(t.start_date)} a {ddmm(t.end_date)} · {stats.totalPages} pág
-          </span>{" "}
-          <span
-            className={clsx(
-              "inline-block text-xs rounded-full px-2 py-0.5 align-middle",
-              cfg.cls,
-            )}
-          >
-            {cfg.label}
-          </span>
-        </p>
-        <p className="text-sm mt-0.5">
-          {stats.status === "concluida" && (
-            <span className="text-moss">meta cumprida</span>
+    <li className="rounded-lg border border-border bg-paper-soft/40 px-3 py-2.5">
+      {/* Cabeçalho: faixa de páginas + status + ações */}
+      <div className="flex items-center gap-2">
+        <FlagIcon className="w-4 h-4 text-[#6D3914] flex-shrink-0" />
+        <span className="font-display text-base text-ink-deep whitespace-nowrap leading-none">
+          p. {t.page_from}–{t.page_to}
+        </span>
+        <span
+          className={clsx(
+            "text-[11px] rounded-full px-2 py-0.5 leading-none",
+            cfg.cls,
           )}
-          {stats.status === "vencida" && !carried && (
-            <span className="text-burgundy">
-              faltaram {stats.remainingPages} páginas
+        >
+          {cfg.label}
+        </span>
+        {editable && (
+          <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="p-1 text-ink-fade hover:text-ink-deep transition-colors"
+              aria-label="Editar meta"
+            >
+              <PencilSquareIcon className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="p-1 text-ink-fade hover:text-burgundy transition-colors"
+              aria-label="Remover meta"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Período + total */}
+      <p className="text-xs text-ink-fade mt-1 ml-6">
+        {ddmm(t.start_date)} – {ddmm(t.end_date)} · {stats.totalPages} páginas
+      </p>
+
+      {/* Corpo por status — números rotulados, escaneáveis */}
+      <div className="ml-6 mt-2">
+        {stats.status === "concluida" && (
+          <span className="text-sm text-moss font-medium">✓ meta cumprida</span>
+        )}
+
+        {stats.status === "futura" && (
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <MetaStat
+              label="ritmo"
+              value={`${stats.originalDaily} pág/dia`}
+              tone="accent"
+            />
+            <MetaStat label="período" value={daysLabel} />
+          </div>
+        )}
+
+        {active &&
+          (stats.doneToday ? (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <span className="text-sm text-moss font-medium">
+                ✓ hoje cumprido · leu {stats.readToday}p
+                {stats.aheadToday > 0 && ` (+${stats.aheadToday} adiantada)`}
+              </span>
+              <MetaStat label="faltam" value={`${stats.remainingPages} pág`} />
+              <MetaStat label="prazo" value={daysLabel} />
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <MetaStat
+                label="hoje"
+                value={`${Math.max(
+                  0,
+                  (stats.todayQuota ?? 0) - stats.readToday,
+                )} pág`}
+                tone="accent"
+              />
+              {stats.targetPageToday !== null && (
+                <MetaStat label="até" value={`p. ${stats.targetPageToday}`} />
+              )}
+              <MetaStat label="faltam" value={`${stats.remainingPages} pág`} />
+              <MetaStat label="prazo" value={daysLabel} />
+            </div>
+          ))}
+
+        {stats.status === "vencida" && !carried && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <span className="text-sm text-burgundy font-medium">
+              ⚠ faltaram {stats.remainingPages} páginas
             </span>
-          )}
-          {carried && (
-            <span className="text-ink-soft">
-              meta não cumprida —{" "}
-              <span className="font-medium text-ink-deep">
-                {stats.remainingPages}p
-              </span>{" "}
-              foram somadas na meta seguinte{" "}
+            {editable && hasNext && stats.remainingPages > 0 && (
               <button
                 type="button"
-                onClick={() => onCarryOver(false)}
-                className="text-xs text-ink-fade underline underline-offset-2 hover:text-ink-deep transition-colors"
+                onClick={() => onCarryOver(true)}
+                className="inline-flex items-center gap-1 text-sm text-gold-deep hover:text-ink-deep transition-colors"
               >
-                desfazer
+                <ArrowUturnRightIcon className="w-3.5 h-3.5" />
+                jogar na próxima meta
               </button>
-            </span>
-          )}
-          {(stats.status === "em_dia" || stats.status === "atrasada") && (
-            <span className="text-ink-soft">
-              {stats.doneToday ? (
-                <span className="text-moss">
-                  hoje cumprido ✓ · leu {stats.readToday}p
-                  {stats.aheadToday > 0 && ` (${stats.aheadToday}p adiantada)`}
-                </span>
-              ) : (
-                <>
-                  hoje:{" "}
-                  <span className="font-medium text-[#6D3914]">
-                    {Math.max(0, (stats.todayQuota ?? 0) - stats.readToday)} pág
-                  </span>
-                  {stats.targetPageToday !== null && (
-                    <> (até a p. {stats.targetPageToday})</>
-                  )}
-                </>
-              )}
-              <span className="text-ink-fade">
-                {" "}
-                · faltam {stats.remainingPages}p em {stats.remainingDays}{" "}
-                {stats.remainingDays === 1 ? "dia" : "dias"}
-              </span>
-            </span>
-          )}
-          {stats.status === "futura" && (
-            <span className="text-ink-fade">
-              {stats.remainingPages}p em {stats.remainingDays} dias →{" "}
-              {stats.originalDaily} pág/dia
-            </span>
-          )}
-        </p>
+            )}
+          </div>
+        )}
+
+        {carried && (
+          <span className="text-sm text-ink-soft">
+            não cumprida —{" "}
+            <span className="font-medium text-ink-deep">
+              {stats.remainingPages}p
+            </span>{" "}
+            somadas na meta seguinte{" "}
+            <button
+              type="button"
+              onClick={() => onCarryOver(false)}
+              className="text-xs text-ink-fade underline underline-offset-2 hover:text-ink-deep transition-colors"
+            >
+              desfazer
+            </button>
+          </span>
+        )}
+
+        {/* Atraso acumulado + recalcular */}
         {stats.backlog > 0 && (
-          <p className="text-sm mt-0.5 flex items-center gap-2 flex-wrap">
-            <span className="text-burgundy">
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-burgundy">
               ⚠ atrasado: {stats.backlog}p de dias anteriores
             </span>
             {editable && (
@@ -1244,10 +1484,12 @@ function TargetRow({
                 recalcular nos dias restantes
               </button>
             )}
-          </p>
+          </div>
         )}
+
+        {/* Marca de recálculo manual */}
         {stats.target.replan_from_date && (
-          <p className="text-[11px] text-ink-fade italic mt-0.5">
+          <p className="text-[11px] text-ink-fade italic mt-1.5">
             recalculada em {ddmm(stats.target.replan_from_date)}
             {editable && (
               <>
@@ -1263,41 +1505,7 @@ function TargetRow({
             )}
           </p>
         )}
-        {editable &&
-          stats.status === "vencida" &&
-          !carried &&
-          hasNext &&
-          stats.remainingPages > 0 && (
-            <button
-              type="button"
-              onClick={() => onCarryOver(true)}
-              className="mt-1 inline-flex items-center gap-1 text-sm text-gold-deep hover:text-ink-deep transition-colors"
-            >
-              <ArrowUturnRightIcon className="w-3.5 h-3.5" />
-              replanejar: jogar {stats.remainingPages}p na próxima meta
-            </button>
-          )}
       </div>
-      {editable && (
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="p-1 text-ink-fade hover:text-ink-deep transition-colors"
-            aria-label="Editar meta"
-          >
-            <PencilSquareIcon className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="p-1 text-ink-fade hover:text-burgundy transition-colors"
-            aria-label="Remover meta"
-          >
-            <TrashIcon className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </li>
   );
 }

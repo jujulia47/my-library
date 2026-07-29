@@ -552,6 +552,7 @@ export type Database = {
           book_id: string
           created_at: string
           id: string
+          pages_planned: number | null
           plan_month: string
           position: number
           user_id: string
@@ -560,6 +561,7 @@ export type Database = {
           book_id: string
           created_at?: string
           id?: string
+          pages_planned?: number | null
           plan_month: string
           position?: number
           user_id: string
@@ -568,6 +570,7 @@ export type Database = {
           book_id?: string
           created_at?: string
           id?: string
+          pages_planned?: number | null
           plan_month?: string
           position?: number
           user_id?: string

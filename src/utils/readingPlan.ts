@@ -114,6 +114,11 @@ export type PlanBookInput = {
    * dia cumprida" sem recalcular nada.
    */
   pages_read_today: number;
+  /**
+   * Páginas deste livro planejadas pro mês (só fila, sem meta). Null = livro
+   * todo (restante). Limita o total do mês e a projeção da fila.
+   */
+  pages_planned: number | null;
   /** Ordem na fila (home_next_read.position). */
   position: number;
   /** Metas do livro (vazio = livro de fila). */
@@ -336,6 +341,33 @@ export function deriveBookTargets(
   return out;
 }
 
+/**
+ * Página que o cronograma das metas espera que você tenha alcançado ao FIM de
+ * `dateISO`, partindo da página atual. Usado só pra ancorar a faixa "de X a Y"
+ * do mês — o TOTAL de páginas continua vindo das contribuições diárias.
+ */
+export function scheduledMetaPage(
+  targets: TargetInput[],
+  currentPage: number,
+  dateISO: string,
+): number {
+  let page = currentPage;
+  const sorted = targets.slice().sort((a, z) => a.page_from - z.page_from);
+  for (const t of sorted) {
+    const baseDate = t.replan_from_date ?? t.start_date;
+    const basePage = t.replan_from_page ?? t.page_from - 1;
+    if (dateISO >= t.end_date) {
+      page = Math.max(page, t.page_to);
+    } else if (dateISO >= baseDate) {
+      const days = Math.max(1, inclusiveDays(baseDate, t.end_date));
+      const daily = Math.ceil((t.page_to - basePage) / days);
+      const elapsed = inclusiveDays(baseDate, dateISO);
+      page = Math.max(page, Math.min(t.page_to, basePage + daily * elapsed));
+    }
+  }
+  return page;
+}
+
 // ============================================================================
 // Capacidade — período mais estreito vence
 // ============================================================================
@@ -396,11 +428,15 @@ export type MonthPlan = {
   /** Projeção da fila (livros sem meta, em ordem). */
   queue: QueueProjection[];
   // --- Referência estática ---
-  /** Soma do restante de todos os livros do plano. */
-  totalRemaining: number;
+  /**
+   * Páginas que vou ler NESTE mês: metas contam só a fatia do mês (dividida
+   * por dia nas que cruzam a virada); fila conta pages_planned (ou o livro
+   * todo por default).
+   */
+  monthPageTotal: number;
   /** Dias restantes no mês (de hoje ao fim; mês inteiro se fora dele). */
   remainingDaysInMonth: number;
-  /** Média diária necessária pra ler tudo até o fim do mês. */
+  /** Média diária necessária pra ler o planejado do mês. */
   neededAvg: number;
   /** Capacidade total planejada nos dias restantes (null se nada definido). */
   capacityTotal: number | null;
@@ -472,14 +508,18 @@ export function buildMonthPlan(
   };
 
   // Fila: livros SEM meta, em ordem de position. Consome a sobra por dia.
+  // "Planejado do mês": pages_planned (limitado ao restante) ou o livro todo.
   const queueBooks = readable
     .filter((b) => (b.targets?.length ?? 0) === 0)
     .sort((a, z) => a.position - z.position);
+  const plannedForMonth = (b: PlanBookInput): number => {
+    const remaining = Math.max(0, (b.total_pages ?? 0) - b.current_page);
+    return b.pages_planned != null
+      ? Math.min(remaining, Math.max(0, b.pages_planned))
+      : remaining;
+  };
   const queueRemaining = new Map(
-    queueBooks.map((b) => [
-      b.book_id,
-      Math.max(0, (b.total_pages ?? 0) - b.current_page),
-    ]),
+    queueBooks.map((b) => [b.book_id, plannedForMonth(b)]),
   );
   const queueProj = new Map<string, QueueProjection>(
     queueBooks.map((b) => [
@@ -561,24 +601,33 @@ export function buildMonthPlan(
     if (proj.endISO === null) proj.leftAtMonthEnd = rem;
   }
 
-  // Referência estática.
-  const totalRemaining = readable.reduce(
-    (s, b) => s + Math.max(0, (b.total_pages ?? 0) - b.current_page),
+  // Total do mês = fatia das metas que cai no mês (soma das contribuições
+  // diárias — já divide por dia as metas que cruzam a virada) + páginas
+  // planejadas da fila.
+  const metaMonthPages = days.reduce(
+    (s, d) =>
+      s + d.entries.reduce((t, e) => t + (e.kind === "meta" ? e.pages : 0), 0),
     0,
   );
+  const filaMonthPages = queueBooks.reduce(
+    (s, b) => s + plannedForMonth(b),
+    0,
+  );
+  const monthPageTotal = metaMonthPages + filaMonthPages;
+
   const remainingDaysInMonth =
     todayISO >= firstISO && todayISO <= lastISO
       ? inclusiveDays(todayISO, lastISO)
       : totalDays;
   const neededAvg =
-    totalRemaining > 0 ? Math.ceil(totalRemaining / remainingDaysInMonth) : 0;
+    monthPageTotal > 0 ? Math.ceil(monthPageTotal / remainingDaysInMonth) : 0;
 
   return {
     year,
     month,
     days,
     queue: queueBooks.map((b) => queueProj.get(b.book_id)!),
-    totalRemaining,
+    monthPageTotal,
     remainingDaysInMonth,
     neededAvg,
     capacityTotal: anyCapacity ? capacityTotal : null,

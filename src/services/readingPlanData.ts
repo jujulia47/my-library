@@ -25,6 +25,7 @@ type BookMeta = {
 
 type NextReadRaw = {
   position: number;
+  pages_planned: number | null;
   book: BookMeta | null;
 };
 
@@ -51,7 +52,9 @@ export async function getReadingPlan(
     await Promise.all([
       supabase
         .from("home_next_read")
-        .select(`position, book:book_id(id, slug, title, pages, cover)`)
+        .select(
+          `position, pages_planned, book:book_id(id, slug, title, pages, cover)`,
+        )
         .eq("user_id", userId)
         .eq("plan_month", month)
         .order("position", { ascending: true }),
@@ -99,15 +102,25 @@ export async function getReadingPlan(
   }
 
   // Ordem de exibição: fila (por position) primeiro, metas-sem-fila depois.
-  type Entry = { book: BookMeta; position: number };
+  type Entry = {
+    book: BookMeta;
+    position: number;
+    pages_planned: number | null;
+  };
   const entries: Entry[] = [];
   for (const r of filaRows) {
-    if (r.book) entries.push({ book: r.book, position: r.position });
+    if (r.book) {
+      entries.push({
+        book: r.book,
+        position: r.position,
+        pages_planned: r.pages_planned,
+      });
+    }
   }
   let extraPos = 1000;
   for (const id of missingBookIds) {
     const b = extraBooks.get(id);
-    if (b) entries.push({ book: b, position: extraPos++ });
+    if (b) entries.push({ book: b, position: extraPos++, pages_planned: null });
   }
 
   const bookIds = entries.map((e) => e.book.id);
@@ -178,6 +191,7 @@ export async function getReadingPlan(
     total_pages: e.book.pages,
     current_page: currentByBook.get(e.book.id) ?? 0,
     pages_read_today: readTodayByBook.get(e.book.id) ?? 0,
+    pages_planned: e.pages_planned,
     position: e.position,
     targets: targetsByBook.get(e.book.id) ?? [],
   }));
