@@ -8,6 +8,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
+import { IconActionButton } from "@/components/ui";
 import { addHomeNextRead } from "@/actions/addHomeNextRead";
 import { removeHomeNextRead } from "@/actions/removeHomeNextRead";
 import { currentMonthISO, addMonthsISO } from "@/utils/dates";
@@ -48,11 +49,9 @@ export default function BookPlanSection({ bookId, planMonths }: Props) {
     });
   };
 
-  const handleRemove = (month: string) => {
-    startTransition(async () => {
-      const res = await removeHomeNextRead(bookId, month);
-      if (res.ok) router.refresh();
-    });
+  const handleRemove = async (month: string) => {
+    const res = await removeHomeNextRead(bookId, month);
+    if (res.ok) router.refresh();
   };
 
   return (
@@ -103,15 +102,14 @@ export default function BookPlanSection({ bookId, planMonths }: Props) {
               >
                 {monthLabel(month)}
               </Link>
-              <button
-                type="button"
+              <IconActionButton
+                icon={<TrashIcon className="w-3.5 h-3.5" />}
                 onClick={() => handleRemove(month)}
-                disabled={pending}
-                className="text-ink-fade hover:text-burgundy transition-colors"
-                aria-label={`Remover de ${monthLabel(month)}`}
-              >
-                <TrashIcon className="w-3.5 h-3.5" />
-              </button>
+                label={`Remover de ${monthLabel(month)}`}
+                className="text-ink-fade hover:text-burgundy"
+                activeColorClass="!text-burgundy"
+                size="w-3.5 h-3.5"
+              />
             </li>
           ))}
         </ul>
