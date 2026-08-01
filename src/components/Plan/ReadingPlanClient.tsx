@@ -24,6 +24,7 @@ import {
 import { addMonthsISO } from "@/utils/dates";
 import Modal from "@/components/forms/Modal";
 import { Button, BookCoverFallback } from "@/components/ui";
+import { IconActionButton } from "@/components/ui/IconActionButton";
 import {
   buildMonthPlan,
   deriveBookTargets,
@@ -886,18 +887,14 @@ function BookCard({
     : scheduledMetaPage(book.targets, 0, monthEndISO);
   const metaMonthTotal = Math.max(0, metaToPage - metaFromBase);
 
-  const handleRemoveBook = () => {
-    startTransition(async () => {
-      const res = await removeHomeNextRead(book.book_id, monthISO);
-      if (res.ok) onChanged();
-    });
+  const handleRemoveBook = async () => {
+    const res = await removeHomeNextRead(book.book_id, monthISO);
+    if (res.ok) onChanged();
   };
 
-  const handleDeleteTarget = (id: string) => {
-    startTransition(async () => {
-      const res = await deleteReadingTarget(id);
-      if (res.ok) onChanged();
-    });
+  const handleDeleteTarget = async (id: string) => {
+    const res = await deleteReadingTarget(id);
+    if (res.ok) onChanged();
   };
 
   const handleCarryOver = (id: string, carried: boolean) => {
@@ -914,11 +911,9 @@ function BookCard({
     });
   };
 
-  const handleMove = (direction: "up" | "down") => {
-    startTransition(async () => {
-      const res = await moveNextRead(book.book_id, direction, monthISO);
-      if (res.ok) onChanged();
-    });
+  const handleMove = async (direction: "up" | "down") => {
+    const res = await moveNextRead(book.book_id, direction, monthISO);
+    if (res.ok) onChanged();
   };
 
   const handleSavePages = (pages: number | null) => {
@@ -939,27 +934,25 @@ function BookCard({
           <div className="flex flex-col items-center gap-0.5 flex-shrink-0 justify-center">
             {editable ? (
               <>
-                <button
-                  type="button"
+                <IconActionButton
+                  icon={<ChevronUpIcon className="w-4 h-4" />}
                   onClick={() => handleMove("up")}
                   disabled={queueIndex === 0}
-                  className="p-0.5 text-ink-fade hover:text-ink-deep disabled:opacity-30 transition-colors"
-                  aria-label="Subir na fila"
-                >
-                  <ChevronUpIcon className="w-4 h-4" />
-                </button>
+                  label="Subir na fila"
+                  className="p-0.5 text-ink-fade hover:text-ink-deep disabled:opacity-30"
+                  activeColorClass="!text-[#6D3914]"
+                />
                 <span className="font-display text-lg text-[#6D3914] leading-none">
                   {queueIndex + 1}º
                 </span>
-                <button
-                  type="button"
+                <IconActionButton
+                  icon={<ChevronDownIcon className="w-4 h-4" />}
                   onClick={() => handleMove("down")}
                   disabled={queueIndex === queueLength - 1}
-                  className="p-0.5 text-ink-fade hover:text-ink-deep disabled:opacity-30 transition-colors"
-                  aria-label="Descer na fila"
-                >
-                  <ChevronDownIcon className="w-4 h-4" />
-                </button>
+                  label="Descer na fila"
+                  className="p-0.5 text-ink-fade hover:text-ink-deep disabled:opacity-30"
+                  activeColorClass="!text-[#6D3914]"
+                />
               </>
             ) : (
               <span className="font-display text-lg text-[#6D3914] leading-none">
@@ -996,14 +989,14 @@ function BookCard({
               {book.title}
             </Link>
             {editable && (
-              <button
-                type="button"
+              <IconActionButton
+                icon={<TrashIcon className="w-4 h-4" />}
                 onClick={handleRemoveBook}
-                className="flex-shrink-0 p-1 -m-1 text-ink-fade hover:text-burgundy transition-colors"
+                label="Remover deste mês do plano"
                 title="Remover deste mês do plano (não muda o status do livro)"
-              >
-                <TrashIcon className="w-4 h-4" />
-              </button>
+                className="flex-shrink-0 p-1 -m-1 text-ink-fade hover:text-burgundy"
+                activeColorClass="!text-burgundy"
+              />
             )}
           </div>
 
@@ -1050,7 +1043,7 @@ function BookCard({
             </>
           )}
 
-          {/* Projeção da fila */}
+          {/* Projeção da fila (com capacidade ou pela média, em ordem) */}
           {queueIndex !== null && !noPages && proj && (
             <div className="text-sm mt-1.5">
               <p className="flex items-center gap-2 flex-wrap">
@@ -1068,7 +1061,7 @@ function BookCard({
                 )}
                 {!proj.startISO && (
                   <span className="text-ink-fade italic">
-                    sem espaço este mês — a capacidade está toda ocupada
+                    sem espaço este mês — os livros acima já preenchem o mês
                   </span>
                 )}
                 {queueDays.length > 0 && (
@@ -1363,29 +1356,29 @@ function TargetRow({
         </span>
         {editable && (
           <div className="ml-auto flex items-center gap-1 flex-shrink-0">
-            <button
-              type="button"
+            <IconActionButton
+              icon={<PencilSquareIcon className="w-4 h-4" />}
               onClick={onEdit}
-              className="p-1 text-ink-fade hover:text-ink-deep transition-colors"
-              aria-label="Editar meta"
-            >
-              <PencilSquareIcon className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
+              label="Editar meta"
+              className="p-1 text-ink-fade hover:text-ink-deep"
+              activeColorClass="!text-ink-deep"
+            />
+            <IconActionButton
+              icon={<TrashIcon className="w-4 h-4" />}
               onClick={onDelete}
-              className="p-1 text-ink-fade hover:text-burgundy transition-colors"
-              aria-label="Remover meta"
-            >
-              <TrashIcon className="w-4 h-4" />
-            </button>
+              label="Remover meta"
+              className="p-1 text-ink-fade hover:text-burgundy"
+              activeColorClass="!text-burgundy"
+            />
           </div>
         )}
       </div>
 
-      {/* Período + total */}
+      {/* Período + total + ritmo (o "pág/dia" fica visível mesmo depois de
+          iniciar a meta — antes só aparecia nas não iniciadas). */}
       <p className="text-xs text-ink-fade mt-1 ml-6">
         {ddmm(t.start_date)} – {ddmm(t.end_date)} · {stats.totalPages} páginas
+        {active && ` · ${stats.originalDaily} pág/dia`}
       </p>
 
       {/* Corpo por status — números rotulados, escaneáveis */}

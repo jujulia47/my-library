@@ -533,6 +533,29 @@ export function buildMonthPlan(
     ]),
   );
 
+  // Pré-cálculo do mês: páginas de meta (fatia do mês) e se há capacidade.
+  // Sem capacidade definida, o orçamento diário implícito é a MÉDIA necessária
+  // (neededAvg) — a fila consome a sobra dela em ordem, igual à capacidade.
+  let hasCapacityInMonth = false;
+  let metaMonthPages = 0;
+  for (let day = 1; day <= totalDays; day += 1) {
+    const iso = isoForDay(year, month, day);
+    if (iso < todayISO) continue;
+    if (capacityForDay(iso, capacity) !== null) hasCapacityInMonth = true;
+    metaMonthPages += targetDaily(iso).reduce((s, e) => s + e.pages, 0);
+  }
+  const filaMonthPages = queueBooks.reduce(
+    (s, b) => s + plannedForMonth(b),
+    0,
+  );
+  const monthPageTotal = metaMonthPages + filaMonthPages;
+  const remainingDaysInMonth =
+    todayISO >= firstISO && todayISO <= lastISO
+      ? inclusiveDays(todayISO, lastISO)
+      : totalDays;
+  const neededAvg =
+    monthPageTotal > 0 ? Math.ceil(monthPageTotal / remainingDaysInMonth) : 0;
+
   const days: PlanDay[] = [];
   const daysOverCapacity: string[] = [];
   let capacityTotal: number | null = null;
@@ -553,8 +576,11 @@ export function buildMonthPlan(
         if (targetSum > cap) daysOverCapacity.push(iso);
       }
 
-      // Fila consome a sobra.
-      let leftover = Math.max(0, (cap ?? 0) - targetSum);
+      // Orçamento diário: a capacidade do dia, ou a média necessária quando
+      // não há capacidade definida. A fila consome a SOBRA (orçamento − metas)
+      // em ORDEM — o mesmo mecanismo nos dois casos.
+      const budget = hasCapacityInMonth ? (cap ?? 0) : neededAvg;
+      let leftover = Math.max(0, budget - targetSum);
       while (leftover > 0 && queueIdx < queueBooks.length) {
         const qb = queueBooks[queueIdx];
         const rem = queueRemaining.get(qb.book_id) ?? 0;
@@ -600,27 +626,6 @@ export function buildMonthPlan(
     const proj = queueProj.get(bookId)!;
     if (proj.endISO === null) proj.leftAtMonthEnd = rem;
   }
-
-  // Total do mês = fatia das metas que cai no mês (soma das contribuições
-  // diárias — já divide por dia as metas que cruzam a virada) + páginas
-  // planejadas da fila.
-  const metaMonthPages = days.reduce(
-    (s, d) =>
-      s + d.entries.reduce((t, e) => t + (e.kind === "meta" ? e.pages : 0), 0),
-    0,
-  );
-  const filaMonthPages = queueBooks.reduce(
-    (s, b) => s + plannedForMonth(b),
-    0,
-  );
-  const monthPageTotal = metaMonthPages + filaMonthPages;
-
-  const remainingDaysInMonth =
-    todayISO >= firstISO && todayISO <= lastISO
-      ? inclusiveDays(todayISO, lastISO)
-      : totalDays;
-  const neededAvg =
-    monthPageTotal > 0 ? Math.ceil(monthPageTotal / remainingDaysInMonth) : 0;
 
   return {
     year,
