@@ -311,8 +311,15 @@ function TodayPanel({
   const [, startTransition] = useTransition();
   const rows = buildTodayRows(books, plan, todayISO);
 
-  const totalQuota = rows.reduce((s, r) => s + r.quota, 0);
-  const totalRead = rows.reduce((s, r) => s + Math.min(r.readToday, r.quota), 0);
+  // Lido hoje = o que você leu de verdade (inclui o que passou da cota).
+  // Restante = o que ainda falta ler hoje. Total = lido + restante (= o
+  // orçamento do dia).
+  const totalRead = rows.reduce((s, r) => s + r.readToday, 0);
+  const totalRemaining = rows.reduce(
+    (s, r) => s + Math.max(0, r.quota - r.readToday),
+    0,
+  );
+  const totalTarget = totalRead + totalRemaining;
   const allDone = rows.length > 0 && rows.every((r) => r.done);
 
   const handleReplan = (targetId: string) => {
@@ -349,10 +356,8 @@ function TodayPanel({
           ) : (
             <span className="text-ink-soft">
               <span className="font-medium text-ink-deep">{totalRead}</span> de{" "}
-              {totalQuota} páginas · ~
-              {formatReadingTime(
-                Math.max(0, totalQuota - totalRead) * SECONDS_PER_PAGE,
-              )}{" "}
+              {totalTarget} páginas · ~
+              {formatReadingTime(totalRemaining * SECONDS_PER_PAGE)}{" "}
               restantes
             </span>
           )}
@@ -1837,8 +1842,14 @@ function CapacityModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const monthStart = isoForDay(year, month, 1);
   const monthEnd = isoForDay(year, month, daysInMonth(year, month));
-  const [startDate, setStartDate] = useState(period?.start_date ?? todayISO);
+  // Novo período nasce dentro do mês visado: do início do mês (ou de hoje, se
+  // for o mês atual) até o fim do mês.
+  const defaultStart = todayISO > monthStart ? todayISO : monthStart;
+  const [startDate, setStartDate] = useState(
+    period?.start_date ?? defaultStart,
+  );
   const [endDate, setEndDate] = useState(period?.end_date ?? monthEnd);
   const [pages, setPages] = useState(
     period ? String(period.pages_per_day) : "",

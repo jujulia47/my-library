@@ -480,6 +480,18 @@ export function buildMonthPlan(
     if (stats.length > 0) targetStats.set(b.book_id, stats);
   }
 
+  // Páginas lidas HOJE de meta ALÉM da cota do dia. Esse excedente já gastou
+  // orçamento do dia, então diminui a sobra da fila — só hoje (os dias
+  // seguintes rebalanceiam quando a página é atualizada).
+  let metaOverReadToday = 0;
+  for (const [, stats] of targetStats) {
+    for (const s of stats) {
+      if (s.status === "em_dia" || s.status === "atrasada") {
+        metaOverReadToday += Math.max(0, s.readToday - (s.todayQuota ?? 0));
+      }
+    }
+  }
+
   // Contribuição diária de cada meta (só dias >= hoje; passado não é
   // planejável). Hoje usa a cota fixa do dia; os dias seguintes, futureDaily.
   const bookMeta = new Map(readable.map((b) => [b.book_id, b]));
@@ -578,9 +590,11 @@ export function buildMonthPlan(
 
       // Orçamento diário: a capacidade do dia, ou a média necessária quando
       // não há capacidade definida. A fila consome a SOBRA (orçamento − metas)
-      // em ORDEM — o mesmo mecanismo nos dois casos.
+      // em ORDEM — o mesmo mecanismo nos dois casos. HOJE, o que você leu de
+      // meta além da cota também já gastou orçamento → a sobra da fila cai.
       const budget = hasCapacityInMonth ? (cap ?? 0) : neededAvg;
-      let leftover = Math.max(0, budget - targetSum);
+      const spentToday = targetSum + (iso === todayISO ? metaOverReadToday : 0);
+      let leftover = Math.max(0, budget - spentToday);
       while (leftover > 0 && queueIdx < queueBooks.length) {
         const qb = queueBooks[queueIdx];
         const rem = queueRemaining.get(qb.book_id) ?? 0;

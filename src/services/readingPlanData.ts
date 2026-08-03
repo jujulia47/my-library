@@ -196,12 +196,16 @@ export async function getReadingPlan(
     targets: targetsByBook.get(e.book.id) ?? [],
   }));
 
-  const capacity: CapacityPeriod[] = (capacityRaw ?? []).map((c) => ({
-    id: c.id,
-    start_date: c.start_date,
-    end_date: c.end_date,
-    pages_per_day: c.pages_per_day,
-  }));
+  // Só os períodos de capacidade que CRUZAM o mês visado — capacidade de
+  // agosto não deve aparecer/valer em setembro.
+  const capacity: CapacityPeriod[] = (capacityRaw ?? [])
+    .filter((c) => c.start_date < nextMonth && c.end_date >= month)
+    .map((c) => ({
+      id: c.id,
+      start_date: c.start_date,
+      end_date: c.end_date,
+      pages_per_day: c.pages_per_day,
+    }));
 
   return { monthISO: month, isCurrentMonth, books, capacity };
 }
