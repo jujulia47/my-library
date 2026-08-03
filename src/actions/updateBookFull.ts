@@ -416,6 +416,9 @@ export async function updateBookFull(
   }
   if (coverPath !== undefined) updateData.cover = coverPath;
   if (nextShelfId !== undefined) updateData.shelf_id = nextShelfId;
+  // "Não vou ler" e "quero ler" (TBR) são opostos — marcar wont_read tira o
+  // TBR pra os dois não ficarem ativos ao mesmo tempo.
+  if (wont_read) updateData.is_tbr = false;
 
   const { error: updateError } = await supabase
     .from("book")

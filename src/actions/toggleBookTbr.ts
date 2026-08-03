@@ -30,9 +30,10 @@ export async function toggleBookTbr(
     return { ok: false, message: "Livro não encontrado." };
 
   const next = !existing.is_tbr;
+  // "Quero ler" e "não vou ler" são opostos — ligar o TBR desliga o wont_read.
   const { error } = await supabase
     .from("book")
-    .update({ is_tbr: next })
+    .update(next ? { is_tbr: true, wont_read: false } : { is_tbr: false })
     .eq("id", id);
   if (error) return { ok: false, ...translateSupabaseError(error) };
 
