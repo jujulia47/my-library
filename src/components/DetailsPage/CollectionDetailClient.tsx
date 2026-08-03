@@ -421,6 +421,11 @@ export default function CollectionDetailClient({ data }: Props) {
   // ----- Filtragem + ordenação pra render -----
   const processedItems = useMemo(() => {
     let arr: CollectionItem[] = items;
+    // Wishlist: o que já foi adquirido (virou book) sai da grade — só o
+    // contador "adquiridos" reflete. A grade mostra só o que falta comprar.
+    if (isWishlistCollection) {
+      arr = arr.filter((i) => i.kind !== "book");
+    }
     if (statusFilters.size > 0) {
       // Filtro por status só faz sentido pra books — wishlist não tem
       // derived_status e some quando há filtro ativo.
@@ -456,7 +461,7 @@ export default function CollectionDetailClient({ data }: Props) {
       });
     }
     return sorted;
-  }, [items, statusFilters, sortMode]);
+  }, [items, statusFilters, sortMode, isWishlistCollection]);
 
   // ----- Group items by section -----
   const grouped = useMemo(() => {
@@ -683,7 +688,12 @@ export default function CollectionDetailClient({ data }: Props) {
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div
+        className={clsx(
+          "grid grid-cols-2 gap-4 mb-6",
+          stats.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4",
+        )}
+      >
         {stats.map((s, idx) => (
           <Card key={idx} size="sm">
             <p className="text-[11px] uppercase tracking-wider text-ink-fade">
@@ -714,38 +724,44 @@ export default function CollectionDetailClient({ data }: Props) {
       {items.length > 0 && (
         <div className="flex flex-col gap-3 mb-5 pb-3 border-b border-border">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-body text-ink-fade mr-1">
-                Filtrar:
-              </span>
-              {FILTER_OPTIONS.map((opt) => {
-                const active = statusFilters.has(opt.value);
-                return (
+            {/* Filtro por status só faz sentido pra livros — na wishlist a
+                grade mostra só pendentes (wishlist), então some. */}
+            {!isWishlistCollection ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-body text-ink-fade mr-1">
+                  Filtrar:
+                </span>
+                {FILTER_OPTIONS.map((opt) => {
+                  const active = statusFilters.has(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleStatus(opt.value)}
+                      className={clsx(
+                        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-body transition-colors",
+                        active
+                          ? "bg-moss text-ivory-light border-moss"
+                          : "bg-ivory-light text-ink-soft border-border hover:bg-paper-soft",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+                {statusFilters.size > 0 && (
                   <button
-                    key={opt.value}
                     type="button"
-                    onClick={() => toggleStatus(opt.value)}
-                    className={clsx(
-                      "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-body transition-colors",
-                      active
-                        ? "bg-moss text-ivory-light border-moss"
-                        : "bg-ivory-light text-ink-soft border-border hover:bg-paper-soft",
-                    )}
+                    onClick={() => setStatusFilters(new Set())}
+                    className="text-xs font-body text-ink-fade hover:text-ink-deep underline ml-1"
                   >
-                    {opt.label}
+                    limpar
                   </button>
-                );
-              })}
-              {statusFilters.size > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setStatusFilters(new Set())}
-                  className="text-xs font-body text-ink-fade hover:text-ink-deep underline ml-1"
-                >
-                  limpar
-                </button>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <span />
+            )}
             <div className="flex items-center gap-2">
               <label className="text-xs font-body text-ink-fade">
                 Ordenar:
@@ -795,6 +811,14 @@ export default function CollectionDetailClient({ data }: Props) {
           >
             Adicionar primeiro item
           </Button>
+        </Card>
+      ) : processedItems.length === 0 ? (
+        <Card className="text-center py-10">
+          <p className="font-display italic text-ink-soft max-w-md mx-auto">
+            {isWishlistCollection
+              ? "Tudo adquirido ✓ — todos os livros desta wishlist já foram comprados."
+              : "Nenhum item com esse filtro."}
+          </p>
         </Card>
       ) : (
         <DndContext
@@ -1016,13 +1040,8 @@ function buildStats(p: {
       p.wishlistAvg > 0 ? `médio ${formatBRL(p.wishlistAvg)}` : undefined;
     return [
       {
-        label: "Total",
-        value: `${p.totalItems} ${p.totalItems === 1 ? "item" : "itens"}`,
-      },
-      {
-        label: "Adquiridos",
-        value: `${p.acquiredCount} de ${p.totalItems}`,
-        bar: progressBar,
+        label: "A comprar",
+        value: `${p.wishlistCount} ${p.wishlistCount === 1 ? "item" : "itens"}`,
       },
       {
         label: "Valor estimado",
