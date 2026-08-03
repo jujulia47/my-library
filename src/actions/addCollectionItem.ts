@@ -79,11 +79,25 @@ export async function addCollectionItem(
     }
   }
 
+  // Novo item vai pro INÍCIO da lista: posição = (menor posição atual) − 1.
+  // Sem itens posicionados, começa em 0 (fica antes dos de posição nula, que
+  // ordenam por último).
+  const { data: minRow } = await supabase
+    .from("collection_item")
+    .select("position")
+    .eq("collection_id", collection_id)
+    .not("position", "is", null)
+    .order("position", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const position = minRow?.position != null ? minRow.position - 1 : 0;
+
   const { error } = await supabase.from("collection_item").insert({
     collection_id,
     book_id,
     wishlist_id,
     section,
+    position,
     was_wishlist: wasWishlist,
     user_id: user.id,
   });
