@@ -406,6 +406,8 @@ export type PlanDay = {
   iso: string;
   isPast: boolean;
   capacity: number | null;
+  /** Orçamento de leitura do dia (capacidade OU média) — 0 em dias passados. */
+  budget: number;
   entries: DayEntry[];
   /** Prazos de meta que vencem neste dia (títulos dos livros). */
   deadlines: string[];
@@ -581,6 +583,14 @@ export function buildMonthPlan(
     const entries = targetDaily(iso);
     const targetSum = entries.reduce((s, e) => s + e.pages, 0);
 
+    // Orçamento de leitura do dia (capacidade OU média). É o total geral que
+    // você pode ler no dia, pra qualquer livro. 0 em dias passados.
+    const budget = isPast
+      ? 0
+      : hasCapacityInMonth
+        ? (cap ?? 0)
+        : neededAvg;
+
     if (!isPast) {
       if (cap !== null) {
         anyCapacity = true;
@@ -588,11 +598,9 @@ export function buildMonthPlan(
         if (targetSum > cap) daysOverCapacity.push(iso);
       }
 
-      // Orçamento diário: a capacidade do dia, ou a média necessária quando
-      // não há capacidade definida. A fila consome a SOBRA (orçamento − metas)
-      // em ORDEM — o mesmo mecanismo nos dois casos. HOJE, o que você leu de
-      // meta além da cota também já gastou orçamento → a sobra da fila cai.
-      const budget = hasCapacityInMonth ? (cap ?? 0) : neededAvg;
+      // A fila consome a SOBRA (orçamento − metas) em ORDEM — o mesmo
+      // mecanismo com capacidade ou média. HOJE, o que você leu de meta além
+      // da cota também já gastou orçamento → a sobra da fila cai.
       const spentToday = targetSum + (iso === todayISO ? metaOverReadToday : 0);
       let leftover = Math.max(0, budget - spentToday);
       while (leftover > 0 && queueIdx < queueBooks.length) {
@@ -632,7 +640,7 @@ export function buildMonthPlan(
       }
     }
 
-    days.push({ day, iso, isPast, capacity: cap, entries, deadlines });
+    days.push({ day, iso, isPast, capacity: cap, budget, entries, deadlines });
   }
 
   // Sobra da fila no fim do mês.

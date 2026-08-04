@@ -311,15 +311,14 @@ function TodayPanel({
   const [, startTransition] = useTransition();
   const rows = buildTodayRows(books, plan, todayISO);
 
-  // Lido hoje = o que você leu de verdade (inclui o que passou da cota).
-  // Restante = o que ainda falta ler hoje. Total = lido + restante (= o
-  // orçamento do dia).
-  const totalRead = rows.reduce((s, r) => s + r.readToday, 0);
-  const totalRemaining = rows.reduce(
-    (s, r) => s + Math.max(0, r.quota - r.readToday),
-    0,
-  );
-  const totalTarget = totalRead + totalRemaining;
+  // O orçamento do dia é GERAL — vale pra qualquer livro (meta OU fila).
+  // Então "lido hoje" soma TUDO que você leu no dia (mesmo de meta já
+  // concluída/adiantada, que não vira linha), contra o orçamento do dia.
+  const dailyBudget =
+    plan.days.find((d) => d.iso === todayISO)?.budget ?? 0;
+  const totalRead = books.reduce((s, b) => s + b.pages_read_today, 0);
+  const totalRemaining = Math.max(0, dailyBudget - totalRead);
+  const totalTarget = Math.max(dailyBudget, totalRead);
   const allDone = rows.length > 0 && rows.every((r) => r.done);
 
   const handleReplan = (targetId: string) => {
