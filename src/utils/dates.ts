@@ -15,6 +15,16 @@ export function todayISO(): string {
 }
 
 /**
+ * Data (`YYYY-MM-DD`, fuso do Brasil) de um instante qualquer (timestamptz ou
+ * `Date`). Usado pra saber, ex., se uma leitura foi CRIADA hoje.
+ */
+export function dateISOInAppTZ(instant: string | Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+  }).format(new Date(instant));
+}
+
+/**
  * Mês de uma data ISO como 1º dia do mês (`YYYY-MM-01`) — a chave usada em
  * `home_next_read.plan_month`.
  */

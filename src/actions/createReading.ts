@@ -133,6 +133,29 @@ export async function createReading(formData: FormData): Promise<ActionResult> {
     await maybeCompleteChallengesForBook(supabase, user.id, book_id);
   }
 
+  // Reading progress log — registra a leitura INICIAL como lida hoje, igual ao
+  // updateReading. Sem isso, começar um livro hoje não conta em "páginas lidas
+  // hoje" e ainda quebra a âncora do plano do dia: current_page sobe sem
+  // pages_read_today, então remainingAtStartOfToday cai e o total do mês encolhe
+  // sozinho conforme você lê. Só quando a leitura começou HOJE (ou sem data) —
+  // páginas de um livro com start_date passado foram lidas ao longo do tempo.
+  if (
+    typeof current_page === "number" &&
+    current_page > 0 &&
+    (status === "reading" || status === "paused") &&
+    (!start_date || start_date === todayISO())
+  ) {
+    await supabase.from("reading_progress_log").upsert(
+      {
+        user_id: user.id,
+        reading_id: inserted.id,
+        log_date: todayISO(),
+        pages_delta: current_page,
+      },
+      { onConflict: "reading_id,log_date" },
+    );
+  }
+
   const slug = formData.get("book_slug") as string | null;
   if (slug) revalidatePath(`/book/${slug}`);
   revalidatePath("/book");

@@ -654,7 +654,7 @@ function SummaryStrip({
                   {" "}
                   Diluindo até {ddmm(activeSpread)}: leia mais{" "}
                   <span className="font-medium">
-                    {catchupPerDay(activeSpread)} pág/dia
+                    {plan.catchupToday} pág/dia
                   </span>
                   {editable && (
                     <>

@@ -1,6 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { imagesUrl } from "@/services/images";
-import { todayISO, currentMonthISO, addMonthsISO } from "@/utils/dates";
+import {
+  todayISO,
+  currentMonthISO,
+  addMonthsISO,
+  dateISOInAppTZ,
+} from "@/utils/dates";
 import { planBookColor } from "@/utils/colorByHash";
 import type { CapacityPeriod, PlanBookInput } from "@/utils/readingPlan";
 
@@ -200,10 +205,16 @@ export async function getReadingPlan(
   // "cota do dia cumprida" sem recalcular a meta.
   const currentByBook = new Map<string, number>();
   const readTodayByBook = new Map<string, number>();
+  // Reconstrução do "lido hoje" pra leituras CRIADAS hoje cujo log ficou
+  // faltando (bug antigo do createReading, já corrigido daqui pra frente): uma
+  // leitura criada hoje não existia ontem, então TODA a current_page foi lida
+  // hoje. Serve de PISO do lido-hoje (via max) pra a âncora do início do dia
+  // não escorregar — e conserta os registros antigos sem precisar refazê-los.
+  const startedTodayByBook = new Map<string, number>();
   if (bookIds.length > 0) {
     const { data: readings } = await supabase
       .from("reading")
-      .select("id, book_id, current_page")
+      .select("id, book_id, current_page, created_at")
       .eq("user_id", userId)
       .in("book_id", bookIds);
     const bookByReading = new Map<string, string>();
@@ -212,6 +223,12 @@ export async function getReadingPlan(
       const page = r.current_page ?? 0;
       if (page > (currentByBook.get(r.book_id) ?? 0)) {
         currentByBook.set(r.book_id, page);
+      }
+      if (page > 0 && r.created_at && dateISOInAppTZ(r.created_at) === todayISO()) {
+        startedTodayByBook.set(
+          r.book_id,
+          (startedTodayByBook.get(r.book_id) ?? 0) + page,
+        );
       }
     }
 
@@ -260,7 +277,10 @@ export async function getReadingPlan(
     cover_url: e.book.cover ? imagesUrl(e.book.cover) : null,
     total_pages: e.book.pages,
     current_page: currentByBook.get(e.book.id) ?? 0,
-    pages_read_today: readTodayByBook.get(e.book.id) ?? 0,
+    pages_read_today: Math.max(
+      readTodayByBook.get(e.book.id) ?? 0,
+      startedTodayByBook.get(e.book.id) ?? 0,
+    ),
     pages_planned: e.pages_planned,
     position: e.position,
     targets: targetsByBook.get(e.book.id) ?? [],

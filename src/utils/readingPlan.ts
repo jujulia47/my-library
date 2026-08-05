@@ -699,7 +699,13 @@ export function buildMonthPlan(
   // números gerais (só entra/sai livro muda). No dia seguinte tudo recalcula.
   const todayBudget = days.find((d) => d.iso === todayISO)?.budget ?? 0;
   const totalReadToday = readable.reduce((s, b) => s + b.pages_read_today, 0);
-  const overReadToday = Math.max(0, totalReadToday - todayBudget);
+  // O alvo do dia inclui o atraso diluído (orçamento + catchup). Ler as próprias
+  // páginas do atraso é executar o plano, não "ler além" — só o que passa disso
+  // dilui o total do mês.
+  const overReadToday = Math.max(
+    0,
+    totalReadToday - (todayBudget + catchupPerDay),
+  );
   const monthPageTotal = Math.max(0, startOfTodayMonthPages - overReadToday);
   const neededAvg =
     monthPageTotal > 0 ? Math.ceil(monthPageTotal / remainingDaysInMonth) : 0;
