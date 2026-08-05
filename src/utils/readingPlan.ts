@@ -444,6 +444,8 @@ export type MonthPlan = {
   capacityTotal: number | null;
   /** Dias (restantes) em que as metas sozinhas passam da capacidade. */
   daysOverCapacity: string[];
+  /** Atraso a recuperar HOJE (páginas do déficit diluídas no dia). */
+  catchupToday: number;
   /** Livros sem contagem de páginas (fora da matemática). */
   booksWithoutPages: number;
 };
@@ -460,6 +462,7 @@ export function buildMonthPlan(
   books: PlanBookInput[],
   capacity: CapacityPeriod[],
   todayISO: string,
+  spreadUntil: string | null = null,
 ): MonthPlan {
   const totalDays = daysInMonth(year, month);
   const firstISO = isoForDay(year, month, 1);
@@ -558,10 +561,15 @@ export function buildMonthPlan(
   // (neededAvg) — a fila consome a sobra dela em ordem, igual à capacidade.
   let hasCapacityInMonth = false;
   let metaMonthPages = 0;
+  let capacityTotalPre = 0;
   for (let day = 1; day <= totalDays; day += 1) {
     const iso = isoForDay(year, month, day);
     if (iso < todayISO) continue;
-    if (capacityForDay(iso, capacity) !== null) hasCapacityInMonth = true;
+    const cap = capacityForDay(iso, capacity);
+    if (cap !== null) {
+      hasCapacityInMonth = true;
+      capacityTotalPre += cap;
+    }
     metaMonthPages += targetDaily(iso).reduce((s, e) => s + e.pages, 0);
   }
   // Total do mês ancorado no INÍCIO de hoje (igual à fila) — ler durante o dia
@@ -583,6 +591,22 @@ export function buildMonthPlan(
     startOfTodayMonthPages > 0
       ? Math.ceil(startOfTodayMonthPages / remainingDaysInMonth)
       : 0;
+
+  // Diluição do atraso: se a capacidade não cobre o plano e há data escolhida,
+  // espalha o déficit (X/dia) do dia até a data — esse extra ENTRA no orçamento
+  // da fila desses dias, então os livros somam orçamento + atraso.
+  const deficit = hasCapacityInMonth
+    ? Math.max(0, startOfTodayMonthPages - capacityTotalPre)
+    : 0;
+  const catchupUntil =
+    deficit > 0 && spreadUntil && spreadUntil >= todayISO
+      ? spreadUntil > lastISO
+        ? lastISO
+        : spreadUntil
+      : null;
+  const catchupPerDay = catchupUntil
+    ? Math.ceil(deficit / Math.max(1, inclusiveDays(todayISO, catchupUntil)))
+    : 0;
 
   const days: PlanDay[] = [];
   const daysOverCapacity: string[] = [];
@@ -612,11 +636,18 @@ export function buildMonthPlan(
         if (targetSum > cap) daysOverCapacity.push(iso);
       }
 
+      // Nos dias do período de diluição, o atraso/dia entra no orçamento — a
+      // fila lê a mais pra recuperar (por isso as linhas somam orçamento +
+      // atraso).
+      const inCatchup =
+        catchupPerDay > 0 && catchupUntil !== null && iso <= catchupUntil;
+      const dayBudget = budget + (inCatchup ? catchupPerDay : 0);
+
       // A fila consome a SOBRA em ORDEM. HOJE usa o orçamento que as metas
       // realmente consumiram (inclui as concluídas hoje); nos outros dias, a
       // cota planejada das metas.
       const metaSpent = iso === todayISO ? metaBudgetToday : targetSum;
-      let leftover = Math.max(0, budget - metaSpent);
+      let leftover = Math.max(0, dayBudget - metaSpent);
       while (leftover > 0 && queueIdx < queueBooks.length) {
         const qb = queueBooks[queueIdx];
         const rem = queueRemaining.get(qb.book_id) ?? 0;
@@ -683,6 +714,7 @@ export function buildMonthPlan(
     neededAvg,
     capacityTotal: anyCapacity ? capacityTotal : null,
     daysOverCapacity,
+    catchupToday: catchupPerDay,
     booksWithoutPages,
   };
 }

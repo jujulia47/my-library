@@ -84,8 +84,9 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
   const editable = !isPast;
 
   const plan = useMemo(
-    () => buildMonthPlan(year, month, books, capacity, todayISO),
-    [year, month, books, capacity, todayISO],
+    () =>
+      buildMonthPlan(year, month, books, capacity, todayISO, data.spreadUntil),
+    [year, month, books, capacity, todayISO, data.spreadUntil],
   );
 
   // Modais.
@@ -341,34 +342,13 @@ function TodayPanel({
   const [, startTransition] = useTransition();
   const rows = buildTodayRows(books, plan, todayISO);
 
-  // Atraso diluído: se há déficit de capacidade e a usuária escolheu diluir
-  // até uma data, mostra "recuperar Wp hoje" (W = déficit ÷ dias).
-  const behind =
-    plan.capacityTotal !== null
-      ? Math.max(0, plan.monthPageTotal - plan.capacityTotal)
-      : 0;
-  const monthEndISO = isoForDay(
-    plan.year,
-    plan.month,
-    daysInMonth(plan.year, plan.month),
-  );
-  const catchupToday =
-    behind > 0 && spreadUntil && spreadUntil >= todayISO
-      ? Math.ceil(
-          behind /
-            Math.max(
-              1,
-              inclusiveDays(
-                todayISO,
-                spreadUntil > monthEndISO ? monthEndISO : spreadUntil,
-              ),
-            ),
-        )
-      : 0;
+  // Atraso a recuperar hoje — vem do mesmo cálculo que já foi diluído nas
+  // linhas da fila (por isso as linhas somam orçamento + atraso).
+  const catchupToday = plan.catchupToday;
 
   // O orçamento do dia é GERAL — vale pra qualquer livro (meta OU fila). A meta
-  // do dia inclui o atraso diluído (catchup). "Lido hoje" soma TUDO que você
-  // leu no dia (mesmo de meta já concluída/adiantada, que não vira linha).
+  // do dia inclui o atraso diluído. "Lido hoje" soma TUDO que você leu no dia
+  // (mesmo de meta já concluída/adiantada, que não vira linha).
   const dailyBudget =
     plan.days.find((d) => d.iso === todayISO)?.budget ?? 0;
   const dayTarget = dailyBudget + catchupToday;
