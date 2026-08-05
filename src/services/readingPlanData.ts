@@ -135,6 +135,64 @@ export async function getReadingPlan(
     if (b) entries.push({ book: b, position: extraPos++, pages_planned: null });
   }
 
+  // Livros LIDOS HOJE que já saíram da fila (ex.: terminados hoje — o
+  // finishReading remove a linha de home_next_read) continuam no plano do DIA e
+  // só somem amanhã (quando não há mais log com a data de hoje). Sem isso, ao
+  // terminar um livro da fila ele sumiria na hora, devolvendo o orçamento
+  // inteiro pros outros e zerando o "lido hoje". Só no mês corrente. Entram com
+  // position bem baixa (leitura travada consome o orçamento primeiro) e
+  // pages_planned = lido hoje (contam só o que foi lido, não o restante).
+  if (isCurrentMonth) {
+    const { data: todayLogs } = await supabase
+      .from("reading_progress_log")
+      .select("reading_id, pages_delta")
+      .eq("user_id", userId)
+      .eq("log_date", todayISO());
+    const logs = todayLogs ?? [];
+    if (logs.length > 0) {
+      const logReadingIds = [...new Set(logs.map((l) => l.reading_id))];
+      const { data: readingsToday } = await supabase
+        .from("reading")
+        .select("id, book_id")
+        .eq("user_id", userId)
+        .in("id", logReadingIds);
+      const bookByReading = new Map(
+        (readingsToday ?? []).map((r) => [r.id, r.book_id]),
+      );
+      const ghostReadToday = new Map<string, number>();
+      for (const l of logs) {
+        const bookId = bookByReading.get(l.reading_id);
+        if (!bookId) continue;
+        ghostReadToday.set(
+          bookId,
+          (ghostReadToday.get(bookId) ?? 0) + Math.max(0, l.pages_delta),
+        );
+      }
+      const ghostIds = [...ghostReadToday.entries()]
+        .filter(
+          ([id, read]) =>
+            read > 0 && !filaBookIds.has(id) && !targetBookIds.has(id),
+        )
+        .map(([id]) => id);
+      if (ghostIds.length > 0) {
+        const { data: ghostBooks } = await supabase
+          .from("book")
+          .select("id, slug, title, pages, cover")
+          .eq("user_id", userId)
+          .in("id", ghostIds);
+        const minPos = entries.reduce((m, e) => Math.min(m, e.position), 0);
+        let ghostPos = minPos - ghostIds.length;
+        for (const b of (ghostBooks as BookMeta[] | null) ?? []) {
+          entries.push({
+            book: b,
+            position: ghostPos++,
+            pages_planned: ghostReadToday.get(b.id) ?? 0,
+          });
+        }
+      }
+    }
+  }
+
   const bookIds = entries.map((e) => e.book.id);
 
   // Página atual por livro (max current_page entre as leituras) e páginas
