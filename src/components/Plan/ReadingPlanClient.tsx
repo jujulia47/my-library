@@ -341,18 +341,8 @@ function TodayPanel({
   const [, startTransition] = useTransition();
   const rows = buildTodayRows(books, plan, todayISO);
 
-  // O orçamento do dia é GERAL — vale pra qualquer livro (meta OU fila).
-  // Então "lido hoje" soma TUDO que você leu no dia (mesmo de meta já
-  // concluída/adiantada, que não vira linha), contra o orçamento do dia.
-  const dailyBudget =
-    plan.days.find((d) => d.iso === todayISO)?.budget ?? 0;
-  const totalRead = books.reduce((s, b) => s + b.pages_read_today, 0);
-  const totalRemaining = Math.max(0, dailyBudget - totalRead);
-  const totalTarget = Math.max(dailyBudget, totalRead);
-  const allDone = rows.length > 0 && rows.every((r) => r.done);
-
   // Atraso diluído: se há déficit de capacidade e a usuária escolheu diluir
-  // até uma data, mostra "recuperar Wp hoje" em vermelho (W = déficit ÷ dias).
+  // até uma data, mostra "recuperar Wp hoje" (W = déficit ÷ dias).
   const behind =
     plan.capacityTotal !== null
       ? Math.max(0, plan.monthPageTotal - plan.capacityTotal)
@@ -375,6 +365,17 @@ function TodayPanel({
             ),
         )
       : 0;
+
+  // O orçamento do dia é GERAL — vale pra qualquer livro (meta OU fila). A meta
+  // do dia inclui o atraso diluído (catchup). "Lido hoje" soma TUDO que você
+  // leu no dia (mesmo de meta já concluída/adiantada, que não vira linha).
+  const dailyBudget =
+    plan.days.find((d) => d.iso === todayISO)?.budget ?? 0;
+  const dayTarget = dailyBudget + catchupToday;
+  const totalRead = books.reduce((s, b) => s + b.pages_read_today, 0);
+  const totalRemaining = Math.max(0, dayTarget - totalRead);
+  const totalTarget = Math.max(dayTarget, totalRead);
+  const allDone = rows.length > 0 && rows.every((r) => r.done);
 
   const handleReplan = (targetId: string) => {
     startTransition(async () => {
@@ -420,8 +421,12 @@ function TodayPanel({
 
       {catchupToday > 0 && (
         <p className="mt-1.5 text-xs text-burgundy/80">
-          recuperar atraso: +{catchupToday}p hoje{" "}
-          <span className="text-ink-fade">· diluído até {ddmm(spreadUntil!)}</span>
+          recuperar atraso: +{catchupToday}p hoje (~
+          {formatReadingTime(catchupToday * SECONDS_PER_PAGE)})
+          <span className="text-ink-fade">
+            {" "}
+            · diluído até {ddmm(spreadUntil!)}
+          </span>
         </p>
       )}
 
