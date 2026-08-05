@@ -99,6 +99,13 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Tailwind v4 deixa <button> com cursor padrão. Volta o pointer em toda
+     ação clicável (botões e role=button), exceto quando desabilitada. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 500;

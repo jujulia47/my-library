@@ -13,6 +13,8 @@ export type ReadingPlanData = {
   books: PlanBookInput[];
   /** Períodos de capacidade do usuário (todos — a lógica filtra por dia). */
   capacity: CapacityPeriod[];
+  /** Diluir o atraso até esta data (YYYY-MM-DD), se definida pelo usuário. */
+  spreadUntil: string | null;
 };
 
 type BookMeta = {
@@ -48,29 +50,39 @@ export async function getReadingPlan(
   const nextMonth = addMonthsISO(month, 1);
   const isCurrentMonth = month === currentMonthISO();
 
-  const [{ data: nextReadsRaw }, { data: targetsRaw }, { data: capacityRaw }] =
-    await Promise.all([
-      supabase
-        .from("home_next_read")
-        .select(
-          `position, pages_planned, book:book_id(id, slug, title, pages, cover)`,
-        )
-        .eq("user_id", userId)
-        .eq("plan_month", month)
-        .order("position", { ascending: true }),
-      supabase
-        .from("reading_target")
-        .select(
-          "id, book_id, start_date, end_date, page_from, page_to, carried_over, replan_from_date, replan_from_page",
-        )
-        .eq("user_id", userId)
-        .order("page_from", { ascending: true }),
-      supabase
-        .from("reading_capacity")
-        .select("id, start_date, end_date, pages_per_day")
-        .eq("user_id", userId)
-        .order("start_date", { ascending: true }),
-    ]);
+  const [
+    { data: nextReadsRaw },
+    { data: targetsRaw },
+    { data: capacityRaw },
+    { data: catchupRaw },
+  ] = await Promise.all([
+    supabase
+      .from("home_next_read")
+      .select(
+        `position, pages_planned, book:book_id(id, slug, title, pages, cover)`,
+      )
+      .eq("user_id", userId)
+      .eq("plan_month", month)
+      .order("position", { ascending: true }),
+    supabase
+      .from("reading_target")
+      .select(
+        "id, book_id, start_date, end_date, page_from, page_to, carried_over, replan_from_date, replan_from_page",
+      )
+      .eq("user_id", userId)
+      .order("page_from", { ascending: true }),
+    supabase
+      .from("reading_capacity")
+      .select("id, start_date, end_date, pages_per_day")
+      .eq("user_id", userId)
+      .order("start_date", { ascending: true }),
+    supabase
+      .from("reading_plan_catchup")
+      .select("spread_until")
+      .eq("user_id", userId)
+      .eq("plan_month", month)
+      .maybeSingle(),
+  ]);
 
   const filaRows = (nextReadsRaw as unknown as NextReadRaw[] | null) ?? [];
   const allTargets = targetsRaw ?? [];
@@ -207,5 +219,8 @@ export async function getReadingPlan(
       pages_per_day: c.pages_per_day,
     }));
 
-  return { monthISO: month, isCurrentMonth, books, capacity };
+  const spreadUntil =
+    (catchupRaw as { spread_until: string } | null)?.spread_until ?? null;
+
+  return { monthISO: month, isCurrentMonth, books, capacity, spreadUntil };
 }

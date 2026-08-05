@@ -748,6 +748,33 @@ export type Database = {
         }
         Relationships: []
       }
+      reading_plan_catchup: {
+        Row: {
+          created_at: string
+          id: string
+          plan_month: string
+          spread_until: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan_month: string
+          spread_until: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan_month?: string
+          spread_until?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reading_target: {
         Row: {
           book_id: string

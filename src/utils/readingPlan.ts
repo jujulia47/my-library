@@ -482,16 +482,18 @@ export function buildMonthPlan(
     if (stats.length > 0) targetStats.set(b.book_id, stats);
   }
 
-  // Páginas lidas HOJE de meta ALÉM da cota do dia. Esse excedente já gastou
-  // orçamento do dia, então diminui a sobra da fila — só hoje (os dias
-  // seguintes rebalanceiam quando a página é atualizada).
-  let metaOverReadToday = 0;
-  for (const [, stats] of targetStats) {
-    for (const s of stats) {
-      if (s.status === "em_dia" || s.status === "atrasada") {
-        metaOverReadToday += Math.max(0, s.readToday - (s.todayQuota ?? 0));
-      }
-    }
+  // Orçamento que as metas consomem HOJE = por livro, o maior entre a cota
+  // planejada do dia e o que você já leu de meta. Cobre metas CONCLUÍDAS hoje
+  // (que saem do targetSum, mas cujas páginas lidas já gastaram orçamento) —
+  // assim a fila fica com a sobra real, não com os 130 inteiros.
+  let metaBudgetToday = 0;
+  for (const b of readable) {
+    if ((b.targets?.length ?? 0) === 0) continue;
+    const stats = targetStats.get(b.book_id) ?? [];
+    const active = stats.find(
+      (s) => s.status === "em_dia" || s.status === "atrasada",
+    );
+    metaBudgetToday += Math.max(active?.todayQuota ?? 0, b.pages_read_today);
   }
 
   // Contribuição diária de cada meta (só dias >= hoje; passado não é
@@ -522,18 +524,22 @@ export function buildMonthPlan(
   };
 
   // Fila: livros SEM meta, em ordem de position. Consome a sobra por dia.
-  // "Planejado do mês": pages_planned (limitado ao restante) ou o livro todo.
   const queueBooks = readable
     .filter((b) => (b.targets?.length ?? 0) === 0)
     .sort((a, z) => a.position - z.position);
-  const plannedForMonth = (b: PlanBookInput): number => {
-    const remaining = Math.max(0, (b.total_pages ?? 0) - b.current_page);
+  // Restante no INÍCIO de hoje (página atual − lido hoje). Ancora tanto a
+  // alocação FIXA do dia quanto o total do mês: ler durante o dia não muda
+  // current−lido (sobem juntos), então nada reembaralha. Nos dias seguintes o
+  // plano recalcula com a página real; `pages_planned` limita ao planejado.
+  const remainingAtStartOfToday = (b: PlanBookInput): number => {
+    const startPage = Math.max(0, b.current_page - b.pages_read_today);
+    const remaining = Math.max(0, (b.total_pages ?? 0) - startPage);
     return b.pages_planned != null
       ? Math.min(remaining, Math.max(0, b.pages_planned))
       : remaining;
   };
   const queueRemaining = new Map(
-    queueBooks.map((b) => [b.book_id, plannedForMonth(b)]),
+    queueBooks.map((b) => [b.book_id, remainingAtStartOfToday(b)]),
   );
   const queueProj = new Map<string, QueueProjection>(
     queueBooks.map((b) => [
@@ -558,17 +564,25 @@ export function buildMonthPlan(
     if (capacityForDay(iso, capacity) !== null) hasCapacityInMonth = true;
     metaMonthPages += targetDaily(iso).reduce((s, e) => s + e.pages, 0);
   }
+  // Total do mês ancorado no INÍCIO de hoje (igual à fila) — ler durante o dia
+  // não muda o "necessário"; ele só recalcula no dia seguinte, e diminui de
+  // fato quando você lê ALÉM do planejado ou tira um livro da fila.
   const filaMonthPages = queueBooks.reduce(
-    (s, b) => s + plannedForMonth(b),
+    (s, b) => s + remainingAtStartOfToday(b),
     0,
   );
-  const monthPageTotal = metaMonthPages + filaMonthPages;
+  // Total do mês no INÍCIO de hoje (fixo durante o dia).
+  const startOfTodayMonthPages = metaMonthPages + filaMonthPages;
   const remainingDaysInMonth =
     todayISO >= firstISO && todayISO <= lastISO
       ? inclusiveDays(todayISO, lastISO)
       : totalDays;
-  const neededAvg =
-    monthPageTotal > 0 ? Math.ceil(monthPageTotal / remainingDaysInMonth) : 0;
+  // Média usada no PLANEJAMENTO (orçamento da fila sem capacidade) — baseada
+  // no total do início do dia, estável durante o dia.
+  const planningAvg =
+    startOfTodayMonthPages > 0
+      ? Math.ceil(startOfTodayMonthPages / remainingDaysInMonth)
+      : 0;
 
   const days: PlanDay[] = [];
   const daysOverCapacity: string[] = [];
@@ -589,7 +603,7 @@ export function buildMonthPlan(
       ? 0
       : hasCapacityInMonth
         ? (cap ?? 0)
-        : neededAvg;
+        : planningAvg;
 
     if (!isPast) {
       if (cap !== null) {
@@ -598,11 +612,11 @@ export function buildMonthPlan(
         if (targetSum > cap) daysOverCapacity.push(iso);
       }
 
-      // A fila consome a SOBRA (orçamento − metas) em ORDEM — o mesmo
-      // mecanismo com capacidade ou média. HOJE, o que você leu de meta além
-      // da cota também já gastou orçamento → a sobra da fila cai.
-      const spentToday = targetSum + (iso === todayISO ? metaOverReadToday : 0);
-      let leftover = Math.max(0, budget - spentToday);
+      // A fila consome a SOBRA em ORDEM. HOJE usa o orçamento que as metas
+      // realmente consumiram (inclui as concluídas hoje); nos outros dias, a
+      // cota planejada das metas.
+      const metaSpent = iso === todayISO ? metaBudgetToday : targetSum;
+      let leftover = Math.max(0, budget - metaSpent);
       while (leftover > 0 && queueIdx < queueBooks.length) {
         const qb = queueBooks[queueIdx];
         const rem = queueRemaining.get(qb.book_id) ?? 0;
@@ -648,6 +662,16 @@ export function buildMonthPlan(
     const proj = queueProj.get(bookId)!;
     if (proj.endISO === null) proj.leftAtMonthEnd = rem;
   }
+
+  // O total do mês só encolhe DENTRO do dia quando você lê ALÉM do orçamento
+  // do dia — o excedente dilui o "todo". Ler dentro do orçamento não mexe nos
+  // números gerais (só entra/sai livro muda). No dia seguinte tudo recalcula.
+  const todayBudget = days.find((d) => d.iso === todayISO)?.budget ?? 0;
+  const totalReadToday = readable.reduce((s, b) => s + b.pages_read_today, 0);
+  const overReadToday = Math.max(0, totalReadToday - todayBudget);
+  const monthPageTotal = Math.max(0, startOfTodayMonthPages - overReadToday);
+  const neededAvg =
+    monthPageTotal > 0 ? Math.ceil(monthPageTotal / remainingDaysInMonth) : 0;
 
   return {
     year,

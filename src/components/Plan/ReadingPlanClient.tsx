@@ -50,6 +50,7 @@ import { deleteReadingTarget } from "@/actions/deleteReadingTarget";
 import { carryOverReadingTarget } from "@/actions/carryOverReadingTarget";
 import { replanReadingTarget } from "@/actions/replanReadingTarget";
 import { setPlanBookPages } from "@/actions/setPlanBookPages";
+import { setPlanCatchup } from "@/actions/setPlanCatchup";
 import {
   upsertReadingCapacity,
   type ReadingCapacityInput,
@@ -152,11 +153,20 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
           books={books}
           plan={plan}
           todayISO={todayISO}
+          spreadUntil={data.spreadUntil}
           onChanged={refresh}
         />
       )}
 
-      <SummaryStrip plan={plan} totalBooks={books.length} />
+      <SummaryStrip
+        plan={plan}
+        totalBooks={books.length}
+        monthISO={monthISO}
+        todayISO={todayISO}
+        editable={editable}
+        spreadUntil={data.spreadUntil}
+        onChanged={refresh}
+      />
 
       <CapacitySection
         capacity={capacity}
@@ -275,6 +285,24 @@ function buildTodayRows(
       continue;
     }
 
+    // Meta sem cota ativa mas LIDA hoje (ex.: concluída hoje) — mostra como
+    // cumprida pra o painel bater com o total (essas páginas gastaram
+    // orçamento do dia).
+    if (book.targets.length > 0 && book.pages_read_today > 0) {
+      rows.push({
+        book,
+        stats: null,
+        quota: book.pages_read_today,
+        readToday: book.pages_read_today,
+        done: true,
+        ahead: 0,
+        backlog: 0,
+        targetPage: null,
+        kind: "meta",
+      });
+      continue;
+    }
+
     // Livro de fila: a cota de hoje vem do calendário (sobra da capacidade).
     if (book.targets.length === 0 && today) {
       const entry = today.entries.find(
@@ -301,11 +329,13 @@ function TodayPanel({
   books,
   plan,
   todayISO,
+  spreadUntil,
   onChanged,
 }: {
   books: PlanBookInput[];
   plan: ReturnType<typeof buildMonthPlan>;
   todayISO: string;
+  spreadUntil: string | null;
   onChanged: () => void;
 }) {
   const [, startTransition] = useTransition();
@@ -320,6 +350,31 @@ function TodayPanel({
   const totalRemaining = Math.max(0, dailyBudget - totalRead);
   const totalTarget = Math.max(dailyBudget, totalRead);
   const allDone = rows.length > 0 && rows.every((r) => r.done);
+
+  // Atraso diluído: se há déficit de capacidade e a usuária escolheu diluir
+  // até uma data, mostra "recuperar Wp hoje" em vermelho (W = déficit ÷ dias).
+  const behind =
+    plan.capacityTotal !== null
+      ? Math.max(0, plan.monthPageTotal - plan.capacityTotal)
+      : 0;
+  const monthEndISO = isoForDay(
+    plan.year,
+    plan.month,
+    daysInMonth(plan.year, plan.month),
+  );
+  const catchupToday =
+    behind > 0 && spreadUntil && spreadUntil >= todayISO
+      ? Math.ceil(
+          behind /
+            Math.max(
+              1,
+              inclusiveDays(
+                todayISO,
+                spreadUntil > monthEndISO ? monthEndISO : spreadUntil,
+              ),
+            ),
+        )
+      : 0;
 
   const handleReplan = (targetId: string) => {
     startTransition(async () => {
@@ -362,6 +417,13 @@ function TodayPanel({
           )}
         </p>
       </div>
+
+      {catchupToday > 0 && (
+        <p className="mt-1.5 text-xs text-burgundy/80">
+          recuperar atraso: +{catchupToday}p hoje{" "}
+          <span className="text-ink-fade">· diluído até {ddmm(spreadUntil!)}</span>
+        </p>
+      )}
 
       <ul className="mt-3 space-y-2">
         {rows.map((r) => (
@@ -457,14 +519,56 @@ function TodayPanel({
 function SummaryStrip({
   plan,
   totalBooks,
+  monthISO,
+  todayISO,
+  editable,
+  spreadUntil,
+  onChanged,
 }: {
   plan: ReturnType<typeof buildMonthPlan>;
   totalBooks: number;
+  monthISO: string;
+  todayISO: string;
+  editable: boolean;
+  spreadUntil: string | null;
+  onChanged: () => void;
 }) {
   const capDiff =
     plan.capacityTotal !== null
       ? plan.capacityTotal - plan.monthPageTotal
       : null;
+  // Déficit: páginas atrás do ritmo (capacidade não cobre o plano do mês).
+  const behind = capDiff !== null && capDiff < 0 ? Math.abs(capDiff) : 0;
+
+  const monthEndISO = isoForDay(
+    plan.year,
+    plan.month,
+    daysInMonth(plan.year, plan.month),
+  );
+  // Diluir o atraso até uma data: X/dia = déficit ÷ dias (de hoje até a data).
+  const catchupPerDay = (untilISO: string): number => {
+    const until = untilISO > monthEndISO ? monthEndISO : untilISO;
+    const days = Math.max(1, inclusiveDays(todayISO, until));
+    return Math.ceil(behind / days);
+  };
+
+  const [, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [dateInput, setDateInput] = useState(monthEndISO);
+
+  const saveCatchup = (until: string | null) => {
+    startTransition(async () => {
+      const res = await setPlanCatchup(monthISO, until);
+      if (res.ok) {
+        setEditing(false);
+        onChanged();
+      }
+    });
+  };
+
+  // Só vale se a data ainda não passou (senão trata como sem diluição).
+  const activeSpread =
+    spreadUntil && spreadUntil >= todayISO ? spreadUntil : null;
 
   return (
     <section className="mt-5">
@@ -509,11 +613,109 @@ function SummaryStrip({
               : "border-burgundy/40 bg-burgundy/[0.06] text-burgundy",
           )}
         >
-          Sua capacidade planejada cobre{" "}
-          {plan.capacityTotal.toLocaleString("pt-BR")} páginas até o fim do mês —{" "}
-          {capDiff >= 0
-            ? `${capDiff.toLocaleString("pt-BR")} acima do necessário ✓`
-            : `faltam ${Math.abs(capDiff).toLocaleString("pt-BR")} pra cobrir todos os livros`}
+          {capDiff >= 0 ? (
+            <>
+              ✓ Sua capacidade cobre o plano do mês
+              {capDiff > 0 && (
+                <>
+                  {" "}
+                  — {capDiff.toLocaleString("pt-BR")} páginas de folga
+                </>
+              )}
+              .
+            </>
+          ) : (
+            <>
+              Você está{" "}
+              <span className="font-medium">
+                {behind.toLocaleString("pt-BR")} páginas
+              </span>{" "}
+              atrás do ritmo.
+              {editing ? (
+                <>
+                  {" "}
+                  Diluir até{" "}
+                  <input
+                    type="date"
+                    value={dateInput}
+                    min={todayISO}
+                    max={monthEndISO}
+                    onChange={(e) => setDateInput(e.target.value)}
+                    className="rounded-md border border-burgundy/40 bg-ivory-light px-2 py-0.5 text-sm text-ink-deep focus:outline-none align-middle"
+                  />{" "}
+                  → leia mais{" "}
+                  <span className="font-medium">
+                    {catchupPerDay(dateInput)} pág/dia
+                  </span>
+                  {" · "}
+                  <button
+                    type="button"
+                    onClick={() => saveCatchup(dateInput)}
+                    className="text-xs underline underline-offset-2 hover:text-ink-deep transition-colors"
+                  >
+                    diluir
+                  </button>
+                  {" · "}
+                  <button
+                    type="button"
+                    onClick={() => setEditing(false)}
+                    className="text-xs text-ink-fade underline underline-offset-2 hover:text-ink-deep transition-colors"
+                  >
+                    cancelar
+                  </button>
+                </>
+              ) : activeSpread ? (
+                <>
+                  {" "}
+                  Diluindo até {ddmm(activeSpread)}: leia mais{" "}
+                  <span className="font-medium">
+                    {catchupPerDay(activeSpread)} pág/dia
+                  </span>
+                  {editable && (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDateInput(activeSpread);
+                          setEditing(true);
+                        }}
+                        className="text-xs underline underline-offset-2 hover:text-ink-deep transition-colors"
+                      >
+                        alterar
+                      </button>
+                      {" · "}
+                      <button
+                        type="button"
+                        onClick={() => saveCatchup(null)}
+                        className="text-xs text-ink-fade underline underline-offset-2 hover:text-ink-deep transition-colors"
+                      >
+                        desfazer
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {" "}
+                  {editable && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDateInput(monthEndISO);
+                        setEditing(true);
+                      }}
+                      className="underline underline-offset-2 hover:text-ink-deep transition-colors"
+                    >
+                      diluir o atraso
+                    </button>
+                  )}
+                  {editable ? ", " : " — "}tire um livro ou aumente a
+                  capacidade.
+                </>
+              )}
+            </>
+          )}
         </p>
       )}
       {plan.daysOverCapacity.length > 0 && (
