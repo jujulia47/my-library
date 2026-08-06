@@ -6,8 +6,12 @@ import {
   addMonthsISO,
   dateISOInAppTZ,
 } from "@/utils/dates";
-import { planBookColor } from "@/utils/colorByHash";
-import type { CapacityPeriod, PlanBookInput } from "@/utils/readingPlan";
+import { planBookColor, colorHexForName } from "@/utils/colorByHash";
+import type {
+  CapacityPeriod,
+  PlanBookInput,
+  PlanHistoryEntry,
+} from "@/utils/readingPlan";
 
 export type ReadingPlanData = {
   /** Mês visado (YYYY-MM-01). */
@@ -20,6 +24,8 @@ export type ReadingPlanData = {
   capacity: CapacityPeriod[];
   /** Diluir o atraso até esta data (YYYY-MM-DD), se definida pelo usuário. */
   spreadUntil: string | null;
+  /** Leitura REAL do mês por dia (log) — preenche os dias passados do calendário. */
+  history: PlanHistoryEntry[];
 };
 
 type BookMeta = {
@@ -300,5 +306,78 @@ export async function getReadingPlan(
   const spreadUntil =
     (catchupRaw as { spread_until: string } | null)?.spread_until ?? null;
 
-  return { monthISO: month, isCurrentMonth, books, capacity, spreadUntil };
+  // Histórico REAL do mês (reading_progress_log): quanto foi lido de cada livro
+  // em cada dia. Preenche os dias PASSADOS do calendário — inclui livros que já
+  // saíram do plano (ex.: terminados), por isso busca título/cor à parte.
+  const history: PlanHistoryEntry[] = [];
+  {
+    const { data: monthLogs } = await supabase
+      .from("reading_progress_log")
+      .select("reading_id, log_date, pages_delta")
+      .eq("user_id", userId)
+      .gte("log_date", month)
+      .lt("log_date", nextMonth)
+      .gt("pages_delta", 0);
+    const logRows = monthLogs ?? [];
+    if (logRows.length > 0) {
+      const histReadingIds = [...new Set(logRows.map((l) => l.reading_id))];
+      const { data: histReadings } = await supabase
+        .from("reading")
+        .select("id, book_id")
+        .eq("user_id", userId)
+        .in("id", histReadingIds);
+      const bookByReading = new Map(
+        (histReadings ?? []).map((r) => [r.id, r.book_id]),
+      );
+      // Páginas por (dia, livro).
+      const byDayBook = new Map<string, number>();
+      const histBookIds = new Set<string>();
+      for (const l of logRows) {
+        const bid = bookByReading.get(l.reading_id);
+        if (!bid) continue;
+        histBookIds.add(bid);
+        const key = `${l.log_date}|${bid}`;
+        byDayBook.set(key, (byDayBook.get(key) ?? 0) + l.pages_delta);
+      }
+      // Título e cor: reusa os livros do plano (mesma cor no passado e futuro);
+      // busca título dos que já saíram do plano e dá cor estável por id.
+      const colorByBookId = new Map(books.map((b) => [b.book_id, b.color]));
+      const titleByBookId = new Map(books.map((b) => [b.book_id, b.title]));
+      const missingTitles = [...histBookIds].filter(
+        (id) => !titleByBookId.has(id),
+      );
+      if (missingTitles.length > 0) {
+        const { data: histBooks } = await supabase
+          .from("book")
+          .select("id, title")
+          .eq("user_id", userId)
+          .in("id", missingTitles);
+        for (const b of (histBooks as { id: string; title: string }[] | null) ??
+          []) {
+          titleByBookId.set(b.id, b.title);
+        }
+      }
+      for (const [key, pages] of byDayBook) {
+        const sep = key.indexOf("|");
+        const date = key.slice(0, sep);
+        const bid = key.slice(sep + 1);
+        history.push({
+          date,
+          book_id: bid,
+          title: titleByBookId.get(bid) ?? "—",
+          color: colorByBookId.get(bid) ?? colorHexForName(bid),
+          pages,
+        });
+      }
+    }
+  }
+
+  return {
+    monthISO: month,
+    isCurrentMonth,
+    books,
+    capacity,
+    spreadUntil,
+    history,
+  };
 }

@@ -398,7 +398,17 @@ export type DayEntry = {
   title: string;
   color: string;
   pages: number;
-  kind: "meta" | "fila";
+  /** "lido" = leitura REAL de um dia passado (histórico); "meta"/"fila" = plano. */
+  kind: "meta" | "fila" | "lido";
+};
+
+/** Uma leitura REAL de um dia (do reading_progress_log) — preenche o passado. */
+export type PlanHistoryEntry = {
+  date: string;
+  book_id: string;
+  title: string;
+  color: string;
+  pages: number;
 };
 
 export type PlanDay = {
@@ -463,10 +473,25 @@ export function buildMonthPlan(
   capacity: CapacityPeriod[],
   todayISO: string,
   spreadUntil: string | null = null,
+  history: PlanHistoryEntry[] = [],
 ): MonthPlan {
   const totalDays = daysInMonth(year, month);
   const firstISO = isoForDay(year, month, 1);
   const lastISO = isoForDay(year, month, totalDays);
+
+  // Histórico real por dia (dias PASSADOS mostram o que foi lido, não o plano).
+  const historyByDate = new Map<string, DayEntry[]>();
+  for (const h of history) {
+    const list = historyByDate.get(h.date) ?? [];
+    list.push({
+      book_id: h.book_id,
+      title: h.title,
+      color: h.color,
+      pages: h.pages,
+      kind: "lido",
+    });
+    historyByDate.set(h.date, list);
+  }
 
   const readable = books.filter(
     (b) => b.total_pages !== null && b.total_pages > 0,
@@ -618,7 +643,8 @@ export function buildMonthPlan(
     const iso = isoForDay(year, month, day);
     const isPast = iso < todayISO;
     const cap = capacityForDay(iso, capacity);
-    const entries = targetDaily(iso);
+    // Passado = histórico real (o que foi lido); hoje/futuro = plano das metas.
+    const entries = isPast ? (historyByDate.get(iso) ?? []) : targetDaily(iso);
     const targetSum = entries.reduce((s, e) => s + e.pages, 0);
 
     // Orçamento de leitura do dia (capacidade OU média). É o total geral que

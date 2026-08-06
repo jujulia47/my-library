@@ -85,8 +85,16 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
 
   const plan = useMemo(
     () =>
-      buildMonthPlan(year, month, books, capacity, todayISO, data.spreadUntil),
-    [year, month, books, capacity, todayISO, data.spreadUntil],
+      buildMonthPlan(
+        year,
+        month,
+        books,
+        capacity,
+        todayISO,
+        data.spreadUntil,
+        data.history,
+      ),
+    [year, month, books, capacity, todayISO, data.spreadUntil, data.history],
   );
 
   // Modais.
@@ -1714,7 +1722,7 @@ function CalendarSection({
       <h2 className="text-sm uppercase tracking-wider text-ink-fade mb-3">
         Calendário{" "}
         <span className="normal-case tracking-normal text-ink-fade/80 italic">
-          — visualização do plano (🚩 = prazo de meta)
+          — passado = lido · futuro = planejado (🚩 = prazo de meta)
         </span>
       </h2>
 
@@ -1742,7 +1750,7 @@ function CalendarSection({
                 isToday
                   ? "border-[#6D3914] bg-[#6D3914]/[0.04]"
                   : "border-border bg-ivory-light",
-                d.isPast && "opacity-45",
+                d.isPast && "opacity-70",
               )}
             >
               <div className="flex items-center justify-between">
@@ -1785,7 +1793,7 @@ function CalendarSection({
       {/* Mobile: lista dos dias com leitura */}
       <ul className="md:hidden space-y-2">
         {plan.days
-          .filter((d) => !d.isPast && (d.entries.length > 0 || d.deadlines.length > 0))
+          .filter((d) => d.entries.length > 0 || d.deadlines.length > 0)
           .map((d) => {
             const isToday = d.iso === todayISO;
             const weekday = new Date(`${d.iso}T00:00:00Z`).getUTCDay();
@@ -1797,6 +1805,7 @@ function CalendarSection({
                   isToday
                     ? "border-[#6D3914] bg-[#6D3914]/[0.04]"
                     : "border-border bg-ivory-light",
+                  d.isPast && "opacity-70",
                 )}
               >
                 <div className="flex items-center justify-between mb-1">
