@@ -7,6 +7,7 @@ import { BookCoverFallback } from "@/components/ui";
 import UpdateProgressModal, {
   type UpdateProgressTarget,
 } from "@/components/forms/UpdateProgressModal";
+import { ReadingSession } from "@/components/Session/ReadingSession";
 import type { ReadingNowItem } from "@/services/homeData";
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
 export function ReadingNow({ items }: Props) {
   const [target, setTarget] = useState<UpdateProgressTarget | null>(null);
   const [open, setOpen] = useState(false);
+  const [sessionItem, setSessionItem] = useState<ReadingNowItem | null>(null);
 
   const handleOpen = (item: ReadingNowItem) => {
     setTarget({
@@ -58,7 +60,11 @@ export function ReadingNow({ items }: Props) {
               key={item.reading_id}
               className="flex-shrink-0 w-[300px] max-w-[85vw]"
             >
-              <ReadingNowCard item={item} onUpdate={() => handleOpen(item)} />
+              <ReadingNowCard
+                item={item}
+                onUpdate={() => handleOpen(item)}
+                onSession={() => setSessionItem(item)}
+              />
             </div>
           ))}
         </div>
@@ -69,6 +75,7 @@ export function ReadingNow({ items }: Props) {
               key={item.reading_id}
               item={item}
               onUpdate={() => handleOpen(item)}
+              onSession={() => setSessionItem(item)}
             />
           ))}
         </div>
@@ -79,6 +86,17 @@ export function ReadingNow({ items }: Props) {
         onClose={() => setOpen(false)}
         target={target}
       />
+
+      {sessionItem && (
+        <ReadingSession
+          readingId={sessionItem.reading_id}
+          title={sessionItem.title}
+          author={sessionItem.author_name}
+          currentPage={sessionItem.current_page}
+          totalPages={sessionItem.pages_count}
+          onClose={() => setSessionItem(null)}
+        />
+      )}
     </>
   );
 }
@@ -86,9 +104,11 @@ export function ReadingNow({ items }: Props) {
 function ReadingNowCard({
   item,
   onUpdate,
+  onSession,
 }: {
   item: ReadingNowItem;
   onUpdate: () => void;
+  onSession: () => void;
 }) {
   return (
     <div className="flex gap-2.5 p-2.5 bg-paper border border-paper-soft rounded-lg hover:border-roasted-chestnut transition-colors duration-150">
@@ -133,13 +153,22 @@ function ReadingNowCard({
               />
               {item.current_page}/{item.pages_count} · {item.progress_percent}%
             </span>
-            <button
-              type="button"
-              onClick={onUpdate}
-              className="text-[10px] font-body text-gold-deep hover:text-ink-deep transition-colors underline-offset-2 hover:underline"
-            >
-              Atualizar
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={onSession}
+                className="text-[10px] font-body text-gold-deep hover:text-ink-deep transition-colors underline-offset-2 hover:underline"
+              >
+                Sessão
+              </button>
+              <button
+                type="button"
+                onClick={onUpdate}
+                className="text-[10px] font-body text-gold-deep hover:text-ink-deep transition-colors underline-offset-2 hover:underline"
+              >
+                Atualizar
+              </button>
+            </div>
           </div>
         </div>
       </div>

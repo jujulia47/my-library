@@ -775,6 +775,57 @@ export type Database = {
         }
         Relationships: []
       }
+      reading_session: {
+        Row: {
+          book_id: string | null
+          created_at: string
+          id: string
+          pages: number
+          reading_id: string | null
+          scene: string | null
+          seconds: number
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          book_id?: string | null
+          created_at?: string
+          id?: string
+          pages: number
+          reading_id?: string | null
+          scene?: string | null
+          seconds: number
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string | null
+          created_at?: string
+          id?: string
+          pages?: number
+          reading_id?: string | null
+          scene?: string | null
+          seconds?: number
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_session_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "book"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reading_session_reading_id_fkey"
+            columns: ["reading_id"]
+            isOneToOne: false
+            referencedRelation: "reading"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reading_target: {
         Row: {
           book_id: string
