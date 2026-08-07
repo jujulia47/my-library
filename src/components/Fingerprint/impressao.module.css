@@ -1,0 +1,203 @@
+/* Impressão digital de leitura — cartão com a arte generativa + leitura dos dados. */
+
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.card {
+  background: var(--color-paper, #f1e9d6);
+  border: 1px solid var(--color-border, #dccba8);
+  border-radius: 20px;
+  padding: clamp(22px, 3.5vw, 40px);
+  box-shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.4);
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: clamp(20px, 3vw, 42px);
+  align-items: center;
+}
+
+.eyebrow {
+  font-family: ui-monospace, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-gold-deep, #b98d3e);
+  margin: 0 0 10px;
+}
+.title {
+  font-family: var(--font-display, Georgia), serif;
+  font-weight: 600;
+  font-size: clamp(1.5rem, 3.4vw, 2.15rem);
+  line-height: 1.08;
+  margin: 0 0 8px;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+  color: var(--color-ink-deep, #352617);
+}
+.lead {
+  color: var(--color-ink-soft, #6f5c44);
+  margin: 0;
+  font-size: 0.98rem;
+  max-width: 44ch;
+}
+
+/* ---- arte ---- */
+.art {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 420px;
+  margin: 18px auto 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: radial-gradient(
+    70% 70% at 50% 46%,
+    var(--color-paper-aged-bg, #f6efdd),
+    var(--color-paper-soft, #e7dcc0)
+  );
+  box-shadow:
+    inset 0 0 0 1px var(--color-border, #dccba8),
+    inset 0 0 60px -20px rgba(0, 0, 0, 0.35);
+}
+.art canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.yr {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft, #6f5c44);
+}
+
+/* ---- info ---- */
+.info { display: flex; flex-direction: column; gap: 22px; }
+
+.plabel {
+  font-family: ui-monospace, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-ink-fade, #8a765c);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.plabel::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border, #dccba8);
+}
+
+.legend { display: grid; gap: 10px; }
+.lg {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.sw { width: 14px; height: 14px; border-radius: 4px; }
+.nm { font-size: 0.92rem; color: var(--color-ink-deep, #352617); }
+.pc {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--color-ink-soft, #6f5c44);
+  font-variant-numeric: tabular-nums;
+}
+.bar {
+  grid-column: 1 / -1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-border, rgba(90, 60, 30, 0.18));
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.emptyGenres {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--color-ink-soft, #6f5c44);
+  margin: 0;
+}
+
+/* ---- stats ---- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.stat {
+  text-align: center;
+  padding: 12px 6px;
+  border-radius: 10px;
+  background: var(--color-paper-aged, rgba(90, 60, 30, 0.06));
+  border: 1px solid var(--color-border, #dccba8);
+}
+.statN {
+  font-family: ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.35rem;
+  color: var(--color-ink-deep, #352617);
+  font-weight: 600;
+  line-height: 1;
+}
+.statC {
+  font-family: ui-monospace, monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink-fade, #8a765c);
+  margin-top: 6px;
+}
+
+/* ---- ações ---- */
+.actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.export {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-weight: 700;
+  background: linear-gradient(#e6cf8f, #c6a250);
+  color: #2a1e08;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 18px;
+  transition: transform 0.12s ease;
+}
+.export:hover { transform: translateY(-1px); }
+.export:focus-visible { outline: 2px solid var(--color-gold, #b98d3e); outline-offset: 3px; }
+.note {
+  font-family: ui-monospace, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-fade, #8a765c);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--color-ink-soft, #6f5c44);
+  font-style: italic;
+}
+
+@media (max-width: 760px) {
+  .card { grid-template-columns: 1fr; }
+  .head { text-align: center; }
+  .lead { margin-inline: auto; }
+}
