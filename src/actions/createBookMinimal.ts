@@ -47,6 +47,17 @@ export async function createBookMinimal(
     ? (languageRaw as BookLanguage)
     : null;
 
+  // Campos extras do merge do ISBN (inputs ocultos) — opcionais.
+  const pagesRaw = formData.get("pages") as string | null;
+  const pages = pagesRaw && pagesRaw !== "" ? Number(pagesRaw) || null : null;
+  const publisher = ((formData.get("publisher") as string) || "").trim() || null;
+  const yearRaw = formData.get("publication_year") as string | null;
+  const publication_year =
+    yearRaw && yearRaw !== "" ? Number(yearRaw) || null : null;
+  const synopsis = ((formData.get("synopsis") as string) || "").trim() || null;
+  const original_title =
+    ((formData.get("original_title") as string) || "").trim() || null;
+
   const authorIds = formData.getAll("author_ids").map(String).filter(Boolean);
 
   const serieId = (formData.get("serie_id") as string) || null;
@@ -85,6 +96,11 @@ export async function createBookMinimal(
       isbn,
       language,
       cover: coverPath,
+      pages,
+      publisher,
+      publication_year,
+      synopsis,
+      original_title,
       serie_id: serieId,
       volume,
       user_id: user.id,
@@ -130,7 +146,7 @@ export async function createBookMinimal(
       user_id: user.id,
       author_id,
       title,
-      publication_year: null,
+      publication_year,
     }));
     await supabase
       .from("author_bibliography")

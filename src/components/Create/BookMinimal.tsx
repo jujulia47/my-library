@@ -43,6 +43,24 @@ const languageOptions = [
   { value: "other", label: "Outro" },
 ];
 
+const SOURCE_NAMES: Record<string, string> = {
+  google: "Google Books",
+  openlibrary: "Open Library",
+  "openlibrary-works": "Open Library",
+};
+function formatSources(sources: string[]): string {
+  const names = [...new Set(sources.map((s) => SOURCE_NAMES[s] ?? s))];
+  return names.join(" + ");
+}
+
+type Enrichment = {
+  pages?: number;
+  publisher?: string;
+  publication_year?: number;
+  synopsis?: string;
+  original_title?: string;
+};
+
 type Props = {
   initialSerie?: SerieOption | null;
   initialSerieSlug?: string | null;
@@ -97,10 +115,14 @@ export default function BookMinimal({
   const [lookupStatus, setLookupStatus] = useState<
     | { state: "idle" }
     | { state: "loading" }
-    | { state: "success"; source: string }
+    | { state: "success"; sources: string[] }
     | { state: "error"; message: string }
   >({ state: "idle" });
   const [isLookingUp, setIsLookingUp] = useState(false);
+  // Campos extras vindos do merge do ISBN — não têm campo visível no form
+  // mínimo, mas são salvos via inputs ocultos (páginas, editora, ano, sinopse,
+  // título original). O usuário completa/edita o resto depois no BookFull.
+  const [enrichment, setEnrichment] = useState<Enrichment | null>(null);
 
   const handleIsbnLookup = async () => {
     const trimmed = isbn.trim();
@@ -159,7 +181,16 @@ export default function BookMinimal({
         }
       }
 
-      setLookupStatus({ state: "success", source: result.source });
+      // Campos extras do merge (salvos via inputs ocultos no submit).
+      setEnrichment({
+        pages: d.pages,
+        publisher: d.publisher,
+        publication_year: d.publication_year,
+        synopsis: d.synopsis,
+        original_title: d.original_title,
+      });
+
+      setLookupStatus({ state: "success", sources: result.sources });
     } catch {
       setLookupStatus({
         state: "error",
@@ -343,7 +374,7 @@ export default function BookMinimal({
                     }
                   }}
                   errorText={fieldErrors.isbn}
-                  helperText="Tem o ISBN? Clique em buscar pra preencher título, autores, idioma e capa automaticamente."
+                  helperText="Tem o ISBN? Clique em buscar pra preencher título, autores, idioma, capa — e, quando houver, páginas, editora, ano e sinopse."
                 />
                 <div className="flex items-start gap-3 flex-wrap">
                   <Button
@@ -359,10 +390,7 @@ export default function BookMinimal({
                   </Button>
                   {lookupStatus.state === "success" && (
                     <span className="text-xs italic text-moss self-center">
-                      ✓ Preenchido via{" "}
-                      {lookupStatus.source === "google"
-                        ? "Google Books"
-                        : "Open Library"}
+                      ✓ Preenchido via {formatSources(lookupStatus.sources)}
                     </span>
                   )}
                   {lookupStatus.state === "error" && (
@@ -381,6 +409,35 @@ export default function BookMinimal({
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
               />
+
+              {/* Campos extras do merge do ISBN — salvos sem poluir o form. */}
+              {enrichment && (
+                <>
+                  {enrichment.pages != null && (
+                    <input type="hidden" name="pages" value={enrichment.pages} />
+                  )}
+                  {enrichment.publisher && (
+                    <input type="hidden" name="publisher" value={enrichment.publisher} />
+                  )}
+                  {enrichment.publication_year != null && (
+                    <input
+                      type="hidden"
+                      name="publication_year"
+                      value={enrichment.publication_year}
+                    />
+                  )}
+                  {enrichment.synopsis && (
+                    <input type="hidden" name="synopsis" value={enrichment.synopsis} />
+                  )}
+                  {enrichment.original_title && (
+                    <input
+                      type="hidden"
+                      name="original_title"
+                      value={enrichment.original_title}
+                    />
+                  )}
+                </>
+              )}
             </div>
 
             {/* Coluna direita: capa */}
