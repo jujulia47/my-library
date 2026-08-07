@@ -371,6 +371,36 @@ export default function BookMinimal({
                 errorText={fieldErrors.title}
               />
 
+              <div className="flex items-center gap-3 flex-wrap -mt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCompleteAI}
+                  loading={isAiBusy}
+                  disabled={(!title.trim() && !isbn.trim()) || isAiBusy}
+                  leftIcon={<SparklesIcon className="w-4 h-4" />}
+                >
+                  Completar com IA
+                </Button>
+                {aiStatus.state === "success" ? (
+                  <span className="text-xs italic text-moss self-center">
+                    ✓ Completado com IA
+                    {aiStatus.confidence === "baixa"
+                      ? " (confiança baixa — confira)"
+                      : ""}
+                  </span>
+                ) : aiStatus.state === "error" ? (
+                  <span className="text-xs italic text-burgundy max-w-md leading-snug">
+                    {aiStatus.message}
+                  </span>
+                ) : (
+                  <span className="text-xs italic text-ink-fade leading-snug">
+                    Digite o título (e/ou o ISBN) e a IA preenche o resto.
+                  </span>
+                )}
+              </div>
+
               <AuthorMultiSelect
                 label="Autores"
                 value={authors}
@@ -452,17 +482,6 @@ export default function BookMinimal({
                   >
                     Buscar pelo ISBN
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCompleteAI}
-                    loading={isAiBusy}
-                    disabled={(!isbn.trim() && !title.trim()) || isAiBusy}
-                    leftIcon={<SparklesIcon className="w-4 h-4" />}
-                  >
-                    Completar com IA
-                  </Button>
                   {lookupStatus.state === "success" && (
                     <span className="text-xs italic text-moss self-center">
                       ✓ Preenchido via {formatSources(lookupStatus.sources)}
@@ -473,24 +492,7 @@ export default function BookMinimal({
                       {lookupStatus.message}
                     </span>
                   )}
-                  {aiStatus.state === "success" && (
-                    <span className="text-xs italic text-moss self-center">
-                      ✓ Completado com IA
-                      {aiStatus.confidence === "baixa"
-                        ? " (confiança baixa — confira)"
-                        : ""}
-                    </span>
-                  )}
-                  {aiStatus.state === "error" && (
-                    <span className="text-xs italic text-burgundy max-w-md leading-snug">
-                      {aiStatus.message}
-                    </span>
-                  )}
                 </div>
-                <p className="text-xs text-ink-fade italic">
-                  Não achou pelo ISBN? O <b>Completar com IA</b> preenche o que
-                  falta (só os campos vazios) a partir do ISBN ou do título.
-                </p>
               </div>
 
               <Select
