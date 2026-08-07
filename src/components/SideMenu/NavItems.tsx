@@ -21,6 +21,7 @@ import {
   FingerPrintIcon,
   TrophyIcon,
   RectangleStackIcon,
+  ViewfinderCircleIcon,
 } from "@heroicons/react/24/outline";
 import { BookOpenIcon as BookOpenSolid } from "@heroicons/react/24/solid";
 
@@ -36,6 +37,7 @@ const items: NavItem[] = [
   { href: "/", label: "Início", Icon: HomeIcon },
   { href: "/plano", label: "Plano de leitura", Icon: ClipboardDocumentListIcon },
   { href: "/book", label: "Livros", Icon: BookOpenIcon },
+  { href: "/scanner", label: "Escanear", Icon: ViewfinderCircleIcon },
   { href: "/serie", label: "Séries", Icon: Squares2X2Icon },
   { href: "/quote", label: "Citações", Icon: ChatBubbleLeftRightIcon },
   { href: "/author", label: "Autores", Icon: UserCircleIcon },
