@@ -20,6 +20,7 @@ import {
   IdentificationIcon,
   FingerPrintIcon,
   TrophyIcon,
+  RectangleStackIcon,
 } from "@heroicons/react/24/outline";
 import { BookOpenIcon as BookOpenSolid } from "@heroicons/react/24/solid";
 
@@ -53,6 +54,7 @@ const items: NavItem[] = [
   { href: "/passaporte", label: "Passaporte", Icon: IdentificationIcon },
   { href: "/impressao-digital", label: "Impressão digital", Icon: FingerPrintIcon },
   { href: "/conquistas", label: "Conquistas", Icon: TrophyIcon },
+  { href: "/antibiblioteca", label: "Antibiblioteca", Icon: RectangleStackIcon },
   { href: "/category", label: "Categorias", Icon: TagIcon },
   { href: "/box", label: "Boxes / kits", Icon: CubeIcon },
   { href: "/assinaturas", label: "Assinaturas", Icon: CreditCardIcon },
