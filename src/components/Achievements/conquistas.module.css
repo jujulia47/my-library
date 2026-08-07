@@ -1,0 +1,193 @@
+/* Conquistas — selos de cera lacrada, por categoria. */
+
+.wrap { max-width: 1040px; margin: 0 auto; }
+
+.eyebrow {
+  font-family: ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-gold-deep, #b4863a);
+  margin: 0 0 10px;
+}
+.title {
+  font-family: var(--font-display, Georgia), serif;
+  font-weight: 600;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  margin: 0 0 10px;
+  letter-spacing: 0.01em;
+  color: var(--color-ink-deep, #33240f);
+}
+.lead {
+  color: var(--color-ink-soft, #6f5c44);
+  margin: 0 0 24px;
+  font-size: 1.02rem;
+  max-width: 60ch;
+}
+
+/* topo: progresso geral */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 26px;
+  padding-bottom: 22px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--color-border, #dbcaa6);
+}
+.progressWide { flex: 1; min-width: 220px; }
+.progN { font-family: var(--font-display, Georgia), serif; font-size: 1.5rem; color: var(--color-ink-deep, #33240f); }
+.progN b { color: var(--color-gold-deep, #b4863a); }
+.progBar {
+  height: 8px;
+  border-radius: 5px;
+  background: var(--color-paper-soft, rgba(90, 60, 30, 0.06));
+  overflow: hidden;
+  margin-top: 8px;
+  border: 1px solid var(--color-border, rgba(90, 60, 30, 0.18));
+}
+.progBar i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #b4863a, #e6cf8f);
+  transition: width 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* categorias */
+.cat { margin-top: 38px; }
+.catLabel {
+  font-family: ui-monospace, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-ink-fade, #8a765c);
+  margin: 0 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.catLabel b { color: var(--color-ink-deep, #33240f); font-weight: 600; }
+.catLabel::after { content: ""; flex: 1; height: 1px; background: var(--color-border, #dbcaa6); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+/* selo/badge */
+.badge {
+  text-align: center;
+  padding: 22px 16px 20px;
+  border-radius: 16px;
+  background: var(--color-paper, #f2ead7);
+  border: 1px solid var(--color-border, #dbcaa6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: badge-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes badge-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.badge:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -22px rgba(0, 0, 0, 0.4);
+}
+
+.sealWrap { position: relative; width: 118px; height: 118px; margin-bottom: 10px; perspective: 600px; }
+.seal {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.12s ease-out;
+}
+.sealWrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  background-size: 250% 100%;
+  background-position: -160% 0;
+  -webkit-mask-image: radial-gradient(circle, #000 62%, transparent 66%);
+  mask-image: radial-gradient(circle, #000 62%, transparent 66%);
+  transition: opacity 0.3s ease;
+}
+.badge:hover .sealWrap::after { opacity: 1; animation: seal-shine 1s ease; }
+@keyframes seal-shine {
+  from { background-position: -160% 0; }
+  to { background-position: 160% 0; }
+}
+
+.locked .seal {
+  filter: grayscale(0.85) brightness(0.92) drop-shadow(0 5px 8px rgba(0, 0, 0, 0.3));
+  opacity: 0.72;
+}
+.lock {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  font-size: 0.9rem;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+}
+
+.badgeName {
+  font-family: var(--font-display, Georgia), serif;
+  font-weight: 600;
+  font-size: 1.08rem;
+  margin: 2px 0 0;
+  line-height: 1.15;
+  text-wrap: balance;
+  color: var(--color-ink-deep, #33240f);
+}
+.desc { color: var(--color-ink-soft, #6f5c44); font-size: 0.82rem; margin: 0; line-height: 1.35; }
+
+.earned {
+  font-family: ui-monospace, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-gold-deep, #b4863a);
+  margin: 8px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.earned::before { content: "✓"; }
+
+.prog {
+  width: 100%;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--color-paper-soft, rgba(90, 60, 30, 0.06));
+  border: 1px solid var(--color-border, rgba(90, 60, 30, 0.18));
+  overflow: hidden;
+  margin: 12px 0 6px;
+}
+.prog i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-ink-soft, #6f5c44), #b4863a);
+}
+.hint {
+  font-family: ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-soft, #6f5c44);
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge, .seal { animation: none !important; transition: none; }
+  .badge:hover .sealWrap::after { animation: none; }
+}
