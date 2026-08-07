@@ -114,11 +114,24 @@ export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
   }
 
   if (!res.ok) {
-    if (res.status === 429)
-      return { ok: false, message: "Cota da IA esgotada por agora — tente mais tarde." };
+    let detail = "";
+    try {
+      const errJson = (await res.json()) as {
+        error?: { message?: string; status?: string };
+      };
+      detail = errJson?.error?.message ?? "";
+    } catch {
+      /* corpo não-JSON */
+    }
+    if (res.status === 429) {
+      return {
+        ok: false,
+        message: `Cota do Gemini atingida (429).${detail ? " " + detail : ""} Tente outro modelo em GEMINI_MODEL ou aguarde o reset diário.`,
+      };
+    }
     return {
       ok: false,
-      message: `A IA respondeu com erro (${res.status}). Verifique a chave/API.`,
+      message: `A IA respondeu com erro (${res.status}).${detail ? " " + detail : " Verifique a chave/API."}`,
     };
   }
 

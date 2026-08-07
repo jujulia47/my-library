@@ -80,6 +80,25 @@
   font-size: 0.72rem;
   line-height: 1.7;
 }
+.camClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+  font-family: ui-monospace, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f0e2c4;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(240, 226, 196, 0.3);
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.camClose:hover { border-color: #e6cf8f; }
 
 /* controles */
 .controls { margin-top: 16px; display: grid; gap: 10px; }

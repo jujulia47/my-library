@@ -18,11 +18,13 @@ import LinkBookToSerieModal from "@/components/forms/LinkBookToSerieModal";
 import { createBookMinimal } from "@/actions/createBookMinimal";
 import { playStamp } from "@/utils/sounds";
 import { lookupBookByIsbn } from "@/actions/lookupBookByIsbn";
+import { completeBookWithAI } from "@/actions/completeBookWithAI";
 import { createAuthor } from "@/actions/createAuthor";
 import {
   PlusIcon,
   XMarkIcon,
   MagnifyingGlassIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 
 function safeFrom(value: string | null): string | null {
@@ -123,6 +125,68 @@ export default function BookMinimal({
   // mínimo, mas são salvos via inputs ocultos (páginas, editora, ano, sinopse,
   // título original). O usuário completa/edita o resto depois no BookFull.
   const [enrichment, setEnrichment] = useState<Enrichment | null>(null);
+
+  // Sessão 17.12: "Completar com IA" — quando as APIs não acham (comum em livro
+  // BR recente), a IA preenche só os campos ainda vazios. Portinha única.
+  const [aiStatus, setAiStatus] = useState<
+    | { state: "idle" }
+    | { state: "loading" }
+    | { state: "success"; confidence?: string }
+    | { state: "error"; message: string }
+  >({ state: "idle" });
+  const [isAiBusy, setIsAiBusy] = useState(false);
+
+  const handleCompleteAI = async () => {
+    if (!isbn.trim() && !title.trim()) {
+      setAiStatus({ state: "error", message: "Digite ao menos o ISBN ou o título." });
+      return;
+    }
+    setIsAiBusy(true);
+    setAiStatus({ state: "loading" });
+    try {
+      const res = await completeBookWithAI({
+        isbn: isbn.trim() || undefined,
+        title: title.trim() || undefined,
+        author: authors[0]?.name,
+        known: {
+          title: title.trim() || undefined,
+          authors: authors.map((a) => a.name),
+          publisher: enrichment?.publisher,
+          publication_year: enrichment?.publication_year,
+          pages: enrichment?.pages,
+        },
+      });
+      if (!res.ok) {
+        setAiStatus({ state: "error", message: res.message });
+        return;
+      }
+      const d = res.data;
+      // Só preenche o que está vazio — nunca sobrescreve o que você já pôs.
+      if (!title.trim() && d.title) setTitle(d.title);
+      if (!language && d.language) setLanguage(d.language);
+      if (!isbn.trim() && d.isbn13) setIsbn(d.isbn13);
+      if (authors.length === 0 && d.authors && d.authors.length > 0) {
+        const created: AuthorOption[] = [];
+        for (const name of d.authors) {
+          const r = await createAuthor(name);
+          if (r.ok) created.push({ id: r.id, name: r.name });
+        }
+        setAuthors(created);
+      }
+      setEnrichment((prev) => ({
+        pages: prev?.pages ?? d.pages,
+        publisher: prev?.publisher ?? d.publisher,
+        publication_year: prev?.publication_year ?? d.publication_year,
+        synopsis: prev?.synopsis ?? d.synopsis,
+        original_title: prev?.original_title ?? d.original_title,
+      }));
+      setAiStatus({ state: "success", confidence: d.confidence });
+    } catch {
+      setAiStatus({ state: "error", message: "Erro ao consultar a IA." });
+    } finally {
+      setIsAiBusy(false);
+    }
+  };
 
   const handleIsbnLookup = async () => {
     const trimmed = isbn.trim();
@@ -388,6 +452,17 @@ export default function BookMinimal({
                   >
                     Buscar pelo ISBN
                   </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCompleteAI}
+                    loading={isAiBusy}
+                    disabled={(!isbn.trim() && !title.trim()) || isAiBusy}
+                    leftIcon={<SparklesIcon className="w-4 h-4" />}
+                  >
+                    Completar com IA
+                  </Button>
                   {lookupStatus.state === "success" && (
                     <span className="text-xs italic text-moss self-center">
                       ✓ Preenchido via {formatSources(lookupStatus.sources)}
@@ -398,7 +473,24 @@ export default function BookMinimal({
                       {lookupStatus.message}
                     </span>
                   )}
+                  {aiStatus.state === "success" && (
+                    <span className="text-xs italic text-moss self-center">
+                      ✓ Completado com IA
+                      {aiStatus.confidence === "baixa"
+                        ? " (confiança baixa — confira)"
+                        : ""}
+                    </span>
+                  )}
+                  {aiStatus.state === "error" && (
+                    <span className="text-xs italic text-burgundy max-w-md leading-snug">
+                      {aiStatus.message}
+                    </span>
+                  )}
                 </div>
+                <p className="text-xs text-ink-fade italic">
+                  Não achou pelo ISBN? O <b>Completar com IA</b> preenche o que
+                  falta (só os campos vazios) a partir do ISBN ou do título.
+                </p>
               </div>
 
               <Select

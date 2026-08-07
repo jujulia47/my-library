@@ -26,6 +26,8 @@ const LANG_LABEL: Record<string, string> = {
 };
 
 type Source = "APIs" | "IA" | "código";
+type CameraMode = null | "barcode" | "cover";
+type Phase = "idle" | "loading" | "draft";
 
 type Draft = {
   title?: string;
@@ -43,8 +45,6 @@ type Draft = {
   confidence?: string;
   sources: Record<string, Source>;
 };
-
-type Phase = "scan" | "loading" | "draft";
 
 function normalizeIsbn(raw: string): string {
   return raw.replace(/[^0-9X]/gi, "");
@@ -83,8 +83,8 @@ export function ScannerClient() {
   const busyRef = useRef(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const [phase, setPhase] = useState<Phase>("scan");
-  const [found, setFound] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [cameraMode, setCameraMode] = useState<CameraMode>(null);
   const [camError, setCamError] = useState<string | null>(null);
   const [manualIsbn, setManualIsbn] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -92,7 +92,6 @@ export function ScannerClient() {
   const [aiBusy, setAiBusy] = useState(false);
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [vcap, setVcap] = useState("Aponte para o código de barras · segure firme");
 
   function showToast(m: string) {
     setToast(m);
@@ -106,64 +105,68 @@ export function ScannerClient() {
     streamRef.current = null;
   }, []);
 
+  const closeCamera = useCallback(() => {
+    setCameraMode(null);
+  }, []);
+
   // ---- busca por ISBN (APIs) ----
-  const runIsbn = useCallback(async (rawIsbn: string) => {
-    const isbn = normalizeIsbn(rawIsbn);
-    if (isbn.length !== 10 && isbn.length !== 13) {
-      setError("ISBN inválido (10 ou 13 dígitos).");
-      return;
-    }
-    setFound(true);
-    setVcap("✓ ISBN lido — buscando dados…");
-    stopCamera();
-    setError(null);
-    setPhase("loading");
+  const runIsbn = useCallback(
+    async (rawIsbn: string) => {
+      const isbn = normalizeIsbn(rawIsbn);
+      if (isbn.length !== 10 && isbn.length !== 13) {
+        setError("ISBN inválido (10 ou 13 dígitos).");
+        return;
+      }
+      setCameraMode(null);
+      stopCamera();
+      setError(null);
+      setPhase("loading");
 
-    const res = await lookupBookByIsbn(isbn);
-    const sources: Record<string, Source> = { isbn: "código" };
-    if (res.ok) {
-      const d = res.data;
-      const mark = (k: string, v: unknown) => {
-        if (v !== undefined && v !== null) sources[k] = "APIs";
-      };
-      mark("title", d.title);
-      mark("authors", d.authors);
-      mark("language", d.language);
-      mark("publisher", d.publisher);
-      mark("publication_year", d.publication_year);
-      mark("original_title", d.original_title);
-      mark("pages", d.pages);
-      mark("synopsis", d.synopsis);
-      mark("categories", d.categories);
-      mark("cover_url", d.cover_url);
-      setDraft({
-        title: d.title,
-        authors: d.authors,
-        language: d.language,
-        publisher: d.publisher,
-        publication_year: d.publication_year,
-        original_title: d.original_title,
-        pages: d.pages,
-        synopsis: d.synopsis,
-        categories: d.categories,
-        cover_url: d.cover_url,
-        isbn: d.isbn13 ?? isbn,
-        sources,
-      });
-    } else {
-      // APIs não acharam — parte pro rascunho vazio com CTA de IA.
-      setDraft({ isbn, sources });
-      setError(res.message);
-    }
-    setPhase("draft");
-  }, [stopCamera]);
+      const res = await lookupBookByIsbn(isbn);
+      const sources: Record<string, Source> = { isbn: "código" };
+      if (res.ok) {
+        const d = res.data;
+        const mark = (k: string, v: unknown) => {
+          if (v !== undefined && v !== null) sources[k] = "APIs";
+        };
+        mark("title", d.title);
+        mark("authors", d.authors);
+        mark("language", d.language);
+        mark("publisher", d.publisher);
+        mark("publication_year", d.publication_year);
+        mark("original_title", d.original_title);
+        mark("pages", d.pages);
+        mark("synopsis", d.synopsis);
+        mark("categories", d.categories);
+        mark("cover_url", d.cover_url);
+        setDraft({
+          title: d.title,
+          authors: d.authors,
+          language: d.language,
+          publisher: d.publisher,
+          publication_year: d.publication_year,
+          original_title: d.original_title,
+          pages: d.pages,
+          synopsis: d.synopsis,
+          categories: d.categories,
+          cover_url: d.cover_url,
+          isbn: d.isbn13 ?? isbn,
+          sources,
+        });
+      } else {
+        setDraft({ isbn, sources });
+        setError(res.message);
+      }
+      setPhase("draft");
+    },
+    [stopCamera],
+  );
 
-  // ---- câmera + BarcodeDetector ----
+  // ---- câmera sob demanda ----
   useEffect(() => {
-    if (phase !== "scan") return;
+    if (!cameraMode) return; // câmera desligada até escolher um modo
     let cancelled = false;
-    setFound(false);
-    setVcap("Aponte para o código de barras · segure firme");
+    setCamError(null);
 
     async function start() {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -185,31 +188,34 @@ export function ScannerClient() {
           video.srcObject = stream;
           await video.play().catch(() => {});
         }
-        setCamError(null);
 
-        if (window.BarcodeDetector) {
-          detectorRef.current = new window.BarcodeDetector({
-            formats: ["ean_13", "ean_8"],
-          });
-          scanTimer.current = setInterval(async () => {
-            const v = videoRef.current;
-            const det = detectorRef.current;
-            if (!v || !det || busyRef.current) return;
-            try {
-              const codes = await det.detect(v);
-              const raw = codes[0]?.rawValue;
-              if (raw && (raw.length === 13 || raw.length === 10)) {
-                busyRef.current = true;
-                runIsbn(raw).finally(() => {
-                  busyRef.current = false;
-                });
+        if (cameraMode === "barcode") {
+          if (window.BarcodeDetector) {
+            detectorRef.current = new window.BarcodeDetector({
+              formats: ["ean_13", "ean_8"],
+            });
+            scanTimer.current = setInterval(async () => {
+              const v = videoRef.current;
+              const det = detectorRef.current;
+              if (!v || !det || busyRef.current) return;
+              try {
+                const codes = await det.detect(v);
+                const raw = codes[0]?.rawValue;
+                if (raw && (raw.length === 13 || raw.length === 10)) {
+                  busyRef.current = true;
+                  runIsbn(raw).finally(() => {
+                    busyRef.current = false;
+                  });
+                }
+              } catch {
+                /* frame ainda não pronto */
               }
-            } catch {
-              /* frame ainda não pronto */
-            }
-          }, 450);
-        } else {
-          setVcap("Sem leitor automático — digite o ISBN ou use a foto da capa");
+            }, 450);
+          } else {
+            setCamError(
+              "Este navegador não lê código de barras automaticamente (comum no iPhone). Fotografe a capa ou digite o ISBN.",
+            );
+          }
         }
       } catch {
         setCamError("Câmera indisponível (permissão negada ou sem HTTPS).");
@@ -220,10 +226,12 @@ export function ScannerClient() {
       cancelled = true;
       stopCamera();
     };
-  }, [phase, runIsbn, stopCamera]);
+  }, [cameraMode, runIsbn, stopCamera]);
 
-  // ---- IA: foto da capa ----
-  async function scanCover() {
+  useEffect(() => () => stopCamera(), [stopCamera]);
+
+  // ---- IA: foto da capa (câmera ao vivo) ----
+  async function takeCoverPhoto() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
       showToast("Câmera ainda carregando…");
@@ -231,22 +239,23 @@ export function ScannerClient() {
     }
     const img = toDownscaledBase64(video);
     if (!img) return;
+    setCameraMode(null);
     stopCamera();
-    setFound(true);
     setPhase("loading");
     setError(null);
     const res = await completeBookWithAI({
       coverImageBase64: img.base64,
       coverMimeType: img.mime,
     });
-    handleAiResult(res, {});
+    handleAiResult(res);
   }
 
-  // upload de arquivo (fallback sem câmera)
+  // ---- IA: upload de arquivo ----
   function onFilePicked(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setCameraMode(null);
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = async () => {
@@ -259,15 +268,12 @@ export function ScannerClient() {
         coverImageBase64: enc.base64,
         coverMimeType: enc.mime,
       });
-      handleAiResult(res, {});
+      handleAiResult(res);
     };
     img.src = url;
   }
 
-  function handleAiResult(
-    res: Awaited<ReturnType<typeof completeBookWithAI>>,
-    base: Partial<Draft>,
-  ) {
+  function handleAiResult(res: Awaited<ReturnType<typeof completeBookWithAI>>) {
     if (!res.ok) {
       setDraft((prev) => prev ?? { sources: {} });
       setError(res.message);
@@ -276,7 +282,7 @@ export function ScannerClient() {
     }
     const d = res.data;
     setDraft((prev) => {
-      const sources = { ...(prev?.sources ?? base.sources ?? {}) };
+      const sources = { ...(prev?.sources ?? {}) };
       const take = <T,>(k: string, cur: T | undefined, ai: T | undefined) => {
         if (cur !== undefined && cur !== null) return cur;
         if (ai !== undefined && ai !== null) {
@@ -285,7 +291,7 @@ export function ScannerClient() {
         }
         return cur;
       };
-      const merged: Draft = {
+      return {
         title: take("title", prev?.title, d.title),
         authors: take("authors", prev?.authors, d.authors),
         language: take("language", prev?.language, d.language),
@@ -301,7 +307,6 @@ export function ScannerClient() {
         confidence: d.confidence,
         sources,
       };
-      return merged;
     });
     setError(null);
     setPhase("draft");
@@ -324,7 +329,7 @@ export function ScannerClient() {
       },
     });
     setAiBusy(false);
-    handleAiResult(res, { sources: draft.sources });
+    handleAiResult(res);
   }
 
   async function addToLibrary() {
@@ -359,67 +364,85 @@ export function ScannerClient() {
   function resetScan() {
     setDraft(null);
     setError(null);
-    setFound(false);
     setManualIsbn("");
-    setPhase("scan");
+    setCameraMode(null);
+    setPhase("idle");
   }
 
-  useEffect(() => () => stopCamera(), [stopCamera]);
+  function onIsbnFocus() {
+    if (cameraMode) closeCamera(); // digitar ISBN fecha a câmera
+  }
 
   return (
     <div className={styles.stage}>
       <p className={styles.eyebrow}>Escanear</p>
       <h1 className={styles.title}>Aponte e cadastre</h1>
       <p className={styles.lead}>
-        Leia o código de barras (ou fotografe a capa) e o livro entra
-        preenchido — das APIs e, quando falta, da IA.
+        Leia o código de barras ou fotografe a capa — o livro entra
+        preenchido pelas APIs e, quando falta, pela IA.
       </p>
 
-      {phase === "scan" && (
+      {phase === "idle" && (
         <>
-          <div className={`${styles.viewer} ${found ? styles.found : ""}`}>
-            <video
-              ref={videoRef}
-              className={styles.video}
-              playsInline
-              muted
-            />
-            {camError ? (
-              <div className={styles.noCam}>
-                {camError}
-                <br />
-                Digite o ISBN abaixo ou envie uma foto da capa.
-              </div>
-            ) : (
-              <>
-                <div className={styles.reticle}>
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <div className={styles.scanline} />
-                <div className={styles.vcap}>{vcap}</div>
-              </>
-            )}
-          </div>
-
-          <div className={styles.controls}>
-            <div className={styles.row}>
-              <button
-                className={styles.btn}
-                onClick={scanCover}
-                disabled={!!camError}
-              >
-                📷 Ler a capa (IA)
-              </button>
-              <button
-                className={styles.btnGhost}
-                onClick={() => fileRef.current?.click()}
-              >
-                Enviar foto
+          {cameraMode && (
+            <div className={styles.viewer}>
+              <video ref={videoRef} className={styles.video} playsInline muted />
+              {camError ? (
+                <div className={styles.noCam}>{camError}</div>
+              ) : cameraMode === "barcode" ? (
+                <>
+                  <div className={styles.reticle}>
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className={styles.scanline} />
+                  <div className={styles.vcap}>
+                    Aponte para o código de barras · segure firme
+                  </div>
+                </>
+              ) : (
+                <div className={styles.vcap}>Enquadre a capa e toque em tirar foto</div>
+              )}
+              <button className={styles.camClose} onClick={closeCamera}>
+                ✕ fechar câmera
               </button>
             </div>
+          )}
+
+          <div className={styles.controls}>
+            {cameraMode === "cover" && !camError && (
+              <button className={styles.btn} onClick={takeCoverPhoto}>
+                📸 Tirar foto da capa
+              </button>
+            )}
+
+            {!cameraMode && (
+              <>
+                <button
+                  className={styles.btn}
+                  onClick={() => setCameraMode("barcode")}
+                >
+                  📷 Escanear código de barras
+                </button>
+                <div className={styles.row}>
+                  <button
+                    className={styles.btnGhost}
+                    onClick={() => setCameraMode("cover")}
+                  >
+                    🖼 Fotografar a capa (IA)
+                  </button>
+                  <button
+                    className={styles.btnGhost}
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    Enviar foto
+                  </button>
+                </div>
+              </>
+            )}
+
             <form
               className={styles.manual}
               onSubmit={(e) => {
@@ -431,17 +454,23 @@ export function ScannerClient() {
                 inputMode="numeric"
                 placeholder="Ou digite o ISBN…"
                 value={manualIsbn}
-                onChange={(e) => setManualIsbn(e.target.value)}
+                onFocus={onIsbnFocus}
+                onChange={(e) => {
+                  if (cameraMode) closeCamera();
+                  setManualIsbn(e.target.value);
+                }}
               />
               <button className={styles.btnGhost} type="submit">
                 Buscar
               </button>
             </form>
+
             <p className={styles.note}>
-              A câmera lê o código automaticamente (quando o navegador
-              suporta). A leitura da capa usa IA pra identificar o livro.
+              <b>Código de barras</b>: lê o ISBN automaticamente (Chrome/Android).{" "}
+              <b>Fotografar a capa</b>: a IA identifica o livro pela imagem.
             </p>
           </div>
+
           <input
             ref={fileRef}
             type="file"
@@ -573,11 +602,7 @@ function DraftView({
         <Row k="Sinopse" value={draft.synopsis} full />
       </div>
 
-      <button
-        className={styles.completeAi}
-        onClick={onCompleteAI}
-        disabled={aiBusy}
-      >
+      <button className={styles.completeAi} onClick={onCompleteAI} disabled={aiBusy}>
         {aiBusy ? "consultando IA…" : "✦ Completar com IA"}
       </button>
 
