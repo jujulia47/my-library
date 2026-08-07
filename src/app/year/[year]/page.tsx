@@ -4,6 +4,8 @@ import AppShell from "@/components/AppShell";
 import { createClient } from "@/utils/supabase/server";
 import { getYearData } from "@/services/yearData";
 import { getReadingOverview } from "@/services/overviewData";
+import { getRetrospective } from "@/services/retrospectiveData";
+import { RetrospectivaToggle } from "@/components/Year/RetrospectivaToggle";
 import { SectionLabel } from "@/components/Home/SectionLabel";
 import { WorldMapChart } from "@/components/Overview/WorldMapChart";
 import { LanguageBars } from "@/components/Overview/LanguageBars";
@@ -46,9 +48,10 @@ export default async function YearPage({ params }: Props) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [data, overview] = await Promise.all([
+  const [data, overview, retro] = await Promise.all([
     getYearData(year, user.id),
     getReadingOverview(user.id, year),
+    getRetrospective(user.id, year),
   ]);
 
   if (
@@ -70,6 +73,8 @@ export default async function YearPage({ params }: Props) {
         totalBooks={data.total_books_finished}
         totalPages={data.total_pages_read}
       />
+
+      {retro.books > 0 && <RetrospectivaToggle data={retro} />}
 
       <SectionLabel>Recordes do ano</SectionLabel>
       <YearRecords records={data.records} />
