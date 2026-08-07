@@ -26,7 +26,7 @@ const LANG_LABEL: Record<string, string> = {
 };
 
 type Source = "APIs" | "IA" | "código";
-type CameraMode = null | "barcode" | "cover";
+type CameraMode = null | "barcode";
 type Phase = "idle" | "loading" | "draft";
 
 type Draft = {
@@ -247,27 +247,7 @@ export function ScannerClient() {
     handleAiResult(res);
   }
 
-  // ---- IA: foto da capa (câmera ao vivo) ----
-  async function takeCoverPhoto() {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) {
-      showToast("Câmera ainda carregando…");
-      return;
-    }
-    const img = toDownscaledBase64(video);
-    if (!img) return;
-    setCameraMode(null);
-    stopCamera();
-    setPhase("loading");
-    setError(null);
-    const res = await completeBookWithAI({
-      coverImageBase64: img.base64,
-      coverMimeType: img.mime,
-    });
-    handleAiResult(res, img);
-  }
-
-  // ---- IA: upload de arquivo ----
+  // ---- IA: foto da capa (câmera nativa no celular, arquivo no PC) ----
   function onFilePicked(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -434,7 +414,7 @@ export function ScannerClient() {
               <video ref={videoRef} className={styles.video} playsInline muted />
               {camError ? (
                 <div className={styles.noCam}>{camError}</div>
-              ) : cameraMode === "barcode" ? (
+              ) : (
                 <>
                   <div className={styles.reticle}>
                     <span />
@@ -447,8 +427,6 @@ export function ScannerClient() {
                     Aponte para o código de barras · segure firme
                   </div>
                 </>
-              ) : (
-                <div className={styles.vcap}>Enquadre a capa e toque em tirar foto</div>
               )}
               <button className={styles.camClose} onClick={closeCamera}>
                 ✕ fechar câmera
@@ -457,12 +435,6 @@ export function ScannerClient() {
           )}
 
           <div className={styles.controls}>
-            {cameraMode === "cover" && !camError && (
-              <button className={styles.btn} onClick={takeCoverPhoto}>
-                📸 Tirar foto da capa
-              </button>
-            )}
-
             {!cameraMode && (
               <>
                 <button
@@ -471,20 +443,12 @@ export function ScannerClient() {
                 >
                   📷 Escanear código de barras
                 </button>
-                <div className={styles.row}>
-                  <button
-                    className={styles.btnGhost}
-                    onClick={() => setCameraMode("cover")}
-                  >
-                    🖼 Fotografar a capa (IA)
-                  </button>
-                  <button
-                    className={styles.btnGhost}
-                    onClick={() => fileRef.current?.click()}
-                  >
-                    Enviar foto
-                  </button>
-                </div>
+                <button
+                  className={styles.btnGhost}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  🖼 Foto da capa (IA)
+                </button>
               </>
             )}
 
@@ -536,10 +500,10 @@ export function ScannerClient() {
             </form>
 
             <p className={styles.note}>
-              <b>Código de barras / capa</b>: pela câmera do celular.{" "}
-              <b>ISBN</b>: busca nas APIs gratuitas.{" "}
-              <b>Nome + IA</b>: funciona no PC, sem câmera — a IA identifica o
-              livro pelo título.
+              <b>Código de barras</b>: câmera lê o ISBN (Chrome/Android).{" "}
+              <b>Foto da capa</b>: no celular abre a câmera, no PC os arquivos —
+              a IA identifica pela imagem.{" "}
+              <b>ISBN</b>: APIs gratuitas. <b>Nome</b>: a IA acha pelo título.
             </p>
           </div>
 
