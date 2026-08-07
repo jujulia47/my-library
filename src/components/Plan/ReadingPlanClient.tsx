@@ -93,8 +93,18 @@ export default function ReadingPlanClient({ data, todayISO }: Props) {
         todayISO,
         data.spreadUntil,
         data.history,
+        data.secondsPerPage,
       ),
-    [year, month, books, capacity, todayISO, data.spreadUntil, data.history],
+    [
+      year,
+      month,
+      books,
+      capacity,
+      todayISO,
+      data.spreadUntil,
+      data.history,
+      data.secondsPerPage,
+    ],
   );
 
   // Modais.
@@ -258,6 +268,13 @@ type TodayRow = {
   kind: "meta" | "fila";
 };
 
+/** Formata segundos/página como "1min20/pág" ou "45s/pág". */
+function pagePaceLabel(spp: number): string {
+  const m = Math.floor(spp / 60);
+  const s = Math.round(spp % 60);
+  return m > 0 ? `${m}min${s ? (s < 10 ? "0" : "") + s : ""}/pág` : `${s}s/pág`;
+}
+
 function buildTodayRows(
   books: PlanBookInput[],
   plan: ReturnType<typeof buildMonthPlan>,
@@ -400,7 +417,7 @@ function TodayPanel({
             <span className="text-ink-soft">
               <span className="font-medium text-ink-deep">{totalRead}</span> de{" "}
               {totalTarget} páginas · ~
-              {formatReadingTime(totalRemaining * SECONDS_PER_PAGE)}{" "}
+              {formatReadingTime(totalRemaining * plan.secondsPerPage)}{" "}
               restantes
             </span>
           )}
@@ -410,7 +427,7 @@ function TodayPanel({
       {catchupToday > 0 && (
         <p className="mt-1.5 text-xs text-burgundy/80">
           recuperar atraso: +{catchupToday}p hoje (~
-          {formatReadingTime(catchupToday * SECONDS_PER_PAGE)})
+          {formatReadingTime(catchupToday * plan.secondsPerPage)})
           <span className="text-ink-fade">
             {" "}
             · diluído até {ddmm(spreadUntil!)}
@@ -591,8 +608,12 @@ function SummaryStrip({
         <StatCard
           icon={<ClockIcon className="w-5 h-5" />}
           label="Tempo do mês"
-          value={formatReadingTime(plan.monthPageTotal * SECONDS_PER_PAGE)}
-          hint="pior caso · 1m20/pág"
+          value={formatReadingTime(plan.monthPageTotal * plan.secondsPerPage)}
+          hint={
+            plan.secondsPerPage === SECONDS_PER_PAGE
+              ? `estimativa · ${pagePaceLabel(plan.secondsPerPage)}`
+              : `seu ritmo · ${pagePaceLabel(plan.secondsPerPage)}`
+          }
         />
       </div>
 
@@ -1216,7 +1237,7 @@ function BookCard({
                 <span className="text-ink-deep font-medium">
                   faltam {remaining}
                 </span>{" "}
-                · ~{formatReadingTime(remaining * SECONDS_PER_PAGE)}
+                · ~{formatReadingTime(remaining * plan.secondsPerPage)}
               </p>
               {queueIndex === null && metaMonthTotal > 0 && (
                 <p className="text-sm text-ink-soft mt-0.5">
@@ -1225,7 +1246,7 @@ function BookCard({
                     {metaMonthTotal} páginas
                   </span>{" "}
                   <span className="text-ink-fade">
-                    (~{formatReadingTime(metaMonthTotal * SECONDS_PER_PAGE)})
+                    (~{formatReadingTime(metaMonthTotal * plan.secondsPerPage)})
                   </span>{" "}
                   ·{" "}
                   <span className="text-ink-deep">
@@ -1782,7 +1803,7 @@ function CalendarSection({
               </div>
               {total > 0 && (
                 <p className="text-[10px] text-ink-fade text-right italic">
-                  {total}p · ~{formatReadingTime(total * SECONDS_PER_PAGE)}
+                  {total}p · ~{formatReadingTime(total * plan.secondsPerPage)}
                 </p>
               )}
             </div>

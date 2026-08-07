@@ -458,6 +458,8 @@ export type MonthPlan = {
   catchupToday: number;
   /** Livros sem contagem de páginas (fora da matemática). */
   booksWithoutPages: number;
+  /** Segundos/página usado nas estimativas de tempo (ritmo real ou fixo). */
+  secondsPerPage: number;
 };
 
 /**
@@ -474,6 +476,7 @@ export function buildMonthPlan(
   todayISO: string,
   spreadUntil: string | null = null,
   history: PlanHistoryEntry[] = [],
+  secondsPerPage: number = SECONDS_PER_PAGE,
 ): MonthPlan {
   const totalDays = daysInMonth(year, month);
   const firstISO = isoForDay(year, month, 1);
@@ -748,5 +751,6 @@ export function buildMonthPlan(
     daysOverCapacity,
     catchupToday: catchupPerDay,
     booksWithoutPages,
+    secondsPerPage,
   };
 }

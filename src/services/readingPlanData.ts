@@ -7,6 +7,7 @@ import {
   dateISOInAppTZ,
 } from "@/utils/dates";
 import { planBookColor, colorHexForName } from "@/utils/colorByHash";
+import { getUserSecondsPerPage } from "@/services/readingPace";
 import type {
   CapacityPeriod,
   PlanBookInput,
@@ -26,6 +27,8 @@ export type ReadingPlanData = {
   spreadUntil: string | null;
   /** Leitura REAL do mês por dia (log) — preenche os dias passados do calendário. */
   history: PlanHistoryEntry[];
+  /** Ritmo real (segundos/página) da usuária pras estimativas de tempo. */
+  secondsPerPage: number;
 };
 
 type BookMeta = {
@@ -372,6 +375,8 @@ export async function getReadingPlan(
     }
   }
 
+  const secondsPerPage = await getUserSecondsPerPage(userId);
+
   return {
     monthISO: month,
     isCurrentMonth,
@@ -379,5 +384,6 @@ export async function getReadingPlan(
     capacity,
     spreadUntil,
     history,
+    secondsPerPage,
   };
 }

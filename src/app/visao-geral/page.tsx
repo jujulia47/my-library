@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getShelfOverview } from "@/services/overviewData";
 import { formatBRL } from "@/utils/formatCurrency";
 import { formatReadingTime, SECONDS_PER_PAGE } from "@/utils/readingPlan";
+import { getUserSecondsPerPage } from "@/services/readingPace";
 import { SectionLabel } from "@/components/Home/SectionLabel";
 import { WorldMapChart } from "@/components/Overview/WorldMapChart";
 import { LanguageBars } from "@/components/Overview/LanguageBars";
@@ -63,6 +64,15 @@ export default async function VisaoGeralPage() {
 
   const data = await getShelfOverview(user.id);
   const r = data.reading;
+
+  // Ritmo real da usuária (ou fixo) pra estimar o tempo da estante não lida.
+  const secondsPerPage = await getUserSecondsPerPage(user.id);
+  const paceM = Math.floor(secondsPerPage / 60);
+  const paceS = Math.round(secondsPerPage % 60);
+  const paceLabel =
+    paceM > 0
+      ? `${paceM}min${paceS ? (paceS < 10 ? "0" : "") + paceS : ""}/pág`
+      : `${paceS}s/pág`;
 
   const pagesPercent =
     data.total_pages_all > 0
@@ -136,8 +146,10 @@ export default async function VisaoGeralPage() {
           <p className="text-xs text-ink-fade italic">
             Pela frente: {fmt(data.unread_shelf_pages)} páginas ainda não lidas
             na estante — ~
-            {formatReadingTime(data.unread_shelf_pages * SECONDS_PER_PAGE)} de
-            leitura (pior caso, 1m20s/página).
+            {formatReadingTime(data.unread_shelf_pages * secondsPerPage)} de
+            leitura (
+            {secondsPerPage === SECONDS_PER_PAGE ? "estimativa" : "no seu ritmo"}{" "}
+            · ~{paceLabel}).
           </p>
         )}
       </div>
