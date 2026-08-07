@@ -87,6 +87,7 @@ export function ScannerClient() {
   const [cameraMode, setCameraMode] = useState<CameraMode>(null);
   const [camError, setCamError] = useState<string | null>(null);
   const [manualIsbn, setManualIsbn] = useState("");
+  const [nameQuery, setNameQuery] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -230,6 +231,18 @@ export function ScannerClient() {
 
   useEffect(() => () => stopCamera(), [stopCamera]);
 
+  // ---- IA: busca por nome do livro (sem câmera, ideal no PC) ----
+  async function searchByName() {
+    const q = nameQuery.trim();
+    if (!q) return;
+    setCameraMode(null);
+    stopCamera();
+    setPhase("loading");
+    setError(null);
+    const res = await completeBookWithAI({ title: q });
+    handleAiResult(res);
+  }
+
   // ---- IA: foto da capa (câmera ao vivo) ----
   async function takeCoverPhoto() {
     const video = videoRef.current;
@@ -365,6 +378,7 @@ export function ScannerClient() {
     setDraft(null);
     setError(null);
     setManualIsbn("");
+    setNameQuery("");
     setCameraMode(null);
     setPhase("idle");
   }
@@ -378,8 +392,8 @@ export function ScannerClient() {
       <p className={styles.eyebrow}>Escanear</p>
       <h1 className={styles.title}>Aponte e cadastre</h1>
       <p className={styles.lead}>
-        Leia o código de barras ou fotografe a capa — o livro entra
-        preenchido pelas APIs e, quando falta, pela IA.
+        Leia o código de barras, fotografe a capa, ou só digite o nome — o
+        livro entra preenchido pelas APIs e pela IA.
       </p>
 
       {phase === "idle" && (
@@ -452,7 +466,7 @@ export function ScannerClient() {
             >
               <input
                 inputMode="numeric"
-                placeholder="Ou digite o ISBN…"
+                placeholder="Digite o ISBN (busca nas APIs)…"
                 value={manualIsbn}
                 onFocus={onIsbnFocus}
                 onChange={(e) => {
@@ -465,9 +479,36 @@ export function ScannerClient() {
               </button>
             </form>
 
+            <form
+              className={styles.manual}
+              onSubmit={(e) => {
+                e.preventDefault();
+                searchByName();
+              }}
+            >
+              <input
+                placeholder="Ou o nome do livro (IA)… ex.: Uma Janela Sombria"
+                value={nameQuery}
+                onFocus={onIsbnFocus}
+                onChange={(e) => {
+                  if (cameraMode) closeCamera();
+                  setNameQuery(e.target.value);
+                }}
+              />
+              <button
+                className={styles.btnGhost}
+                type="submit"
+                disabled={!nameQuery.trim()}
+              >
+                ✦ Buscar com IA
+              </button>
+            </form>
+
             <p className={styles.note}>
-              <b>Código de barras</b>: lê o ISBN automaticamente (Chrome/Android).{" "}
-              <b>Fotografar a capa</b>: a IA identifica o livro pela imagem.
+              <b>Código de barras / capa</b>: pela câmera do celular.{" "}
+              <b>ISBN</b>: busca nas APIs gratuitas.{" "}
+              <b>Nome + IA</b>: funciona no PC, sem câmera — a IA identifica o
+              livro pelo título.
             </p>
           </div>
 
