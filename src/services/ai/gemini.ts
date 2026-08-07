@@ -19,14 +19,10 @@ const SYSTEM = `Você é um assistente bibliográfico especializado em livros. A
 Regras rígidas:
 - Retorne SÓ os campos bibliográficos do schema. NUNCA invente dados pessoais/de acervo (preço, prateleira, data de compra) — eles não existem aqui.
 - Preencha em PORTUGUÊS (sinopse e gêneros), EXCETO se a edição for estrangeira (não brasileira nem portuguesa); nesse caso use o idioma da edição.
-- "publication_year" = ano da PRIMEIRA publicação da OBRA original, NÃO o ano desta edição.
-- "edition_year" = ano DESTA edição/impressão.
+- DADOS DA OBRA (estáveis, pode preencher com segurança): "title", "authors", "original_title", "publication_year" (ano da PRIMEIRA publicação da obra, NUNCA o da edição), "synopsis" (um parágrafo, sem spoilers), "categories" (2 a 4 gêneros).
+- DADOS DA EDIÇÃO (variam de uma edição pra outra): "pages", "publisher", "edition_year", "language". ATENÇÃO: só preencha esses SE um ISBN foi informado (que fixa a edição exata) OU se estiverem CLARAMENTE legíveis numa foto. Sem ISBN e sem foto legível, OMITA "pages", "publisher" e "edition_year" — é muito melhor deixar em branco pro usuário conferir no exemplar do que chutar a edição errada.
 - "original_title" = título original da obra quando diferente do título da edição; senão omita.
-- "language" = idioma DESTA edição.
-- "pages" = número de páginas desta edição.
-- "synopsis" = um parágrafo, sem spoilers.
-- "categories" = 2 a 4 gêneros/categorias.
-- Se NÃO tiver certeza de um campo, OMITA — prefira precisão a completude, nunca invente.
+- REGRA DE OURO: se não tiver CERTEZA de um campo, OMITA. Precisão vale mais que completude. Nunca preencha "por preencher".
 - Se for uma foto e você não reconhecer o livro com segurança, use confidence "baixa".`;
 
 const RESPONSE_SCHEMA = {
@@ -106,7 +102,9 @@ export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: RESPONSE_SCHEMA,
-      temperature: 0.2,
+      // Baixa temperatura = respostas mais factuais e determinísticas, menos
+      // "criatividade" (que aqui vira dado inventado).
+      temperature: 0.1,
     },
   };
 
