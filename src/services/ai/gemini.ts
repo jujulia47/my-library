@@ -1,6 +1,18 @@
 import type { AIInput, AIResult, AIBookDraft } from "./types";
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+// Modelos leves, em cascata: se um vier com "limit 0" (não liberado no free tier
+// da conta) ou 404, tenta o próximo. GEMINI_MODEL, se setado, vai na frente.
+const CANDIDATE_MODELS = [
+  ...new Set(
+    [
+      process.env.GEMINI_MODEL,
+      "gemini-2.5-flash-lite",
+      "gemini-2.0-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-flash-latest",
+    ].filter((m): m is string => !!m),
+  ),
+];
 
 const SYSTEM = `Você é um assistente bibliográfico especializado em livros. A partir de um ISBN, de um título/autor, ou de uma FOTO da capa/contracapa, você identifica a EDIÇÃO e a OBRA e retorna APENAS metadados bibliográficos.
 
@@ -98,10 +110,30 @@ export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
     },
   };
 
+  let lastMessage = "Nenhum modelo de IA disponível.";
+  for (const model of CANDIDATE_MODELS) {
+    const r = await callModel(model, key, body);
+    if (r.ok) return { ok: true, data: r.data, provider: `gemini:${model}` };
+    lastMessage = r.message;
+    // 429 (limit 0 / cota) ou 404 (modelo inexistente) → tenta o próximo.
+    if (!r.tryNext) return { ok: false, message: r.message };
+  }
+  return { ok: false, message: lastMessage };
+}
+
+type ModelCall =
+  | { ok: true; data: AIBookDraft }
+  | { ok: false; message: string; tryNext: boolean };
+
+async function callModel(
+  model: string,
+  key: string,
+  body: unknown,
+): Promise<ModelCall> {
   let res: Response;
   try {
     res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -110,28 +142,26 @@ export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
       },
     );
   } catch {
-    return { ok: false, message: "Falha de rede ao falar com a IA." };
+    return { ok: false, message: "Falha de rede ao falar com a IA.", tryNext: false };
   }
 
   if (!res.ok) {
     let detail = "";
     try {
-      const errJson = (await res.json()) as {
-        error?: { message?: string; status?: string };
-      };
+      const errJson = (await res.json()) as { error?: { message?: string } };
       detail = errJson?.error?.message ?? "";
     } catch {
       /* corpo não-JSON */
     }
-    if (res.status === 429) {
-      return {
-        ok: false,
-        message: `Cota do Gemini atingida (429).${detail ? " " + detail : ""} Tente outro modelo em GEMINI_MODEL ou aguarde o reset diário.`,
-      };
-    }
+    const tryNext = res.status === 429 || res.status === 404;
+    const prefix =
+      res.status === 429
+        ? `Cota do Gemini atingida (429) em ${model}.`
+        : `A IA respondeu com erro (${res.status}) em ${model}.`;
     return {
       ok: false,
-      message: `A IA respondeu com erro (${res.status}).${detail ? " " + detail : " Verifique a chave/API."}`,
+      tryNext,
+      message: `${prefix}${detail ? " " + detail : ""}`,
     };
   }
 
@@ -139,21 +169,19 @@ export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
   try {
     json = await res.json();
   } catch {
-    return { ok: false, message: "Resposta da IA ilegível." };
+    return { ok: false, message: "Resposta da IA ilegível.", tryNext: false };
   }
 
   const text = (
-    json as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    }
+    json as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
   )?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) return { ok: false, message: "A IA não retornou dados." };
+  if (!text) return { ok: false, message: "A IA não retornou dados.", tryNext: true };
 
   let parsed: AIBookDraft;
   try {
     parsed = JSON.parse(text) as AIBookDraft;
   } catch {
-    return { ok: false, message: "A IA retornou um formato inesperado." };
+    return { ok: false, message: "A IA retornou um formato inesperado.", tryNext: false };
   }
 
   // Sanitiza: descarta strings vazias e arrays vazios.
@@ -165,5 +193,5 @@ export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
     (clean as Record<string, unknown>)[k] = v;
   }
 
-  return { ok: true, data: clean, provider: "gemini" };
+  return { ok: true, data: clean };
 }

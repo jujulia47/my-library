@@ -42,6 +42,10 @@ type Draft = {
   categories?: string[];
   isbn?: string;
   cover_url?: string;
+  /** Foto tirada da capa — vira a capa do livro (base64 + preview). */
+  coverPhotoBase64?: string;
+  coverPhotoMime?: string;
+  coverPreview?: string;
   confidence?: string;
   sources: Record<string, Source>;
 };
@@ -54,7 +58,7 @@ function normalizeIsbn(raw: string): string {
 function toDownscaledBase64(
   source: HTMLVideoElement | HTMLImageElement,
   maxW = 900,
-): { base64: string; mime: string } | null {
+): { base64: string; mime: string; dataUrl: string } | null {
   const w =
     source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
   const h =
@@ -72,7 +76,7 @@ function toDownscaledBase64(
   if (!ctx) return null;
   ctx.drawImage(source, 0, 0, cw, ch);
   const dataUrl = canvas.toDataURL("image/jpeg", 0.72);
-  return { base64: dataUrl.split(",")[1], mime: "image/jpeg" };
+  return { base64: dataUrl.split(",")[1], mime: "image/jpeg", dataUrl };
 }
 
 export function ScannerClient() {
@@ -260,7 +264,7 @@ export function ScannerClient() {
       coverImageBase64: img.base64,
       coverMimeType: img.mime,
     });
-    handleAiResult(res);
+    handleAiResult(res, img);
   }
 
   // ---- IA: upload de arquivo ----
@@ -281,12 +285,32 @@ export function ScannerClient() {
         coverImageBase64: enc.base64,
         coverMimeType: enc.mime,
       });
-      handleAiResult(res);
+      handleAiResult(res, enc);
     };
     img.src = url;
   }
 
-  function handleAiResult(res: Awaited<ReturnType<typeof completeBookWithAI>>) {
+  /** Quando a IA acha o ISBN mas não temos capa, puxa a capa real das APIs. */
+  async function enrichCoverFromApis(isbn: string) {
+    try {
+      const res = await lookupBookByIsbn(isbn);
+      if (res.ok && res.data.cover_url) {
+        const url = res.data.cover_url;
+        setDraft((prev) =>
+          prev && !prev.cover_url && !prev.coverPhotoBase64
+            ? { ...prev, cover_url: url }
+            : prev,
+        );
+      }
+    } catch {
+      /* sem capa das APIs — fica a capa gerada */
+    }
+  }
+
+  function handleAiResult(
+    res: Awaited<ReturnType<typeof completeBookWithAI>>,
+    photo?: { base64: string; mime: string; dataUrl: string },
+  ) {
     if (!res.ok) {
       setDraft((prev) => prev ?? { sources: {} });
       setError(res.message);
@@ -316,6 +340,9 @@ export function ScannerClient() {
         synopsis: take("synopsis", prev?.synopsis, d.synopsis),
         categories: take("categories", prev?.categories, d.categories),
         cover_url: prev?.cover_url,
+        coverPhotoBase64: photo?.base64 ?? prev?.coverPhotoBase64,
+        coverPhotoMime: photo?.mime ?? prev?.coverPhotoMime,
+        coverPreview: photo?.dataUrl ?? prev?.coverPreview,
         isbn: prev?.isbn ?? d.isbn13,
         confidence: d.confidence,
         sources,
@@ -323,6 +350,8 @@ export function ScannerClient() {
     });
     setError(null);
     setPhase("draft");
+    // Sem foto e com ISBN da IA → tenta capa real das APIs.
+    if (!photo && d.isbn13) enrichCoverFromApis(d.isbn13);
   }
 
   async function completeWithAI() {
@@ -362,6 +391,8 @@ export function ScannerClient() {
       synopsis: draft.synopsis ?? null,
       isbn: draft.isbn ?? null,
       cover_url: draft.cover_url ?? null,
+      coverImageBase64: draft.coverPhotoBase64 ?? null,
+      coverImageMime: draft.coverPhotoMime ?? null,
       categories: draft.categories,
     };
     const res = await createBookFromScan(payload);
@@ -602,9 +633,12 @@ function DraftView({
     <div>
       <div className={styles.rhead}>
         <div className={styles.rcover}>
-          {draft.cover_url ? (
+          {draft.coverPreview || draft.cover_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={draft.cover_url} alt={draft.title ?? "capa"} />
+            <img
+              src={draft.coverPreview ?? draft.cover_url}
+              alt={draft.title ?? "capa"}
+            />
           ) : (
             <span className={styles.rcoverFallback}>{draft.title ?? "sem capa"}</span>
           )}

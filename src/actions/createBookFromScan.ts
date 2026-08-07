@@ -29,6 +29,9 @@ export type ScanDraft = {
   isbn?: string | null;
   /** URL externa da capa (Google/Open Library) — guardada direto. */
   cover_url?: string | null;
+  /** Foto da capa tirada pelo usuário (base64) — sobe pro storage. */
+  coverImageBase64?: string | null;
+  coverImageMime?: string | null;
   categories?: string[];
 };
 
@@ -122,6 +125,26 @@ export async function createBookFromScan(
     ? (draft.language as BookLanguage)
     : null;
 
+  // Capa: foto tirada pelo usuário → sobe pro storage; senão, URL externa das
+  // APIs (imagesUrl repassa http direto).
+  let cover: string | null = draft.cover_url?.trim() || null;
+  if (draft.coverImageBase64) {
+    try {
+      const buffer = Buffer.from(draft.coverImageBase64, "base64");
+      const path = `${user.id}/${crypto.randomUUID()}.jpg`;
+      const { data: up, error: upErr } = await supabase.storage
+        .from("images")
+        .upload(path, buffer, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: draft.coverImageMime ?? "image/jpeg",
+        });
+      if (!upErr && up) cover = up.path;
+    } catch {
+      /* falha no upload não deve impedir o cadastro */
+    }
+  }
+
   const { data: bookData, error: bookError } = await supabase
     .from("book")
     .insert({
@@ -129,7 +152,7 @@ export async function createBookFromScan(
       slug: formateTitleToSlug(title),
       isbn: draft.isbn?.trim() || null,
       language,
-      cover: draft.cover_url?.trim() || null,
+      cover,
       pages: draft.pages ?? null,
       publisher: draft.publisher?.trim() || null,
       publication_year: draft.publication_year ?? null,
