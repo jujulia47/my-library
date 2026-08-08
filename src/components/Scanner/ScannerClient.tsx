@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { lookupBookByIsbn } from "@/actions/lookupBookByIsbn";
 import { completeBookWithAI } from "@/actions/completeBookWithAI";
 import { createBookFromScan, type ScanDraft } from "@/actions/createBookFromScan";
@@ -83,6 +84,7 @@ function toDownscaledBase64(
 }
 
 export function ScannerClient() {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectorRef = useRef<BarcodeDetectorLike | null>(null);
@@ -385,13 +387,13 @@ export function ScannerClient() {
       series_total: draft.seriesTotal ?? null,
     };
     const res = await createBookFromScan(payload);
-    setAdding(false);
     if (res.ok) {
-      showToast(`${draft.title} entrou na biblioteca ✓`);
-      resetScan();
-    } else {
-      setError(res.message);
+      // Vai direto pro detalhe do livro recém-criado (pra completar o acervo).
+      router.push(`/book/${res.data?.slug ?? ""}`);
+      return;
     }
+    setAdding(false);
+    setError(res.message);
   }
 
   function resetScan() {
