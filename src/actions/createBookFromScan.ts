@@ -33,6 +33,10 @@ export type ScanDraft = {
   coverImageBase64?: string | null;
   coverImageMime?: string | null;
   categories?: string[];
+  /** Série (find-or-create) + volume, quando o livro faz parte de uma. */
+  series_name?: string | null;
+  series_volume?: number | null;
+  series_total?: number | null;
 };
 
 async function findOrCreateAuthor(
@@ -104,6 +108,54 @@ async function findOrCreateCategory(
   return created.id;
 }
 
+async function findOrCreateSerie(
+  supabase: DB,
+  userId: string,
+  name: string,
+  total: number | null,
+): Promise<string | null> {
+  const clean = name.trim();
+  if (!clean) return null;
+  const { data: existing } = await supabase
+    .from("serie")
+    .select("id, qty_volumes")
+    .eq("user_id", userId)
+    .ilike("name", clean)
+    .limit(1)
+    .maybeSingle();
+  if (existing) {
+    // Já cadastrada → reusa; se não sabia o total e a IA trouxe, completa.
+    if (existing.qty_volumes == null && total) {
+      await supabase
+        .from("serie")
+        .update({ qty_volumes: total })
+        .eq("id", existing.id);
+    }
+    return existing.id;
+  }
+  const { data: created, error } = await supabase
+    .from("serie")
+    .insert({
+      name: clean,
+      slug: formateTitleToSlug(clean),
+      qty_volumes: total ?? null,
+      user_id: userId,
+    })
+    .select("id")
+    .single();
+  if (error || !created) {
+    const { data: retry } = await supabase
+      .from("serie")
+      .select("id")
+      .eq("user_id", userId)
+      .ilike("name", clean)
+      .limit(1)
+      .maybeSingle();
+    return retry?.id ?? null;
+  }
+  return created.id;
+}
+
 /**
  * Cria um livro a partir do rascunho do scanner: SÓ campos bibliográficos.
  * Autores e categorias entram por NOME (find-or-create). A capa fica como URL
@@ -145,6 +197,17 @@ export async function createBookFromScan(
     }
   }
 
+  // Série: find-or-create pelo nome (não duplica se já existe).
+  let serieId: string | null = null;
+  if (draft.series_name?.trim()) {
+    serieId = await findOrCreateSerie(
+      supabase,
+      user.id,
+      draft.series_name,
+      draft.series_total ?? null,
+    );
+  }
+
   const { data: bookData, error: bookError } = await supabase
     .from("book")
     .insert({
@@ -158,6 +221,8 @@ export async function createBookFromScan(
       publication_year: draft.publication_year ?? null,
       synopsis: draft.synopsis?.trim() || null,
       original_title: draft.original_title?.trim() || null,
+      serie_id: serieId,
+      volume: draft.series_volume ?? null,
       user_id: user.id,
       ownership_status: "owned",
       acquired_at: null,

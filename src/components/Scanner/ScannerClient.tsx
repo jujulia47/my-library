@@ -40,6 +40,9 @@ type Draft = {
   pages?: number;
   synopsis?: string;
   categories?: string[];
+  seriesName?: string;
+  seriesVolume?: number;
+  seriesTotal?: number;
   isbn?: string;
   cover_url?: string;
   /** Foto tirada da capa — vira a capa do livro (base64 + preview). */
@@ -319,6 +322,9 @@ export function ScannerClient() {
         pages: take("pages", prev?.pages, d.pages),
         synopsis: take("synopsis", prev?.synopsis, d.synopsis),
         categories: take("categories", prev?.categories, d.categories),
+        seriesName: take("seriesName", prev?.seriesName, d.series_name),
+        seriesVolume: take("seriesVolume", prev?.seriesVolume, d.series_volume),
+        seriesTotal: take("seriesTotal", prev?.seriesTotal, d.series_total),
         cover_url: prev?.cover_url,
         coverPhotoBase64: photo?.base64 ?? prev?.coverPhotoBase64,
         coverPhotoMime: photo?.mime ?? prev?.coverPhotoMime,
@@ -374,6 +380,9 @@ export function ScannerClient() {
       coverImageBase64: draft.coverPhotoBase64 ?? null,
       coverImageMime: draft.coverPhotoMime ?? null,
       categories: draft.categories,
+      series_name: draft.seriesName ?? null,
+      series_volume: draft.seriesVolume ?? null,
+      series_total: draft.seriesTotal ?? null,
     };
     const res = await createBookFromScan(payload);
     setAdding(false);
@@ -637,6 +646,15 @@ function DraftView({
           source={s.language}
         />
         <Row k="Título original" value={draft.original_title} source={s.original_title} />
+        <Row
+          k="Série"
+          value={
+            draft.seriesName
+              ? `${draft.seriesName}${draft.seriesVolume ? ` · vol. ${draft.seriesVolume}` : ""}${draft.seriesTotal ? ` (de ${draft.seriesTotal})` : ""}`
+              : undefined
+          }
+          source={s.seriesName}
+        />
         <Row k="Gêneros" value={draft.categories?.join(" · ")} source={s.categories} />
         <Row k="Sinopse" value={draft.synopsis} full />
       </div>

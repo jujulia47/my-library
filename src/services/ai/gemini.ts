@@ -25,10 +25,11 @@ Regras:
 - "edition_year" = ano DESTA edição. "pages"/"publisher" = desta edição — confirme na web; se não achar a edição exata, omita esses três.
 - "original_title" = título original quando difere; senão omita.
 - "synopsis" = um parágrafo, sem spoilers. "categories" = 2 a 4 gêneros.
+- SÉRIE: se o livro faz parte de uma série/saga, informe "series_name" (nome da série, em português se a edição for BR), "series_volume" (a posição do livro: 1, 2, 3…) e, se souber, "series_total" (total de volumes). Se for um livro único/standalone, OMITA os três.
 - Se não confirmar um campo, OMITA. Precisão vale mais que completude.
 
 FORMATO DA RESPOSTA — responda SOMENTE com um único objeto JSON válido, SEM markdown e SEM crases. Chaves possíveis (omita as que não souber):
-{"title": string, "authors": [string], "language": "pt_BR"|"en"|"es"|"fr"|"it"|"de"|"ja"|"other", "publisher": string, "edition_year": number, "publication_year": number, "original_title": string, "pages": number, "synopsis": string, "categories": [string], "confidence": "alta"|"média"|"baixa"}
+{"title": string, "authors": [string], "language": "pt_BR"|"en"|"es"|"fr"|"it"|"de"|"ja"|"other", "publisher": string, "edition_year": number, "publication_year": number, "original_title": string, "pages": number, "synopsis": string, "categories": [string], "series_name": string, "series_volume": number, "series_total": number, "confidence": "alta"|"média"|"baixa"}
 NUNCA repita as instruções nem nomes de chaves dentro de um valor. Um título tem no máximo uma linha.`;
 
 function buildUserPrompt(input: AIInput): string {
@@ -76,6 +77,7 @@ function looksDegenerate(d: AIBookDraft): boolean {
   if (long(d.title, 200)) return true;
   if (long(d.original_title, 200)) return true;
   if (long(d.publisher, 120)) return true;
+  if (long(d.series_name, 160)) return true;
   if (d.synopsis && d.synopsis.length > 4000) return true;
   if (d.authors?.some((a) => long(a, 120))) return true;
   if (d.categories?.some((c) => long(c, 60))) return true;
@@ -111,6 +113,9 @@ function sanitize(raw: unknown): AIBookDraft | null {
     pages: num(r.pages),
     synopsis: str(r.synopsis),
     categories: arr(r.categories)?.slice(0, 4),
+    series_name: str(r.series_name),
+    series_volume: num(r.series_volume),
+    series_total: num(r.series_total),
     confidence:
       r.confidence === "alta" || r.confidence === "média" || r.confidence === "baixa"
         ? r.confidence

@@ -17,6 +17,12 @@ export type AIBookDraft = {
   synopsis?: string;
   /** 2 a 4 gêneros/categorias em português. */
   categories?: string[];
+  /** Nome da série, quando o livro faz parte de uma. */
+  series_name?: string;
+  /** Posição do livro na série (1, 2, 3…). */
+  series_volume?: number;
+  /** Total de volumes da série, quando conhecido. */
+  series_total?: number;
   isbn13?: string;
   confidence?: "alta" | "média" | "baixa";
 };
