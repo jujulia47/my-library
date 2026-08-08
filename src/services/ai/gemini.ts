@@ -1,73 +1,48 @@
 import type { AIInput, AIResult, AIBookDraft } from "./types";
 
-// Modelos leves, em cascata: se um vier com "limit 0" (não liberado no free tier
-// da conta) ou 404, tenta o próximo. GEMINI_MODEL, se setado, vai na frente.
+// Modelos em cascata: se um vier com "limit 0" (não liberado no free tier),
+// 404 ou rejeitar o grounding, tenta o próximo. GEMINI_MODEL vai na frente.
 const CANDIDATE_MODELS = [
   ...new Set(
     [
       process.env.GEMINI_MODEL,
+      "gemini-2.5-flash",
       "gemini-2.5-flash-lite",
       "gemini-2.0-flash-lite",
-      "gemini-2.5-flash",
       "gemini-flash-latest",
     ].filter((m): m is string => !!m),
   ),
 ];
 
-const SYSTEM = `Você é um assistente bibliográfico especializado em livros. A partir de um ISBN, de um título/autor, ou de uma FOTO da capa/contracapa, você identifica a EDIÇÃO e a OBRA e retorna APENAS metadados bibliográficos.
+const SYSTEM = `Você é um assistente bibliográfico. A partir de um ISBN, de um título/autor, ou de uma FOTO da capa/contracapa, você identifica a EDIÇÃO e a OBRA e retorna metadados bibliográficos.
 
-Regras rígidas:
-- Retorne SÓ os campos bibliográficos do schema. NUNCA invente dados pessoais/de acervo (preço, prateleira, data de compra) — eles não existem aqui.
-- Preencha em PORTUGUÊS (sinopse e gêneros), EXCETO se a edição for estrangeira (não brasileira nem portuguesa); nesse caso use o idioma da edição.
-- DADOS DA OBRA (estáveis, pode preencher com segurança): "title", "authors", "original_title", "publication_year" (ano da PRIMEIRA publicação da obra, NUNCA o da edição), "synopsis" (um parágrafo, sem spoilers), "categories" (2 a 4 gêneros).
-- DADOS DA EDIÇÃO (variam de uma edição pra outra): "pages", "publisher", "edition_year", "language". ATENÇÃO: só preencha esses SE um ISBN foi informado (que fixa a edição exata) OU se estiverem CLARAMENTE legíveis numa foto. Sem ISBN e sem foto legível, OMITA "pages", "publisher" e "edition_year" — é muito melhor deixar em branco pro usuário conferir no exemplar do que chutar a edição errada.
-- "original_title" = título original da obra quando diferente do título da edição; senão omita.
-- REGRA DE OURO: se não tiver CERTEZA de um campo, OMITA. Precisão vale mais que completude. Nunca preencha "por preencher".
-- Se for uma foto e você não reconhecer o livro com segurança, use confidence "baixa".`;
+MUITO IMPORTANTE — use a BUSCA NA WEB para confirmar os dados em fontes reais (catálogos de editora, livrarias, Wikipedia). NÃO responda de memória. Se houver ISBN, procure exatamente por ele (identifica a edição certa: páginas, editora e ano corretos).
 
-const RESPONSE_SCHEMA = {
-  type: "OBJECT",
-  properties: {
-    title: { type: "STRING" },
-    authors: { type: "ARRAY", items: { type: "STRING" } },
-    language: {
-      type: "STRING",
-      enum: ["pt_BR", "en", "es", "fr", "it", "de", "ja", "other"],
-    },
-    publisher: { type: "STRING" },
-    edition_year: { type: "INTEGER" },
-    publication_year: { type: "INTEGER" },
-    original_title: { type: "STRING" },
-    pages: { type: "INTEGER" },
-    synopsis: { type: "STRING" },
-    categories: { type: "ARRAY", items: { type: "STRING" } },
-    confidence: { type: "STRING", enum: ["alta", "média", "baixa"] },
-  },
-} as const;
+Regras:
+- Retorne SÓ dados bibliográficos. NUNCA invente dados pessoais/de acervo (preço, prateleira, data de compra).
+- Preencha em PORTUGUÊS (sinopse e gêneros), EXCETO se a edição for estrangeira; nesse caso, o idioma da edição.
+- "publication_year" = ano da PRIMEIRA publicação da OBRA original, NÃO o desta edição.
+- "edition_year" = ano DESTA edição. "pages"/"publisher" = desta edição — confirme na web; se não achar a edição exata, omita esses três.
+- "original_title" = título original quando difere; senão omita.
+- "synopsis" = um parágrafo, sem spoilers. "categories" = 2 a 4 gêneros.
+- Se não confirmar um campo, OMITA. Precisão vale mais que completude.
+
+FORMATO DA RESPOSTA — responda SOMENTE com um único objeto JSON válido, SEM markdown e SEM crases. Chaves possíveis (omita as que não souber):
+{"title": string, "authors": [string], "language": "pt_BR"|"en"|"es"|"fr"|"it"|"de"|"ja"|"other", "publisher": string, "edition_year": number, "publication_year": number, "original_title": string, "pages": number, "synopsis": string, "categories": [string], "confidence": "alta"|"média"|"baixa"}
+NUNCA repita as instruções nem nomes de chaves dentro de um valor. Um título tem no máximo uma linha.`;
 
 function buildUserPrompt(input: AIInput): string {
   const lines: string[] = [];
   if (input.coverImageBase64) {
     lines.push(
-      "Identifique o livro pela foto anexada (capa e/ou contracapa) e complete os metadados bibliográficos.",
+      "Identifique o livro pela foto anexada (capa/contracapa) e confirme os dados buscando na web.",
     );
   } else {
-    lines.push("Complete os metadados bibliográficos deste livro.");
+    lines.push("Identifique este livro e confirme os dados buscando na web.");
   }
   if (input.isbn) lines.push(`ISBN: ${input.isbn}`);
   if (input.title) lines.push(`Título (pode estar incompleto): ${input.title}`);
   if (input.author) lines.push(`Autor: ${input.author}`);
-  const known = input.known ?? {};
-  const knownKeys = Object.entries(known).filter(
-    ([, v]) => v !== undefined && v !== null && (!Array.isArray(v) || v.length),
-  );
-  if (knownKeys.length) {
-    lines.push(
-      `Já sei (não precisa repetir, mas use como contexto): ${knownKeys
-        .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join(", ") : v}`)
-        .join("; ")}.`,
-    );
-  }
   return lines.join("\n");
 }
 
@@ -75,7 +50,83 @@ type GeminiPart =
   | { text: string }
   | { inline_data: { mime_type: string; data: string } };
 
-/** Implementação Gemini da portinha de IA. Usa a API REST (free tier). */
+const LANG_MAP: Record<string, NonNullable<AIBookDraft["language"]>> = {
+  pt_br: "pt_BR", "pt-br": "pt_BR", pt: "pt_BR", português: "pt_BR", portugues: "pt_BR",
+  en: "en", inglês: "en", ingles: "en", english: "en",
+  es: "es", espanhol: "es",
+  fr: "fr", francês: "fr", frances: "fr",
+  it: "it", italiano: "it",
+  de: "de", alemão: "de", alemao: "de",
+  ja: "ja", japonês: "ja", japones: "ja",
+  other: "other", outro: "other",
+};
+
+/** Extrai o objeto JSON de um texto (tira crases/markdown e prosa ao redor). */
+function extractJson(text: string): string | null {
+  const t = text.replace(/```(?:json)?/gi, "").trim();
+  const start = t.indexOf("{");
+  const end = t.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  return t.slice(start, end + 1);
+}
+
+/** Rejeita respostas degeneradas (campo curto virou blob gigante). */
+function looksDegenerate(d: AIBookDraft): boolean {
+  const long = (s?: string, max = 160) => !!s && s.length > max;
+  if (long(d.title, 200)) return true;
+  if (long(d.original_title, 200)) return true;
+  if (long(d.publisher, 120)) return true;
+  if (d.synopsis && d.synopsis.length > 4000) return true;
+  if (d.authors?.some((a) => long(a, 120))) return true;
+  if (d.categories?.some((c) => long(c, 60))) return true;
+  return false;
+}
+
+/** Normaliza + limpa o rascunho vindo da IA. */
+function sanitize(raw: unknown): AIBookDraft | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const str = (v: unknown) =>
+    typeof v === "string" && v.trim() ? v.trim() : undefined;
+  const num = (v: unknown) => {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : undefined;
+  };
+  const arr = (v: unknown) =>
+    Array.isArray(v)
+      ? (v.map((x) => str(x)).filter(Boolean) as string[])
+      : undefined;
+
+  const langRaw = str(r.language)?.toLowerCase();
+  const language = langRaw ? LANG_MAP[langRaw] : undefined;
+
+  const d: AIBookDraft = {
+    title: str(r.title),
+    authors: arr(r.authors),
+    language,
+    publisher: str(r.publisher),
+    edition_year: num(r.edition_year),
+    publication_year: num(r.publication_year),
+    original_title: str(r.original_title),
+    pages: num(r.pages),
+    synopsis: str(r.synopsis),
+    categories: arr(r.categories)?.slice(0, 4),
+    confidence:
+      r.confidence === "alta" || r.confidence === "média" || r.confidence === "baixa"
+        ? r.confidence
+        : undefined,
+  };
+  // remove chaves vazias
+  const clean: AIBookDraft = {};
+  for (const [k, v] of Object.entries(d)) {
+    if (v === undefined) continue;
+    if (Array.isArray(v) && v.length === 0) continue;
+    (clean as Record<string, unknown>)[k] = v;
+  }
+  if (looksDegenerate(clean)) return null;
+  return clean;
+}
+
 export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
@@ -99,13 +150,11 @@ export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
   const body = {
     systemInstruction: { parts: [{ text: SYSTEM }] },
     contents: [{ role: "user", parts }],
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: RESPONSE_SCHEMA,
-      // Baixa temperatura = respostas mais factuais e determinísticas, menos
-      // "criatividade" (que aqui vira dado inventado).
-      temperature: 0.1,
-    },
+    // Grounding: a IA pesquisa na web antes de responder (dados reais, não de
+    // memória). Não pode combinar com responseSchema, então pedimos JSON no
+    // texto e fazemos parsing robusto + validação.
+    tools: [{ google_search: {} }],
+    generationConfig: { temperature: 0.1 },
   };
 
   let lastMessage = "Nenhum modelo de IA disponível.";
@@ -113,7 +162,6 @@ export async function geminiCompleteBook(input: AIInput): Promise<AIResult> {
     const r = await callModel(model, key, body);
     if (r.ok) return { ok: true, data: r.data, provider: `gemini:${model}` };
     lastMessage = r.message;
-    // 429 (limit 0 / cota) ou 404 (modelo inexistente) → tenta o próximo.
     if (!r.tryNext) return { ok: false, message: r.message };
   }
   return { ok: false, message: lastMessage };
@@ -151,45 +199,49 @@ async function callModel(
     } catch {
       /* corpo não-JSON */
     }
-    const tryNext = res.status === 429 || res.status === 404;
+    // 400/404 (modelo/tool não suportado) e 429 (cota) → tenta o próximo modelo.
+    const tryNext = [400, 404, 429].includes(res.status);
     const prefix =
       res.status === 429
         ? `Cota do Gemini atingida (429) em ${model}.`
         : `A IA respondeu com erro (${res.status}) em ${model}.`;
-    return {
-      ok: false,
-      tryNext,
-      message: `${prefix}${detail ? " " + detail : ""}`,
-    };
+    return { ok: false, tryNext, message: `${prefix}${detail ? " " + detail : ""}` };
   }
 
   let json: unknown;
   try {
     json = await res.json();
   } catch {
-    return { ok: false, message: "Resposta da IA ilegível.", tryNext: false };
+    return { ok: false, message: "Resposta da IA ilegível.", tryNext: true };
   }
 
-  const text = (
-    json as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
-  )?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) return { ok: false, message: "A IA não retornou dados.", tryNext: true };
+  // Com grounding, a resposta pode ter várias parts — junta os textos.
+  const partsOut =
+    (json as { candidates?: { content?: { parts?: { text?: string }[] } }[] })
+      ?.candidates?.[0]?.content?.parts ?? [];
+  const text = partsOut.map((p) => p.text ?? "").join("");
+  if (!text.trim())
+    return { ok: false, message: "A IA não retornou dados.", tryNext: true };
 
-  let parsed: AIBookDraft;
+  const jsonStr = extractJson(text);
+  if (!jsonStr)
+    return { ok: false, message: "A IA não devolveu JSON.", tryNext: true };
+
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(text) as AIBookDraft;
+    parsed = JSON.parse(jsonStr);
   } catch {
-    return { ok: false, message: "A IA retornou um formato inesperado.", tryNext: false };
+    return { ok: false, message: "A IA retornou um formato inesperado.", tryNext: true };
   }
 
-  // Sanitiza: descarta strings vazias e arrays vazios.
-  const clean: AIBookDraft = {};
-  for (const [k, v] of Object.entries(parsed)) {
-    if (v === null || v === undefined) continue;
-    if (typeof v === "string" && v.trim() === "") continue;
-    if (Array.isArray(v) && v.length === 0) continue;
-    (clean as Record<string, unknown>)[k] = v;
+  const clean = sanitize(parsed);
+  if (!clean) {
+    // resposta degenerada/vazia — tenta outro modelo.
+    return {
+      ok: false,
+      message: "A IA devolveu uma resposta inválida — tente de novo.",
+      tryNext: true,
+    };
   }
-
   return { ok: true, data: clean };
 }
