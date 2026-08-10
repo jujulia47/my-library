@@ -23,6 +23,7 @@ import {
   RectangleStackIcon,
   ViewfinderCircleIcon,
   SparklesIcon,
+  ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { BookOpenIcon as BookOpenSolid } from "@heroicons/react/24/solid";
 
@@ -54,6 +55,7 @@ const items: NavItem[] = [
   },
   { href: "/year", label: "Resumo do ano", Icon: CalendarDaysIcon },
   { href: "/visao-geral", label: "Visão geral", Icon: GlobeAmericasIcon },
+  { href: "/saude-dados", label: "Saúde do acervo", Icon: ClipboardDocumentCheckIcon },
   { href: "/passaporte", label: "Passaporte", Icon: IdentificationIcon },
   { href: "/impressao-digital", label: "Impressão digital", Icon: FingerPrintIcon },
   { href: "/conquistas", label: "Conquistas", Icon: TrophyIcon },
