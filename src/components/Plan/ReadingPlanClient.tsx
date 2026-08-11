@@ -1743,7 +1743,7 @@ function CalendarSection({
       <h2 className="text-sm uppercase tracking-wider text-ink-fade mb-3">
         Calendário{" "}
         <span className="normal-case tracking-normal text-ink-fade/80 italic">
-          — passado = lido · futuro = planejado (🚩 = prazo de meta)
+          — passado = lido · futuro = planejado (🚩 prazo · ✓ terminou aqui)
         </span>
       </h2>
 
@@ -1793,11 +1793,20 @@ function CalendarSection({
                 {d.entries.map((e) => (
                   <span
                     key={`${e.book_id}-${e.kind}`}
-                    className="text-[11px] leading-tight rounded px-1.5 py-1 text-ivory truncate"
+                    className={clsx(
+                      "text-[11px] leading-tight rounded px-1.5 py-1 text-ivory truncate",
+                      e.finished && "ring-2 ring-inset ring-gold font-medium",
+                    )}
                     style={{ backgroundColor: e.color }}
-                    title={`${e.title} · ${e.pages} pág (${e.kind})`}
+                    title={
+                      e.finished
+                        ? `${e.title} · terminou aqui${e.pages > 0 ? ` · ${e.pages} pág lidas` : ""}`
+                        : `${e.title} · ${e.pages} pág (${e.kind})`
+                    }
                   >
-                    {e.pages}p · {e.title}
+                    {e.finished && "✓ "}
+                    {e.pages > 0 && `${e.pages}p · `}
+                    {e.title}
                   </span>
                 ))}
               </div>
@@ -1850,12 +1859,18 @@ function CalendarSection({
                   {d.entries.map((e) => (
                     <span
                       key={`${e.book_id}-${e.kind}`}
-                      className="text-sm rounded px-2 py-1 text-ivory flex items-center justify-between gap-2"
+                      className={clsx(
+                        "text-sm rounded px-2 py-1 text-ivory flex items-center justify-between gap-2",
+                        e.finished && "ring-2 ring-inset ring-gold font-medium",
+                      )}
                       style={{ backgroundColor: e.color }}
                     >
-                      <span className="truncate">{e.title}</span>
+                      <span className="truncate">
+                        {e.finished && "✓ "}
+                        {e.title}
+                      </span>
                       <span className="flex-shrink-0 tabular-nums">
-                        {e.pages}p
+                        {e.finished ? "terminou" : `${e.pages}p`}
                       </span>
                     </span>
                   ))}

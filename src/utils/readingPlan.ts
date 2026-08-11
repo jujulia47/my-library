@@ -400,6 +400,8 @@ export type DayEntry = {
   pages: number;
   /** "lido" = leitura REAL de um dia passado (histórico); "meta"/"fila" = plano. */
   kind: "meta" | "fila" | "lido";
+  /** true no dia em que o livro foi terminado (marca "terminou aqui"). */
+  finished?: boolean;
 };
 
 /** Uma leitura REAL de um dia (do reading_progress_log) — preenche o passado. */
@@ -409,6 +411,8 @@ export type PlanHistoryEntry = {
   title: string;
   color: string;
   pages: number;
+  /** true se o livro foi terminado nesta data. */
+  finished?: boolean;
 };
 
 export type PlanDay = {
@@ -492,6 +496,7 @@ export function buildMonthPlan(
       color: h.color,
       pages: h.pages,
       kind: "lido",
+      finished: h.finished,
     });
     historyByDate.set(h.date, list);
   }

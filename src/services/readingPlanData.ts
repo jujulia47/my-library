@@ -309,6 +309,21 @@ export async function getReadingPlan(
   const spreadUntil =
     (catchupRaw as { spread_until: string } | null)?.spread_until ?? null;
 
+  // Finalizações do mês: data de término por livro (marca "terminou aqui").
+  const { data: finData } = await supabase
+    .from("reading")
+    .select("book_id, finish_date")
+    .eq("user_id", userId)
+    .eq("status", "finished")
+    .gte("finish_date", month)
+    .lt("finish_date", nextMonth);
+  const finishPairs = (
+    (finData as { book_id: string; finish_date: string | null }[] | null) ?? []
+  )
+    .filter((f) => f.finish_date)
+    .map((f) => ({ book_id: f.book_id, date: f.finish_date as string }));
+  const finishSet = new Set(finishPairs.map((f) => `${f.date}|${f.book_id}`));
+
   // Histórico REAL do mês (reading_progress_log): quanto foi lido de cada livro
   // em cada dia. Preenche os dias PASSADOS do calendário — inclui livros que já
   // saíram do plano (ex.: terminados), por isso busca título/cor à parte.
@@ -322,6 +337,10 @@ export async function getReadingPlan(
       .lt("log_date", nextMonth)
       .gt("pages_delta", 0);
     const logRows = monthLogs ?? [];
+
+    // Páginas por (dia, livro).
+    const byDayBook = new Map<string, number>();
+    const involvedBookIds = new Set<string>();
     if (logRows.length > 0) {
       const histReadingIds = [...new Set(logRows.map((l) => l.reading_id))];
       const { data: histReadings } = await supabase
@@ -332,46 +351,63 @@ export async function getReadingPlan(
       const bookByReading = new Map(
         (histReadings ?? []).map((r) => [r.id, r.book_id]),
       );
-      // Páginas por (dia, livro).
-      const byDayBook = new Map<string, number>();
-      const histBookIds = new Set<string>();
       for (const l of logRows) {
         const bid = bookByReading.get(l.reading_id);
         if (!bid) continue;
-        histBookIds.add(bid);
+        involvedBookIds.add(bid);
         const key = `${l.log_date}|${bid}`;
         byDayBook.set(key, (byDayBook.get(key) ?? 0) + l.pages_delta);
       }
-      // Título e cor: reusa os livros do plano (mesma cor no passado e futuro);
-      // busca título dos que já saíram do plano e dá cor estável por id.
-      const colorByBookId = new Map(books.map((b) => [b.book_id, b.color]));
-      const titleByBookId = new Map(books.map((b) => [b.book_id, b.title]));
-      const missingTitles = [...histBookIds].filter(
-        (id) => !titleByBookId.has(id),
-      );
-      if (missingTitles.length > 0) {
-        const { data: histBooks } = await supabase
-          .from("book")
-          .select("id, title")
-          .eq("user_id", userId)
-          .in("id", missingTitles);
-        for (const b of (histBooks as { id: string; title: string }[] | null) ??
-          []) {
-          titleByBookId.set(b.id, b.title);
-        }
+    }
+    // Livros finalizados também precisam de título/cor (mesmo sem log no dia).
+    for (const f of finishPairs) involvedBookIds.add(f.book_id);
+
+    // Título e cor: reusa os livros do plano (mesma cor no passado e futuro);
+    // busca título dos que já saíram do plano e dá cor estável por id.
+    const colorByBookId = new Map(books.map((b) => [b.book_id, b.color]));
+    const titleByBookId = new Map(books.map((b) => [b.book_id, b.title]));
+    const missingTitles = [...involvedBookIds].filter(
+      (id) => !titleByBookId.has(id),
+    );
+    if (missingTitles.length > 0) {
+      const { data: histBooks } = await supabase
+        .from("book")
+        .select("id, title")
+        .eq("user_id", userId)
+        .in("id", missingTitles);
+      for (const b of (histBooks as { id: string; title: string }[] | null) ??
+        []) {
+        titleByBookId.set(b.id, b.title);
       }
-      for (const [key, pages] of byDayBook) {
-        const sep = key.indexOf("|");
-        const date = key.slice(0, sep);
-        const bid = key.slice(sep + 1);
-        history.push({
-          date,
-          book_id: bid,
-          title: titleByBookId.get(bid) ?? "—",
-          color: colorByBookId.get(bid) ?? colorHexForName(bid),
-          pages,
-        });
-      }
+    }
+
+    for (const [key, pages] of byDayBook) {
+      const sep = key.indexOf("|");
+      const date = key.slice(0, sep);
+      const bid = key.slice(sep + 1);
+      history.push({
+        date,
+        book_id: bid,
+        title: titleByBookId.get(bid) ?? "—",
+        color: colorByBookId.get(bid) ?? colorHexForName(bid),
+        pages,
+        finished: finishSet.has(key),
+      });
+    }
+
+    // Marca "terminou aqui" mesmo nos dias de término sem leitura registrada.
+    const histKeys = new Set(history.map((h) => `${h.date}|${h.book_id}`));
+    for (const f of finishPairs) {
+      const key = `${f.date}|${f.book_id}`;
+      if (histKeys.has(key)) continue;
+      history.push({
+        date: f.date,
+        book_id: f.book_id,
+        title: titleByBookId.get(f.book_id) ?? "—",
+        color: colorByBookId.get(f.book_id) ?? colorHexForName(f.book_id),
+        pages: 0,
+        finished: true,
+      });
     }
   }
 
