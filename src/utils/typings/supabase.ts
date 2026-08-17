@@ -146,6 +146,7 @@ export type Database = {
           is_favorite: boolean
           is_tbr: boolean
           isbn: string | null
+          isbn_normalized: string | null
           language: Database["public"]["Enums"]["book_language"] | null
           lent_out_at: string | null
           lent_to: string | null

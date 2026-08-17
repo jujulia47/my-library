@@ -115,7 +115,7 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 async function searchBooks(
   supabase: SupabaseClient,
   userId: string,
-  _query: string,
+  query: string,
   pat: string,
   limit: number,
 ): Promise<SearchResultGroup> {
@@ -123,21 +123,29 @@ async function searchBooks(
     book_author(author(name)),
     reading(status, finish_date, start_date)`;
 
-  // Match accent-insensitive via title_normalized. original_title e synopsis
-  // ficaram fora desta sessão (não foram normalizados — busca menos comum).
+  // Match accent-insensitive via title_normalized. Também busca por ISBN: o
+  // termo vira dígitos (+X) e casa contra isbn_normalized (com/sem hífens). Só
+  // entra quando parece um ISBN (>= 8 dígitos), pra não poluir buscas de título
+  // numéricas (ex.: "1984").
+  const isbnDigits = query.replace(/[^0-9xX]/g, "").toUpperCase();
+  const filter =
+    isbnDigits.length >= 8
+      ? `title_normalized.ilike.${pat},isbn_normalized.ilike.%${isbnDigits}%`
+      : `title_normalized.ilike.${pat}`;
+
   const [{ data, error }, { count }] = await Promise.all([
     supabase
       .from("book")
       .select(select)
       .eq("user_id", userId)
-      .ilike("title_normalized", pat)
+      .or(filter)
       .order("updated_at", { ascending: false })
       .limit(limit),
     supabase
       .from("book")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
-      .ilike("title_normalized", pat),
+      .or(filter),
   ]);
 
   if (error) return emptyGroup("book");
