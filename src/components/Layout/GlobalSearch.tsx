@@ -204,9 +204,21 @@ export default function GlobalSearch() {
   return (
     <div ref={containerRef} className="relative w-full max-w-[360px]">
       <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-fade">
+        <button
+          type="button"
+          aria-label="Buscar"
+          onClick={() => {
+            const q = query.trim();
+            if (q.length >= MIN_QUERY) {
+              navigateAndClose(`/search?q=${encodeURIComponent(q)}`);
+            } else {
+              inputRef.current?.focus();
+            }
+          }}
+          className="absolute inset-y-0 left-0 flex items-center pl-3 text-ink-fade hover:text-ink-deep transition-colors cursor-pointer z-10"
+        >
           <MagnifyingGlassIcon className="w-4 h-4" />
-        </span>
+        </button>
         <input
           ref={inputRef}
           type="text"

@@ -81,12 +81,13 @@ export default async function SearchPage({
           Buscar
         </label>
         <div className="relative">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-fade"
+          <button
+            type="submit"
+            aria-label="Buscar"
+            className="absolute inset-y-0 left-0 flex items-center pl-3 text-ink-fade hover:text-ink-deep transition-colors cursor-pointer"
           >
             <MagnifyingGlassIcon className="w-5 h-5" />
-          </span>
+          </button>
           <input
             id="search-q"
             name="q"
