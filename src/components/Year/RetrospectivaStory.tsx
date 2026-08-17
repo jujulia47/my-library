@@ -237,13 +237,16 @@ export function RetrospectivaStory({
             {data.authors} autores diferentes te contaram uma história esse ano
           </p>
           <div className={styles.countryDots}>
-            {data.countryList.slice(0, 24).map((iso, i) => (
-              <span
-                key={iso + i}
-                className={`fi fi-${iso} ${styles.flagChip}`}
-                aria-hidden
-              />
-            ))}
+            {data.countryList
+              .filter((iso) => iso)
+              .slice(0, 24)
+              .map((iso, i) => (
+                <span
+                  key={iso + i}
+                  className={`fi fi-${iso} ${styles.flagChip}`}
+                  aria-hidden
+                />
+              ))}
           </div>
         </div>
       ),

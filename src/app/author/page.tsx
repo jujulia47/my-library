@@ -16,19 +16,13 @@ import {
   parsePagination,
   paginateArray,
 } from "@/utils/typings/pagination";
+import { COUNTRY_LABELS } from "@/utils/countryLabels";
 import type { Database } from "@/utils/typings/supabase";
 
 type Country = Database["public"]["Enums"]["country"];
 
-const VALID_COUNTRIES = new Set<Country>([
-  "africa_do_sul", "alemanha", "angola", "argentina", "australia",
-  "brasil", "cabo_verde", "canada", "chile", "china",
-  "colombia", "coreia_do_sul", "cuba", "egito", "espanha",
-  "estados_unidos", "franca", "holanda", "hungria", "india",
-  "irlanda", "israel", "italia", "japao", "mexico",
-  "mocambique", "noruega", "peru", "polonia", "portugal",
-  "reino_unido", "republica_tcheca", "russia", "suecia", "turquia",
-]);
+// Deriva do enum — o filtro por país acompanha automaticamente novos países.
+const VALID_COUNTRIES = new Set<Country>(Object.keys(COUNTRY_LABELS) as Country[]);
 
 function parseList(v: string | string[] | undefined): string[] {
   if (!v) return [];

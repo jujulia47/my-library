@@ -7,20 +7,14 @@ import {
   translateSupabaseError,
   type ActionResult,
 } from "@/utils/translateSupabaseError";
+import { COUNTRY_LABELS } from "@/utils/countryLabels";
 import type { Database } from "@/utils/typings/supabase";
 
 type Country = Database["public"]["Enums"]["country"];
 type AuthorUpdate = Database["public"]["Tables"]["author"]["Update"];
 
-const VALID_COUNTRIES: Country[] = [
-  "africa_do_sul", "alemanha", "angola", "argentina", "australia",
-  "brasil", "cabo_verde", "canada", "chile", "china",
-  "colombia", "coreia_do_sul", "cuba", "egito", "espanha",
-  "estados_unidos", "franca", "holanda", "hungria", "india",
-  "irlanda", "israel", "italia", "japao", "mexico",
-  "mocambique", "noruega", "peru", "polonia", "portugal",
-  "reino_unido", "republica_tcheca", "russia", "suecia", "turquia",
-];
+// Deriva do enum (COUNTRY_LABELS) — adicionar país novo nunca mais quebra o save.
+const VALID_COUNTRIES = Object.keys(COUNTRY_LABELS) as Country[];
 
 function pickCountry(value: unknown): Country | null {
   return typeof value === "string" && VALID_COUNTRIES.includes(value as Country)

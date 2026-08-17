@@ -42,6 +42,12 @@ const CONTINENT: Record<Country, string> = {
   russia: "Europa",
   suecia: "Europa",
   australia: "Oceania",
+  venezuela: "América do Sul",
+  quenia: "África",
+  dinamarca: "Europa",
+  niassalandia: "África",
+  suica: "Europa",
+  jerusalem: "Ásia",
 };
 
 export type Achievement = {

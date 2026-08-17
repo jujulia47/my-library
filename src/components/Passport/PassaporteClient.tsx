@@ -126,7 +126,9 @@ export function PassaporteClient({ data }: { data: PassportData }) {
                   }
                 >
                   <div className={styles.stampInner}>
-                    <span className={`fi fi-${s.iso} ${styles.stampFlag}`} role="img" aria-label={s.label} />
+                    {s.iso && (
+                      <span className={`fi fi-${s.iso} ${styles.stampFlag}`} role="img" aria-label={s.label} />
+                    )}
                     <span className={styles.stampCountry}>{s.label}</span>
                     <span className={styles.stampMeta}>✦ {s.count} · {firstStampLabel(s.firstDate)}</span>
                   </div>
@@ -173,7 +175,9 @@ function Destino({ d }: { d: PassportDestino }) {
         }
       }}
     >
-      <span className={`fi fi-${d.iso} ${styles.destFlag}`} role="img" aria-label={d.label} />
+      {d.iso && (
+        <span className={`fi fi-${d.iso} ${styles.destFlag}`} role="img" aria-label={d.label} />
+      )}
       <span className={styles.destName}>{d.label}</span>
       <span className={styles.destN}>
         {d.count} {d.count === 1 ? "livro esperando" : "livros esperando"}

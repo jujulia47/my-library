@@ -30,18 +30,20 @@ export default function CountryBadge({
         className,
       )}
     >
-      <span
-        className={`fi fi-${iso}`}
-        style={{
-          width: "18px",
-          height: "13px",
-          borderRadius: "2px",
-          display: "inline-block",
-          flexShrink: 0,
-        }}
-        role="img"
-        aria-label={label}
-      />
+      {iso && (
+        <span
+          className={`fi fi-${iso}`}
+          style={{
+            width: "18px",
+            height: "13px",
+            borderRadius: "2px",
+            display: "inline-block",
+            flexShrink: 0,
+          }}
+          role="img"
+          aria-label={label}
+        />
+      )}
       {showLabel && <span className="text-ink-soft">{label}</span>}
     </span>
   );

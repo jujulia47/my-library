@@ -1251,6 +1251,12 @@ export type Database = {
         | "russia"
         | "suecia"
         | "turquia"
+        | "venezuela"
+        | "quenia"
+        | "dinamarca"
+        | "niassalandia"
+        | "suica"
+        | "jerusalem"
       ownership_status:
         | "owned"
         | "lent_out"
@@ -1456,6 +1462,12 @@ export const Constants = {
         "russia",
         "suecia",
         "turquia",
+        "venezuela",
+        "quenia",
+        "dinamarca",
+        "niassalandia",
+        "suica",
+        "jerusalem",
       ],
       ownership_status: [
         "owned",

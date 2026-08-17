@@ -16,6 +16,7 @@ export const COUNTRY_LABELS: Record<Country, string> = {
   colombia: "Colômbia",
   coreia_do_sul: "Coreia do Sul",
   cuba: "Cuba",
+  dinamarca: "Dinamarca",
   egito: "Egito",
   espanha: "Espanha",
   estados_unidos: "Estados Unidos",
@@ -27,17 +28,22 @@ export const COUNTRY_LABELS: Record<Country, string> = {
   israel: "Israel",
   italia: "Itália",
   japao: "Japão",
+  jerusalem: "Jerusalém",
   mexico: "México",
   mocambique: "Moçambique",
+  niassalandia: "Niassalândia",
   noruega: "Noruega",
   peru: "Peru",
   polonia: "Polônia",
   portugal: "Portugal",
+  quenia: "Quênia",
   reino_unido: "Reino Unido",
   republica_tcheca: "República Tcheca",
   russia: "Rússia",
   suecia: "Suécia",
+  suica: "Suíça",
   turquia: "Turquia",
+  venezuela: "Venezuela",
 };
 
 /**
@@ -59,6 +65,7 @@ export const COUNTRY_CODES: Record<Country, string> = {
   colombia: "CO",
   coreia_do_sul: "KR",
   cuba: "CU",
+  dinamarca: "DK",
   egito: "EG",
   espanha: "ES",
   estados_unidos: "US",
@@ -70,17 +77,24 @@ export const COUNTRY_CODES: Record<Country, string> = {
   israel: "IL",
   italia: "IT",
   japao: "JP",
+  // Jerusalém é cidade (não país) — sem código ISO/bandeira, só o nome.
+  jerusalem: "",
   mexico: "MX",
   mocambique: "MZ",
+  // Niassalândia (histórica) → bandeira do Malawi (Estado sucessor).
+  niassalandia: "MW",
   noruega: "NO",
   peru: "PE",
   polonia: "PL",
   portugal: "PT",
+  quenia: "KE",
   reino_unido: "GB",
   republica_tcheca: "CZ",
   russia: "RU",
   suecia: "SE",
+  suica: "CH",
   turquia: "TR",
+  venezuela: "VE",
 };
 
 /** Lista ordenada por label PT-BR — usada em selects. */
