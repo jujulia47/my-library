@@ -168,6 +168,12 @@ export type TargetStats = {
    * de hoje sem você mandar.
    */
   backlog: number;
+  /**
+   * true quando o atraso vem de ANTES desta meta (a meta anterior não foi
+   * terminada e você ainda não chegou no início desta). "Recalcular" não
+   * resolve isso — o caminho é jogar a meta anterior na seguinte.
+   */
+  backlogInherited: boolean;
   /** Página que o cronograma espera que você alcance até o fim de hoje. */
   targetPageToday: number | null;
   /** Cota dos dias DEPOIS de hoje (pro calendário). */
@@ -204,8 +210,13 @@ export function deriveTarget(
   // Cronograma vigente: original, ou reiniciado no ponto do recálculo manual.
   const baseDate = target.replan_from_date ?? target.start_date;
   const basePage = target.replan_from_page ?? target.page_from - 1;
+  // Se uma meta anterior foi JOGADA pra cá (carried_over), o ponteiro `fromPage`
+  // vem ABAIXO do início desta meta. Nesse caso o cronograma passa a espalhar
+  // TAMBÉM o que ficou faltando — a cota diária sobe (em vez de as páginas
+  // ficarem só como backlog). Sem carryover, fromPage ≥ basePage e nada muda.
+  const effectiveBase = Math.min(basePage, fromPage);
   const scheduleDays = Math.max(1, inclusiveDays(baseDate, target.end_date));
-  const scheduledPages = Math.max(0, target.page_to - basePage);
+  const scheduledPages = Math.max(0, target.page_to - effectiveBase);
   const originalDaily = Math.ceil(scheduledPages / scheduleDays);
 
   // Restante efetivo a partir do ponteiro (herda só o que foi jogado pra cá).
@@ -221,6 +232,7 @@ export function deriveTarget(
     doneToday: false,
     aheadToday: 0,
     backlog: 0,
+    backlogInherited: false,
     targetPageToday: null,
     futureDaily: 0,
   };
@@ -266,7 +278,7 @@ export function deriveTarget(
   );
   const expectedByYesterday = Math.min(
     target.page_to,
-    basePage + originalDaily * daysBeforeToday,
+    effectiveBase + originalDaily * daysBeforeToday,
   );
   const debtAtStartOfToday = Math.max(
     0,
@@ -277,6 +289,9 @@ export function deriveTarget(
   // ao mesmo tempo.
   const surplusToday = Math.max(0, pagesReadToday - todayQuota);
   const backlog = Math.max(0, debtAtStartOfToday - surplusToday);
+  // Atraso HERDADO: você ainda não chegou no início desta meta (a anterior não
+  // foi terminada). Recalcular não ajuda aqui — é caso de "jogar na seguinte".
+  const backlogInherited = backlog > 0 && currentPage < target.page_from - 1;
 
   const doneToday = todayQuota > 0 && pagesReadToday >= todayQuota;
   const targetPageToday = Math.min(
@@ -299,6 +314,7 @@ export function deriveTarget(
     doneToday,
     aheadToday: Math.max(0, surplusToday - debtAtStartOfToday),
     backlog,
+    backlogInherited,
     targetPageToday,
     futureDaily,
     status: backlog > 0 ? "atrasada" : "em_dia",

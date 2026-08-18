@@ -497,23 +497,29 @@ function TodayPanel({
                   )}
                 </p>
 
-                {r.backlog > 0 && (
-                  <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-burgundy">
-                      ⚠ atrasado: {r.backlog}p de dias anteriores
-                    </span>
-                    {r.stats && (
-                      <button
-                        type="button"
-                        onClick={() => handleReplan(r.stats!.target.id)}
-                        className="inline-flex items-center gap-1 text-xs text-gold-deep hover:text-ink-deep transition-colors underline underline-offset-2"
-                      >
-                        <ArrowUturnRightIcon className="w-3.5 h-3.5" />
-                        recalcular nos dias restantes
-                      </button>
-                    )}
-                  </div>
-                )}
+                {r.backlog > 0 &&
+                  (r.stats?.backlogInherited ? (
+                    <p className="mt-1.5 text-sm text-burgundy">
+                      ⚠ atrasado: {r.backlog}p — de uma meta anterior (jogue a
+                      meta vencida na seguinte)
+                    </p>
+                  ) : (
+                    <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-burgundy">
+                        ⚠ atrasado: {r.backlog}p de dias anteriores
+                      </span>
+                      {r.stats && (
+                        <button
+                          type="button"
+                          onClick={() => handleReplan(r.stats!.target.id)}
+                          className="inline-flex items-center gap-1 text-xs text-gold-deep hover:text-ink-deep transition-colors underline underline-offset-2"
+                        >
+                          <ArrowUturnRightIcon className="w-3.5 h-3.5" />
+                          recalcular nos dias restantes
+                        </button>
+                      )}
+                    </div>
+                  ))}
               </div>
             </div>
           </li>
@@ -1681,24 +1687,32 @@ function TargetRow({
           </span>
         )}
 
-        {/* Atraso acumulado + recalcular */}
-        {stats.backlog > 0 && (
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-burgundy">
-              ⚠ atrasado: {stats.backlog}p de dias anteriores
-            </span>
-            {editable && (
-              <button
-                type="button"
-                onClick={onReplan}
-                className="inline-flex items-center gap-1 text-xs text-gold-deep hover:text-ink-deep transition-colors underline underline-offset-2"
-              >
-                <ArrowUturnRightIcon className="w-3.5 h-3.5" />
-                recalcular nos dias restantes
-              </button>
-            )}
-          </div>
-        )}
+        {/* Atraso acumulado. Se veio de uma meta ANTERIOR (herdado), o caminho
+            é jogar aquela na seguinte — "recalcular" não resolve, então nem
+            aparece. Se é atraso DENTRO desta meta, mostra o "recalcular". */}
+        {stats.backlog > 0 &&
+          (stats.backlogInherited ? (
+            <p className="mt-2 text-sm text-burgundy">
+              ⚠ atrasado: {stats.backlog}p — de uma meta anterior (jogue a meta
+              vencida na seguinte)
+            </p>
+          ) : (
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-burgundy">
+                ⚠ atrasado: {stats.backlog}p de dias anteriores
+              </span>
+              {editable && (
+                <button
+                  type="button"
+                  onClick={onReplan}
+                  className="inline-flex items-center gap-1 text-xs text-gold-deep hover:text-ink-deep transition-colors underline underline-offset-2"
+                >
+                  <ArrowUturnRightIcon className="w-3.5 h-3.5" />
+                  recalcular nos dias restantes
+                </button>
+              )}
+            </div>
+          ))}
 
         {/* Marca de recálculo manual */}
         {stats.target.replan_from_date && (
