@@ -155,6 +155,7 @@ export type Database = {
           pages: number | null
           priority: Database["public"]["Enums"]["priority_level"] | null
           publication_year: number | null
+          publication_era: string | null
           publisher: string | null
           purchase_group_id: string | null
           purchase_origin: Database["public"]["Enums"]["purchase_origin"] | null
@@ -197,6 +198,7 @@ export type Database = {
           pages?: number | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
           publication_year?: number | null
+          publication_era?: string | null
           publisher?: string | null
           purchase_group_id?: string | null
           purchase_origin?:
@@ -241,6 +243,7 @@ export type Database = {
           pages?: number | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
           publication_year?: number | null
+          publication_era?: string | null
           publisher?: string | null
           purchase_group_id?: string | null
           purchase_origin?:

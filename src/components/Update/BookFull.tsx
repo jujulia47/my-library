@@ -245,11 +245,13 @@ export default function BookFull({
                   defaultValue={book.publisher ?? ""}
                 />
                 <Input
-                  label="Ano de publicação original"
+                  label="Ano ou época de publicação"
                   name="publication_year"
-                  type="number"
-                  defaultValue={book.publication_year ?? ""}
-                  helperText="Quando a obra foi publicada pela primeira vez."
+                  defaultValue={
+                    book.publication_era ?? book.publication_year ?? ""
+                  }
+                  placeholder="Ex.: 1543, c. 800 a.C., Século X a.C."
+                  helperText="Um ano numérico (entra nos gráficos) ou texto livre pra datas antigas/imprecisas (a.C., século)."
                 />
                 <Input
                   label="Páginas"

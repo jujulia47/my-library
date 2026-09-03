@@ -284,6 +284,7 @@ export default async function Page({
           isbn: book.isbn,
           publisher: book.publisher,
           publication_year: book.publication_year,
+          publication_era: book.publication_era,
           synopsis: book.synopsis,
           pages: book.pages,
           language: book.language,

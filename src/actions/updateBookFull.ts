@@ -142,10 +142,22 @@ export async function updateBookFull(
     (formData.get("original_title") as string)?.trim() || null;
   const isbn = (formData.get("isbn") as string)?.trim() || null;
   const publisher = (formData.get("publisher") as string)?.trim() || null;
-  const publicationYearRaw = formData.get("publication_year") as string | null;
-  const publication_year = publicationYearRaw
-    ? Number(publicationYearRaw) || null
-    : null;
+  // Campo único "Ano ou época": só dígitos → ano (alimenta os gráficos);
+  // qualquer texto (ex.: "Século X a.C.") → época. De uma época d.C. dá pra
+  // extrair um ano de 4 dígitos pros gráficos; de datas a.C., não.
+  const publicationRaw = ((formData.get("publication_year") as string) || "").trim();
+  let publication_year: number | null = null;
+  let publication_era: string | null = null;
+  if (publicationRaw) {
+    if (/^-?\d{1,4}$/.test(publicationRaw)) {
+      publication_year = Number(publicationRaw) || null;
+    } else {
+      publication_era = publicationRaw;
+      const isBC = /a\.?\s*c\.?|\bbc\b/i.test(publicationRaw);
+      const m = publicationRaw.match(/\b(\d{3,4})\b/);
+      if (m && !isBC) publication_year = Number(m[1]) || null;
+    }
+  }
   const synopsis = (formData.get("synopsis") as string)?.trim() || null;
   const comments = (formData.get("comments") as string)?.trim() || null;
   const pagesRaw = formData.get("pages") as string | null;
@@ -385,6 +397,7 @@ export async function updateBookFull(
     isbn,
     publisher,
     publication_year,
+    publication_era,
     synopsis,
     comments,
     pages,

@@ -73,6 +73,7 @@ export type BookDetail = {
   isbn: string | null;
   publisher: string | null;
   publication_year: number | null;
+  publication_era: string | null;
   synopsis: string | null;
   pages: number | null;
   language: Database["public"]["Enums"]["book_language"] | null;
@@ -835,12 +836,19 @@ export default function BookDetailClient({
                   <dd className="text-ink-deep">{book.publisher}</dd>
                 </div>
               )}
-              {book.publication_year && (
+              {(book.publication_era || book.publication_year) && (
                 <div>
                   <dt className="text-xs uppercase tracking-wider text-ink-fade">
-                    Ano
+                    {book.publication_era ? "Publicação" : "Ano"}
                   </dt>
-                  <dd className="text-ink-deep">{book.publication_year}</dd>
+                  <dd className="text-ink-deep">
+                    {book.publication_era
+                      ? book.publication_era
+                      : book.publication_year != null &&
+                          book.publication_year < 0
+                        ? `${-book.publication_year} a.C.`
+                        : book.publication_year}
+                  </dd>
                 </div>
               )}
               {book.pages && (
