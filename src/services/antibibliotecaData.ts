@@ -41,8 +41,7 @@ type BookRow = {
   pages: number | null;
   created_at: string;
   wont_read: boolean;
-  ownership_status: string;
-  formats_owned: string[] | null;
+  is_tbr: boolean;
   book_author: { author: { name: string | null } | null }[] | null;
   book_category: { category: { id: string; name: string } | null }[] | null;
 };
@@ -57,33 +56,26 @@ export async function getAntibiblioteca(
       supabase
         .from("book")
         .select(
-          "id, title, slug, cover, pages, created_at, wont_read, ownership_status, formats_owned, book_author(author(name)), book_category(category(id, name))",
+          "id, title, slug, cover, pages, created_at, wont_read, is_tbr, book_author(author(name)), book_category(category(id, name))",
         )
-        .eq("user_id", userId)
-        .eq("ownership_status", "owned"),
-      supabase
-        .from("reading")
-        .select("book_id, status")
-        .eq("user_id", userId)
-        .in("status", ["finished", "reading", "abandoned"]),
+        .eq("user_id", userId),
+      supabase.from("reading").select("book_id").eq("user_id", userId),
       getUserSecondsPerPage(userId),
     ]);
 
   const books = (booksRaw as unknown as BookRow[] | null) ?? [];
-  const excluded = new Set(
+  const hasReading = new Set(
     ((readingsRaw as { book_id: string }[] | null) ?? []).map((r) => r.book_id),
   );
 
   const now = Date.now();
   const YEAR = 365.25 * 24 * 3600 * 1000;
 
-  // Antibiblioteca = tem (owned + físico), não descartou (wont_read) e ainda
-  // não leu / não está lendo / não abandonou.
+  // Antibiblioteca = "quero ler" (mesma regra da página Livros): marcado como
+  // quero ler (is_tbr) OU sem nenhuma leitura registrada e não descartado
+  // (wont_read). Qualquer formato ou posse — físico ou não.
   const unread = books.filter(
-    (b) =>
-      !b.wont_read &&
-      (b.formats_owned ?? []).includes("physical") &&
-      !excluded.has(b.id),
+    (b) => b.is_tbr || (!hasReading.has(b.id) && !b.wont_read),
   );
 
   // Cor por gênero: gêneros presentes em ordem alfabética → paleta cíclica.
