@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { countPhysicalCopies } from "@/services/bookList";
+import { isComicBook } from "@/utils/comics";
 import type { Database } from "@/utils/typings/supabase";
 import type { BookLanguage } from "@/utils/languageLabels";
 
@@ -37,7 +38,10 @@ export type PageBucket = {
  * a vida toda.
  */
 export type ReadingOverview = {
+  /** Livros lidos — EXCLUI HQ/quadrinhos (contados à parte). */
   read_books_total: number;
+  /** HQs/quadrinhos lidos (distintos) — contagem separada. */
+  comics_read_total: number;
   /** Lidos sem país de autor cadastrado (fora do mapa). */
   without_country: number;
   countries: CountryBookCount[];
@@ -159,6 +163,7 @@ type FinishedRaw = {
     book_author:
       | { author: { id: string; name: string | null; country: Country | null } | null }[]
       | null;
+    book_category: { category: { name: string } | null }[] | null;
   } | null;
 };
 
@@ -171,7 +176,7 @@ export async function fetchReadingOverview(
     .from("reading")
     .select(
       `rating, finish_date,
-       book:book_id(id, pages, language, book_author(author(id, name, country)))`,
+       book:book_id(id, pages, language, book_author(author(id, name, country)), book_category(category(name)))`,
     )
     .eq("user_id", userId)
     .eq("status", "finished");
@@ -194,11 +199,22 @@ export async function fetchReadingOverview(
       finishedCount: number;
     }
   >();
+  // HQ/quadrinhos saem da conta de livros (e de todos os agregados por livro),
+  // e são contados à parte.
+  const comicIds = new Set<string>();
   for (const r of rows) {
     if (!r.book) continue;
-    const existing = books.get(r.book.id);
+    const id = r.book.id;
+    if (comicIds.has(id)) continue;
+    const existing = books.get(id);
     if (existing) {
       existing.finishedCount += 1;
+      continue;
+    }
+    if (
+      isComicBook((r.book.book_category ?? []).map((bc) => bc.category?.name))
+    ) {
+      comicIds.add(id);
       continue;
     }
     const countries = new Set<Country>();
@@ -208,7 +224,7 @@ export async function fetchReadingOverview(
       if (ba.author.country) countries.add(ba.author.country);
       if (ba.author.name) authors.set(ba.author.id, ba.author.name);
     }
-    books.set(r.book.id, {
+    books.set(id, {
       pages: r.book.pages,
       language: r.book.language,
       countries,
@@ -266,8 +282,9 @@ export async function fetchReadingOverview(
     (b) => b.finishedCount >= 2,
   ).length;
 
-  // Notas (todas as leituras finalizadas, releituras contam).
+  // Notas (leituras finalizadas de LIVROS — HQ fora; releituras contam).
   const ratings = rows
+    .filter((r) => r.book && !comicIds.has(r.book.id))
     .map((r) => r.rating)
     .filter((n): n is number => n !== null);
   const avgRating =
@@ -282,7 +299,7 @@ export async function fetchReadingOverview(
   const pagesByYear = new Map<number, number>();
   const seenBookYear = new Set<string>();
   for (const r of rows) {
-    if (!r.finish_date || !r.book) continue;
+    if (!r.finish_date || !r.book || comicIds.has(r.book.id)) continue;
     const y = Number(r.finish_date.slice(0, 4));
     const key = `${r.book.id}-${y}`;
     if (seenBookYear.has(key)) continue; // releitura no mesmo ano não duplica
@@ -303,6 +320,7 @@ export async function fetchReadingOverview(
 
   return {
     read_books_total: total,
+    comics_read_total: comicIds.size,
     without_country: withoutCountry,
     countries,
     languages,
@@ -482,9 +500,14 @@ export async function getShelfOverview(userId: string): Promise<ShelfOverview> {
     shelf_page_buckets: bucketizePages(withPages),
     shelf_without_pages: books.length - withPages.length,
     reading,
+    // No acervo as HQ continuam contando (% lido inclui livros + HQs lidas).
     read_percent:
       books.length > 0
-        ? Math.round((reading.read_books_total / books.length) * 100)
+        ? Math.round(
+            ((reading.read_books_total + reading.comics_read_total) /
+              books.length) *
+              100,
+          )
         : 0,
     total_pages_all: totalPagesAll,
     total_pages_read: totalPagesRead,

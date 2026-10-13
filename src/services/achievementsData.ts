@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { isComicBook } from "@/utils/comics";
 import type { Database } from "@/utils/typings/supabase";
 
 type Country = Database["public"]["Enums"]["country"];
@@ -87,6 +88,7 @@ type ReadingRow = {
     created_at: string;
     serie_id: string | null;
     book_author: { author: { id: string; country: Country | null } | null }[] | null;
+    book_category: { category: { name: string } | null }[] | null;
   } | null;
 };
 
@@ -201,7 +203,7 @@ export async function getAchievements(userId: string): Promise<AchievementsData>
     supabase
       .from("reading")
       .select(
-        "id, start_date, finish_date, book:book_id(id, pages, language, created_at, serie_id, book_author(author(id, country)))",
+        "id, start_date, finish_date, book:book_id(id, pages, language, created_at, serie_id, book_author(author(id, country)), book_category(category(name)))",
       )
       .eq("user_id", userId)
       .eq("status", "finished"),
@@ -223,8 +225,16 @@ export async function getAchievements(userId: string): Promise<AchievementsData>
   const sessions = (sessionsRaw as { started_at: string }[] | null) ?? [];
   const series = (seriesRaw as unknown as SerieRow[] | null) ?? [];
 
+  // HQ fora das conquistas de contagem de LIVROS (país/idioma/páginas/livros/
+  // autores/semana). Citações, 1000-páginas-num-dia, sessões e série ficam iguais.
+  const bookReadings = readings.filter(
+    (r) =>
+      r.book &&
+      !isComicBook((r.book.book_category ?? []).map((bc) => bc.category?.name)),
+  );
+
   // ---- Exploração ----
-  const countryEvents = readings.map((r) => ({
+  const countryEvents = bookReadings.map((r) => ({
     date: r.finish_date,
     keys: [
       ...new Set(
@@ -236,7 +246,7 @@ export async function getAchievements(userId: string): Promise<AchievementsData>
   }));
   const countryReach = distinctReach(countryEvents, 20);
 
-  const continentEvents = readings.map((r) => ({
+  const continentEvents = bookReadings.map((r) => ({
     date: r.finish_date,
     keys: [
       ...new Set(
@@ -249,25 +259,25 @@ export async function getAchievements(userId: string): Promise<AchievementsData>
   }));
   const continentReach = distinctReach(continentEvents, 6);
 
-  const langEvents = readings.map((r) => ({
+  const langEvents = bookReadings.map((r) => ({
     date: r.finish_date,
     keys: r.book?.language ? [r.book.language] : [],
   }));
   const langReach = distinctReach(langEvents, 5);
 
   // ---- Volume ----
-  const pageEvents = readings
-    .filter((r) => r.book)
-    .map((r) => ({
-      date: r.finish_date,
-      amount: r.book!.pages ?? 0,
-      bookId: r.book!.id,
-    }));
+  const pageEvents = bookReadings.map((r) => ({
+    date: r.finish_date,
+    amount: r.book!.pages ?? 0,
+    bookId: r.book!.id,
+  }));
   const pagesYear = yearlyReach(pageEvents, 10000);
 
-  const bookEvents = readings
-    .filter((r) => r.book)
-    .map((r) => ({ date: r.finish_date, amount: 1, bookId: r.book!.id }));
+  const bookEvents = bookReadings.map((r) => ({
+    date: r.finish_date,
+    amount: 1,
+    bookId: r.book!.id,
+  }));
   const booksYear = yearlyReach(bookEvents, 50);
 
   // páginas num único dia (soma dos deltas por data)
@@ -288,7 +298,7 @@ export async function getAchievements(userId: string): Promise<AchievementsData>
   // ---- Ritmo ----
   // Maratonista: livros distintos por primeira data de conclusão.
   const firstFinish = new Map<string, string>();
-  for (const r of readings) {
+  for (const r of bookReadings) {
     if (!r.book || !r.finish_date) continue;
     const prev = firstFinish.get(r.book.id);
     if (!prev || r.finish_date < prev) firstFinish.set(r.book.id, r.finish_date);
@@ -299,7 +309,7 @@ export async function getAchievements(userId: string): Promise<AchievementsData>
   const folego = windowReach(sessionDates, 7, 5);
 
   // ---- Curadoria ----
-  const authorEvents = readings.map((r) => ({
+  const authorEvents = bookReadings.map((r) => ({
     date: r.finish_date,
     keys: [
       ...new Set(

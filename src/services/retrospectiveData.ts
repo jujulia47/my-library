@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { getUserSecondsPerPage } from "@/services/readingPace";
 import { COUNTRY_CODES } from "@/utils/countryLabels";
+import { isComicBook } from "@/utils/comics";
 import type { Database } from "@/utils/typings/supabase";
 import type { FingerprintGenre } from "@/services/fingerprintData";
 
@@ -102,10 +103,16 @@ export async function getRetrospective(
   const continents = new Set<string>();
   const authors = new Set<string>();
   const byMonth = new Map<number, Set<string>>();
+  const comicIds = new Set<string>();
   let pagesTotal = 0;
 
   for (const r of readings) {
     if (!r.book) continue;
+    // HQ fora das contagens da retrospectiva (é "livros lidos").
+    if (isComicBook((r.book.book_category ?? []).map((bc) => bc.category?.name))) {
+      comicIds.add(r.book.id);
+      continue;
+    }
     const first = !seenBooks.has(r.book.id);
     if (first) {
       seenBooks.add(r.book.id);
@@ -159,7 +166,7 @@ export async function getRetrospective(
   let topReading: ReadingRow | null = null;
   const fiveStarBooks = new Set<string>();
   for (const r of readings) {
-    if (!r.book || r.rating == null) continue;
+    if (!r.book || r.rating == null || comicIds.has(r.book.id)) continue;
     if (r.rating >= 5) fiveStarBooks.add(r.book.id);
     if (
       !topReading ||
@@ -181,6 +188,7 @@ export async function getRetrospective(
     : null;
 
   const ratings = readings
+    .filter((r) => r.book && !comicIds.has(r.book.id))
     .map((r) => r.rating)
     .filter((n): n is number => n !== null);
   const rating =

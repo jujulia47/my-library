@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { COUNTRY_LABELS, COUNTRY_CODES } from "@/utils/countryLabels";
+import { isComicBook } from "@/utils/comics";
 import type { CountryBookCount } from "@/services/overviewData";
 import type { Database } from "@/utils/typings/supabase";
 
@@ -85,6 +86,8 @@ export type PassportData = {
   destinos: PassportDestino[];
 };
 
+type Cat = { category: { name: string } | null }[] | null;
+
 type ReadingRow = {
   finish_date: string | null;
   book: {
@@ -92,6 +95,7 @@ type ReadingRow = {
     title: string;
     pages: number | null;
     book_author: { author: { country: Country | null } | null }[] | null;
+    book_category: Cat;
   } | null;
 };
 
@@ -99,6 +103,7 @@ type TbrRow = {
   id: string;
   title: string;
   book_author: { author: { country: Country | null } | null }[] | null;
+  book_category: Cat;
 };
 
 function countriesOf(
@@ -119,13 +124,13 @@ export async function getPassport(userId: string): Promise<PassportData> {
       supabase
         .from("reading")
         .select(
-          "finish_date, book:book_id(id, title, pages, book_author(author(country)))",
+          "finish_date, book:book_id(id, title, pages, book_author(author(country)), book_category(category(name)))",
         )
         .eq("user_id", userId)
         .eq("status", "finished"),
       supabase
         .from("book")
-        .select("id, title, book_author(author(country))")
+        .select("id, title, book_author(author(country)), book_category(category(name))")
         .eq("user_id", userId)
         .eq("is_tbr", true),
       supabase
@@ -150,6 +155,9 @@ export async function getPassport(userId: string): Promise<PassportData> {
 
   for (const r of readings) {
     if (!r.book) continue;
+    // HQ não entra no passaporte (contagem de livros lidos).
+    if (isComicBook((r.book.book_category ?? []).map((bc) => bc.category?.name)))
+      continue;
     const countries = countriesOf(r.book.book_author);
     if (countries.length === 0) {
       noCountryBookIds.add(r.book.id);
@@ -211,6 +219,8 @@ export async function getPassport(userId: string): Promise<PassportData> {
   const tbr = (tbrRaw as unknown as TbrRow[] | null) ?? [];
   const destMap = new Map<Country, { books: Set<string>; titles: string[] }>();
   for (const b of tbr) {
+    if (isComicBook((b.book_category ?? []).map((bc) => bc.category?.name)))
+      continue;
     for (const c of countriesOf(b.book_author)) {
       if (visited.has(c)) continue;
       const d = destMap.get(c) ?? { books: new Set(), titles: [] };

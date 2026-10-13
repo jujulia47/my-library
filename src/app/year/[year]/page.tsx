@@ -14,6 +14,7 @@ import { YearHeader } from "@/components/Year/YearHeader";
 import { YearRecords } from "@/components/Year/YearRecords";
 import { TopBooksOfYear } from "@/components/Year/TopBooksOfYear";
 import { YearBooksGrid } from "@/components/Year/YearBooksGrid";
+import { YearRereads } from "@/components/Year/YearRereads";
 import { YearSeriesTracker } from "@/components/Year/YearSeriesTracker";
 import { YearMonthlyReadsList } from "@/components/Year/YearMonthlyReadsList";
 import { YearMilestones } from "@/components/Year/YearMilestones";
@@ -56,6 +57,7 @@ export default async function YearPage({ params }: Props) {
 
   if (
     data.total_books_finished === 0 &&
+    data.total_comics_finished === 0 &&
     data.acquisitions.total_count === 0
   ) {
     return (
@@ -71,6 +73,7 @@ export default async function YearPage({ params }: Props) {
         year={year}
         availableYears={data.available_years}
         totalBooks={data.total_books_finished}
+        totalComics={data.total_comics_finished}
         totalPages={data.total_pages_read}
       />
 
@@ -91,6 +94,13 @@ export default async function YearPage({ params }: Props) {
         year={year}
         goal={data.reading_goal}
       />
+
+      {data.rereads.books.length > 0 && (
+        <>
+          <SectionLabel>Releituras de {year}</SectionLabel>
+          <YearRereads year={year} data={data.rereads} />
+        </>
+      )}
 
       {data.series_trackers.length > 0 && (
         <>

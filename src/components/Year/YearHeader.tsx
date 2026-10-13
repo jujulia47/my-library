@@ -5,6 +5,7 @@ type Props = {
   year: number;
   availableYears: number[];
   totalBooks: number;
+  totalComics: number;
   totalPages: number;
 };
 
@@ -12,12 +13,18 @@ export function YearHeader({
   year,
   availableYears,
   totalBooks,
+  totalComics,
   totalPages,
 }: Props) {
   const formattedPages = totalPages.toLocaleString("pt-BR");
+  // HQs lidas aparecem à parte dos livros (são contagens diferentes).
+  const comicsPart =
+    totalComics > 0
+      ? ` · ${totalComics} ${totalComics === 1 ? "HQ" : "HQs"}`
+      : "";
   const subtitle =
-    totalBooks > 0
-      ? `${totalBooks} ${totalBooks === 1 ? "livro" : "livros"} · ${formattedPages} ${
+    totalBooks > 0 || totalComics > 0
+      ? `${totalBooks} ${totalBooks === 1 ? "livro" : "livros"}${comicsPart} · ${formattedPages} ${
           totalPages === 1 ? "página" : "páginas"
         }`
       : "Sem leituras concluídas";

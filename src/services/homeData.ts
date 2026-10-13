@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { collectionListQuery } from "@/services/collectionList";
 import { imagesUrl } from "@/services/images";
+import { isComicBook } from "@/utils/comics";
 import {
   todayISO as todayISOBrazil,
   currentMonthISO,
@@ -291,6 +292,7 @@ type FinishedReadingRaw = {
   book: {
     pages: number | null;
     book_author: { author_id: string }[] | null;
+    book_category: { category: { name: string } | null }[] | null;
   } | null;
 };
 
@@ -303,7 +305,9 @@ async function fetchYearStats(
   const [{ data: finishedRaw }, { count: quotesCount }] = await Promise.all([
     supabase
       .from("reading")
-      .select(`rating, book:book_id(pages, book_author(author_id))`)
+      .select(
+        `rating, book:book_id(pages, book_author(author_id), book_category(category(name)))`,
+      )
       .eq("user_id", userId)
       .eq("status", "finished")
       .gte("finish_date", `${currentYear}-01-01`)
@@ -314,7 +318,13 @@ async function fetchYearStats(
       .eq("user_id", userId),
   ]);
 
-  const finished = (finishedRaw as unknown as FinishedReadingRaw[] | null) ?? [];
+  const finishedAll = (finishedRaw as unknown as FinishedReadingRaw[] | null) ?? [];
+  // HQ não conta como "livro lido" nas estatísticas do ano.
+  const finished = finishedAll.filter(
+    (r) =>
+      r.book &&
+      !isComicBook((r.book.book_category ?? []).map((bc) => bc.category?.name)),
+  );
 
   const books_finished = finished.length;
   const pages_read = finished.reduce(

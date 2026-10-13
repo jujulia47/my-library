@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { imagesUrl } from "@/services/images";
+import { isComicBook } from "@/utils/comics";
 import type { Database } from "@/utils/typings/supabase";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
@@ -19,6 +20,21 @@ export type TopBookOfYear = {
   rating: number | null;
   is_favorite: boolean;
   finish_date: string;
+};
+
+/** Um livro relido no ano (já lido antes; terminado de novo neste ano). */
+export type YearReread = {
+  slug: string;
+  title: string;
+  author_name: string | null;
+  cover_url: string | null;
+  /** Total de vezes que o livro já foi terminado na vida (>= 2). */
+  times_total: number;
+  /** Quantas dessas releituras caíram neste ano (geralmente 1). */
+  year_reread_count: number;
+  /** Data da releitura mais recente no ano. */
+  finish_date: string;
+  rating: number | null;
 };
 
 /**
@@ -206,6 +222,8 @@ export type YearData = {
   available_years: number[];
 
   total_books_finished: number;
+  /** HQs/quadrinhos terminados no ano — contagem à parte dos livros. */
+  total_comics_finished: number;
   total_pages_read: number;
 
   records: {
@@ -220,6 +238,9 @@ export type YearData = {
 
   top_books: TopBookOfYear[];
   finished_books: FinishedBookEntry[];
+  /** Releituras do ano: livros que já tinham sido lidos antes e foram
+   *  terminados de novo neste ano. Não altera `total_books_finished`. */
+  rereads: { count: number; books: YearReread[] };
   /** Meta de livros lidos do user pra esse ano (vinda de `reading_goal`).
    *  `null` quando o user nunca definiu — UI cai no default (50). */
   reading_goal: number | null;
@@ -319,9 +340,16 @@ type FinishedRaw = {
     cover: string | null;
     purchase_origin: PurchaseOrigin | null;
     book_author: { author: { name: string } | null }[] | null;
+    book_category: { category: { name: string } | null }[] | null;
     subscription: { id: string; name: string } | null;
   } | null;
 };
+
+/** HQ (categoria quadrinhos/HQ) não conta como "livro lido". */
+function rowIsComic(r: FinishedRaw): boolean {
+  if (!r.book) return false;
+  return isComicBook((r.book.book_category ?? []).map((bc) => bc.category?.name));
+}
 
 /**
  * Carrega todas as readings finished do user no ano, com book join. Reaproveitada
@@ -338,6 +366,7 @@ async function fetchFinishedReadings(
       `id, start_date, finish_date, rating, current_page,
        book:book_id(id, slug, title, pages, is_favorite, cover, purchase_origin,
          book_author(author(name)),
+         book_category(category(name)),
          subscription(id, name))`,
     )
     .eq("user_id", userId)
@@ -346,6 +375,89 @@ async function fetchFinishedReadings(
     .lte("finish_date", `${year}-12-31`);
 
   return (data as unknown as FinishedRaw[] | null) ?? [];
+}
+
+type RereadRaw = {
+  finish_date: string | null;
+  rating: number | null;
+  book: {
+    id: string;
+    slug: string;
+    title: string;
+    cover: string | null;
+    book_author: { author: { name: string } | null }[] | null;
+    book_category: { category: { name: string } | null }[] | null;
+  } | null;
+};
+
+/**
+ * Releituras que caíram no ano. Precisa do histórico de vida toda (não só do
+ * ano) pra saber qual término foi a 1ª leitura — só os demais são releitura.
+ * HQ fica de fora (releitura é de livros). Não afeta `total_books_finished`.
+ */
+async function fetchYearRereads(
+  supabase: SupabaseServer,
+  userId: string,
+  year: number,
+): Promise<{ count: number; books: YearReread[] }> {
+  const { data } = await supabase
+    .from("reading")
+    .select(
+      `finish_date, rating,
+       book:book_id(id, slug, title, cover,
+         book_author(author(name)),
+         book_category(category(name)))`,
+    )
+    .eq("user_id", userId)
+    .eq("status", "finished")
+    .not("finish_date", "is", null);
+
+  const rows = (data as unknown as RereadRaw[] | null) ?? [];
+
+  type Entry = {
+    book: NonNullable<RereadRaw["book"]>;
+    finishes: { date: string; rating: number | null }[];
+  };
+  const byBook = new Map<string, Entry>();
+  for (const r of rows) {
+    if (!r.book || !r.finish_date) continue;
+    if (
+      isComicBook((r.book.book_category ?? []).map((bc) => bc.category?.name))
+    )
+      continue;
+    const entry = byBook.get(r.book.id) ?? { book: r.book, finishes: [] };
+    entry.finishes.push({ date: r.finish_date, rating: r.rating });
+    byBook.set(r.book.id, entry);
+  }
+
+  const books: YearReread[] = [];
+  let count = 0;
+  for (const { book, finishes } of byBook.values()) {
+    if (finishes.length < 2) continue; // nunca releu
+    finishes.sort((a, b) => a.date.localeCompare(b.date));
+    // A 1ª leitura não é releitura; da 2ª em diante, sim.
+    const rereadsInYear = finishes
+      .slice(1)
+      .filter((f) => f.date.slice(0, 4) === String(year));
+    if (rereadsInYear.length === 0) continue;
+    count += rereadsInYear.length;
+    const last = rereadsInYear[rereadsInYear.length - 1];
+    const author =
+      book.book_author?.find((ba) => ba.author?.name)?.author?.name ?? null;
+    books.push({
+      slug: book.slug,
+      title: book.title,
+      author_name: author,
+      cover_url: book.cover ? imagesUrl(book.cover) : null,
+      times_total: finishes.length,
+      year_reread_count: rereadsInYear.length,
+      finish_date: last.date,
+      rating: last.rating,
+    });
+  }
+  // Releitura mais recente no ano primeiro.
+  books.sort((a, b) => b.finish_date.localeCompare(a.finish_date));
+  return { count, books };
 }
 
 function computeYearTotals(
@@ -1331,6 +1443,7 @@ export async function getYearData(
   const [
     availableYears,
     finishedRows,
+    rereads,
     otherReadings,
     acquisitions,
     countries,
@@ -1342,6 +1455,7 @@ export async function getYearData(
   ] = await Promise.all([
     fetchAvailableYears(supabase, userId),
     fetchFinishedReadings(supabase, userId, year),
+    fetchYearRereads(supabase, userId, year),
     fetchOtherReadings(supabase, userId, year),
     fetchAcquisitions(supabase, userId, year),
     fetchCountries(supabase, userId, year),
@@ -1352,11 +1466,15 @@ export async function getYearData(
     fetchSeriesTrackers(supabase, userId, year),
   ]);
 
-  const totals = computeYearTotals(finishedRows);
-  const records = computeRecords(finishedRows);
-  const topBooks = computeTopBooks(finishedRows);
-  const finishedBooks = computeFinishedBooks(finishedRows);
-  const milestones = computeMilestones(finishedRows);
+  // HQ sai das contagens de "livros lidos"; vira uma contagem própria.
+  const bookRows = finishedRows.filter((r) => !rowIsComic(r));
+  const comicsFinished = finishedRows.length - bookRows.length;
+
+  const totals = computeYearTotals(bookRows);
+  const records = computeRecords(bookRows);
+  const topBooks = computeTopBooks(bookRows);
+  const finishedBooks = computeFinishedBooks(bookRows);
+  const milestones = computeMilestones(bookRows);
 
   console.log(`[yearData] year=${year} took ${Date.now() - startedAt}ms`);
 
@@ -1364,8 +1482,10 @@ export async function getYearData(
     year,
     available_years: availableYears,
     total_books_finished: totals.books,
+    total_comics_finished: comicsFinished,
     total_pages_read: totals.pages,
     records,
+    rereads,
     top_books: topBooks,
     finished_books: finishedBooks,
     reading_goal: readingGoal,

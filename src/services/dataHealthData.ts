@@ -46,6 +46,7 @@ type Row = {
   pages: number | null;
   publisher: string | null;
   publication_year: number | null;
+  publication_era: string | null;
   original_title: string | null;
   synopsis: string | null;
   acquired_at: string | null;
@@ -63,7 +64,7 @@ export async function getDataHealth(userId: string): Promise<DataHealthData> {
   const { data: raw } = await supabase
     .from("book")
     .select(
-      "id, title, slug, cover, isbn, language, pages, publisher, publication_year, original_title, synopsis, acquired_at, book_author(author(name, country)), book_category(id)",
+      "id, title, slug, cover, isbn, language, pages, publisher, publication_year, publication_era, original_title, synopsis, acquired_at, book_author(author(name, country)), book_category(id)",
     )
     .eq("user_id", userId);
 
@@ -85,7 +86,9 @@ export async function getDataHealth(userId: string): Promise<DataHealthData> {
     if (!b.language) missing.push("idioma");
     if (b.pages == null || b.pages <= 0) missing.push("páginas");
     if (empty(b.publisher)) missing.push("editora");
-    if (b.publication_year == null) missing.push("ano de publicação");
+    // Preenchido se tem o ano numérico OU a época em texto (ex.: "Século X a.C.").
+    if (b.publication_year == null && empty(b.publication_era))
+      missing.push("ano de publicação");
     if (empty(b.original_title)) missing.push("título original");
     if (empty(b.cover)) missing.push("capa");
     if (empty(b.synopsis)) missing.push("sinopse");

@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { isComicBook } from "@/utils/comics";
 import type { Database } from "@/utils/typings/supabase";
 
 type Country = Database["public"]["Enums"]["country"];
@@ -55,12 +56,19 @@ export async function getFingerprint(userId: string): Promise<FingerprintData> {
   const readings = (readingsRaw as unknown as ReadingRow[] | null) ?? [];
 
   const seenBooks = new Set<string>();
+  const comicIds = new Set<string>();
   const catCount = new Map<string, { name: string; count: number }>();
   const countries = new Set<Country>();
   let pagesTotal = 0;
 
   for (const r of readings) {
-    if (!r.book || seenBooks.has(r.book.id)) continue;
+    if (!r.book) continue;
+    // HQ fora da impressão digital (é contagem de livros lidos).
+    if (isComicBook((r.book.book_category ?? []).map((bc) => bc.category?.name))) {
+      comicIds.add(r.book.id);
+      continue;
+    }
+    if (seenBooks.has(r.book.id)) continue;
     seenBooks.add(r.book.id);
     pagesTotal += r.book.pages ?? 0;
 
@@ -79,8 +87,9 @@ export async function getFingerprint(userId: string): Promise<FingerprintData> {
     }
   }
 
-  // Notas de todas as leituras finalizadas (releituras contam).
+  // Notas das leituras finalizadas de LIVROS (HQ fora; releituras contam).
   const ratings = readings
+    .filter((r) => r.book && !comicIds.has(r.book.id))
     .map((r) => r.rating)
     .filter((n): n is number => n !== null);
   const rating =

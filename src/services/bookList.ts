@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { isComicBook } from "@/utils/comics";
 import type { Database } from "@/utils/typings/supabase";
 
 type BookRow = Database["public"]["Tables"]["book"]["Row"];
@@ -24,10 +25,15 @@ export type BookListItem = BookRow & {
     ReadingRow,
     "status" | "start_date" | "finish_date" | "current_page" | "rating"
   > | null;
+  /** HQ/quadrinho (categoria quadrinhos/HQ) — tratado à parte dos livros. */
+  is_comic: boolean;
+  /** Nº de leituras finalizadas (>= 2 = releitura). */
+  finished_count: number;
 };
 
 type RawBookFromQuery = BookRow & {
   book_author?: { author: { name: string } | null }[] | null;
+  book_category?: { category: { name: string } | null }[] | null;
   reading?: ReadingRow[] | null;
 };
 
@@ -71,10 +77,18 @@ function flatten(raw: RawBookFromQuery): BookListItem {
     return bs.localeCompare(as);
   });
 
+  const finished_count = (raw.reading ?? []).filter(
+    (r) => r.status === "finished",
+  ).length;
+
   return {
     ...raw,
     authors,
     reading: raw.reading ?? [],
+    is_comic: isComicBook(
+      (raw.book_category ?? []).map((bc) => bc.category?.name),
+    ),
+    finished_count,
     latest_reading: sorted[0]
       ? {
           status: sorted[0].status,
@@ -93,10 +107,14 @@ export type BookListParams = {
   formats?: string[];
   /** Slugs dos autores a filtrar — livro precisa ter pelo menos um deles. */
   author_slugs?: string[];
+  /** Tipo de obra: "book" (livros) e/ou "comic" (HQ/quadrinhos). */
+  types?: string[];
   year?: number;
   month?: number;
   /** Quando true, lista só livros marcados como favoritos. */
   favorite?: boolean;
+  /** Quando true, lista só o que foi lido 2+ vezes (releituras). */
+  rereads_only?: boolean;
   sort?: BookListSort;
 };
 
@@ -126,7 +144,9 @@ export async function bookListQuery(
 
   let query = supabase
     .from("book")
-    .select(`*, book_author(author(name)), reading(*)`);
+    .select(
+      `*, book_author(author(name)), book_category(category(name)), reading(*)`,
+    );
 
   // Ownerships: grupos vindos da UI. Quando há `fora_estante` na lista, o
   // filtro vira "NOT (owned + physical)" — não cabe em IN/EQ, então cai pra
@@ -299,6 +319,19 @@ export async function bookListQuery(
     );
   }
 
+  // Tipo de obra: "book" (livros) e/ou "comic" (HQ). Vazio ou ambos = tudo.
+  const types = (params.types ?? []).filter((t) => t === "book" || t === "comic");
+  const wantsBook = types.includes("book");
+  const wantsComic = types.includes("comic");
+  if (wantsBook !== wantsComic) {
+    books = books.filter((b) => (wantsComic ? b.is_comic : !b.is_comic));
+  }
+
+  // Só releituras: lido 2+ vezes (mesma regra de "Livros relidos").
+  if (params.rereads_only) {
+    books = books.filter((b) => b.finished_count >= 2);
+  }
+
   if (sort === "last_reading_desc") {
     books = books.slice().sort((a, b) => {
       const ad = a.latest_reading?.finish_date ?? "";
@@ -348,15 +381,36 @@ export async function bookCounts() {
     .from("book")
     .select("id", { count: "exact", head: true });
 
+  // HQ não entra em "lidos" — contagem à parte ("HQs lidas").
   const { data: finishedReadings } = await supabase
     .from("reading")
-    .select("book_id")
+    .select("book_id, book:book_id(book_category(category(name)))")
     .eq("status", "finished");
-  const finishedBookIds = new Set(
-    (finishedReadings ?? []).map((r) => r.book_id),
-  );
+  const finishedRows =
+    (finishedReadings as unknown as {
+      book_id: string;
+      book: { book_category: { category: { name: string } | null }[] | null } | null;
+    }[] | null) ?? [];
+  const comicByBook = new Map<string, boolean>();
+  for (const r of finishedRows) {
+    if (!r.book_id) continue;
+    comicByBook.set(
+      r.book_id,
+      isComicBook((r.book?.book_category ?? []).map((bc) => bc.category?.name)),
+    );
+  }
+  let finished = 0;
+  let comicsFinished = 0;
+  for (const isComic of comicByBook.values()) {
+    if (isComic) comicsFinished += 1;
+    else finished += 1;
+  }
 
-  return { total: totalCount ?? 0, finished: finishedBookIds.size };
+  return {
+    total: totalCount ?? 0,
+    finished,
+    comics_finished: comicsFinished,
+  };
 }
 
 /**

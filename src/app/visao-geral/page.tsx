@@ -107,6 +107,9 @@ export default async function VisaoGeralPage() {
           value={String(data.sold_or_traded)}
         />
         <StatCard label="Livros lidos" value={String(r.read_books_total)} />
+        {r.comics_read_total > 0 && (
+          <StatCard label="HQs lidas" value={String(r.comics_read_total)} />
+        )}
         <StatCard label="Países lidos" value={String(r.countries.length)} />
         <StatCard label="Idiomas lidos" value={String(r.languages.length)} />
       </div>

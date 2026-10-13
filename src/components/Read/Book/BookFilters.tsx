@@ -12,6 +12,8 @@ import {
   RectangleStackIcon,
   UserCircleIcon,
   HeartIcon,
+  ArrowPathIcon,
+  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import type { ComponentType, SVGProps } from "react";
 import { Button, Select, Card, Badge } from "@/components/ui";
@@ -38,6 +40,12 @@ const OWNERSHIP_OPTIONS: { value: string; label: string; variant: BadgeVariant }
   { value: "doado_vendido", label: "Doado/Vendido", variant: "fade" },
   { value: "emprestado", label: "Emprestado", variant: "olive" },
   { value: "perdido", label: "Perdido", variant: "burgundy" },
+];
+
+// Tipo de obra — HQ é contada à parte dos livros (ver bookList.ts).
+const TYPE_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] = [
+  { value: "book", label: "Livros", variant: "gold" },
+  { value: "comic", label: "HQs / Quadrinhos", variant: "terracota" },
 ];
 
 const FORMAT_OPTIONS: { value: string; label: string; variant: BadgeVariant }[] = [
@@ -98,9 +106,11 @@ export default function BookFilters({
   const ownerships = parseList(sp.get("ownership"));
   const formats = parseList(sp.get("format"));
   const authorSlugs = parseList(sp.get("author"));
+  const types = parseList(sp.get("type"));
   const year = sp.get("year") ? Number(sp.get("year")) : null;
   const month = sp.get("month") ? Number(sp.get("month")) : null;
   const favorite = sp.get("favorite") === "1";
+  const rereads = sp.get("rereads") === "1";
   const sort = sp.get("sort") ?? "reading_first";
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -147,10 +157,12 @@ export default function BookFilters({
       status: null,
       ownership: null,
       format: null,
+      type: null,
       year: null,
       month: null,
       author: null,
       favorite: null,
+      rereads: null,
     });
   };
 
@@ -159,8 +171,10 @@ export default function BookFilters({
     ownerships.length +
     formats.length +
     authorSlugs.length +
+    types.length +
     (year ? 1 : 0) +
-    (favorite ? 1 : 0);
+    (favorite ? 1 : 0) +
+    (rereads ? 1 : 0);
 
   const activeChips: {
     key: string;
@@ -200,6 +214,16 @@ export default function BookFilters({
       onRemove: () => setParam({ year: null, month: null }),
     });
   }
+  for (const t of types) {
+    const opt = TYPE_OPTIONS.find((x) => x.value === t);
+    if (opt)
+      activeChips.push({
+        key: `type:${t}`,
+        label: opt.label,
+        variant: opt.variant,
+        onRemove: () => removeListItem("type", types, t),
+      });
+  }
   for (const f of formats) {
     const opt = FORMAT_OPTIONS.find((x) => x.value === f);
     if (opt)
@@ -226,6 +250,14 @@ export default function BookFilters({
       label: "Favoritos",
       variant: "burgundy",
       onRemove: () => setParam({ favorite: null }),
+    });
+  }
+  if (rereads) {
+    activeChips.push({
+      key: "rereads",
+      label: "Releituras",
+      variant: "navy",
+      onRemove: () => setParam({ rereads: null }),
     });
   }
 
@@ -344,6 +376,30 @@ export default function BookFilters({
                 onToggle={() =>
                   setParam({ favorite: favorite ? null : "1" })
                 }
+              />
+            </FilterGroup>
+
+            <FilterGroup
+              label="Releituras"
+              icon={ArrowPathIcon}
+              iconColor="text-navy"
+            >
+              <CheckboxList
+                options={[{ value: "1", label: "Só relidos (2+ vezes)" }]}
+                selected={rereads ? ["1"] : []}
+                onToggle={() => setParam({ rereads: rereads ? null : "1" })}
+              />
+            </FilterGroup>
+
+            <FilterGroup
+              label="Tipo"
+              icon={Squares2X2Icon}
+              iconColor="text-terracota"
+            >
+              <CheckboxList
+                options={TYPE_OPTIONS}
+                selected={types}
+                onToggle={(v) => toggleListItem("type", types, v)}
               />
             </FilterGroup>
 

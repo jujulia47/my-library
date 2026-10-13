@@ -47,11 +47,13 @@ export default async function BookPage({
   const ownerships = parseList(sp.ownership);
   const formats = parseList(sp.format);
   const authorSlugs = parseList(sp.author);
+  const types = parseList(sp.type);
   const yearStr = pickFirst(sp.year);
   const monthStr = pickFirst(sp.month);
   const year = yearStr ? Number(yearStr) || undefined : undefined;
   const month = monthStr ? Number(monthStr) || undefined : undefined;
   const favorite = pickFirst(sp.favorite) === "1";
+  const rereadsOnly = pickFirst(sp.rereads) === "1";
   const sortRaw = pickFirst(sp.sort) ?? "reading_first";
   const sort = (
     VALID_SORTS.has(sortRaw as BookListSort) ? sortRaw : "reading_first"
@@ -81,9 +83,11 @@ export default async function BookPage({
       ownerships,
       formats,
       author_slugs: authorSlugs,
+      types,
       year,
       month,
       favorite,
+      rereads_only: rereadsOnly,
       sort,
     }),
     bookCounts(),
@@ -103,9 +107,11 @@ export default async function BookPage({
     ownerships.length > 0 ||
     formats.length > 0 ||
     authorSlugs.length > 0 ||
+    types.length > 0 ||
     year !== undefined ||
     month !== undefined ||
-    favorite;
+    favorite ||
+    rereadsOnly;
   // "Na estante" agora é o grupo lógico `na_estante` (antes era o valor cru
   // `owned`). Mantém a contagem que deduplica exemplares físicos (volumes
   // bundled contam 1).
@@ -118,39 +124,53 @@ export default async function BookPage({
   // exemplares físicos no recorte atual.
   const sharedVolumes = filteredVolumes - filteredPhysical;
 
+  const onlyComics = types.includes("comic") && !types.includes("book");
+
   let subtitle: ReactNode;
   if (counts.total === 0) {
     subtitle = "Sua estante começa aqui";
-  } else {
-    const base = `${counts.total} ${
+  } else if (!anyFilter) {
+    // Sem filtro: resumo do acervo. "lidos" = livros (HQ fora); HQs lidas
+    // aparecem à parte quando houver.
+    const comicsPart =
+      counts.comics_finished > 0
+        ? ` · ${counts.comics_finished} ${
+            counts.comics_finished === 1 ? "HQ lida" : "HQs lidas"
+          }`
+        : "";
+    subtitle = `${counts.total} ${
       counts.total === 1 ? "título" : "títulos"
-    } · ${counts.finished} lidos`;
-    if (!anyFilter) {
-      subtitle = base;
-    } else if (isNaEstante) {
-      subtitle = (
-        <>
-          {base} · {filteredPhysical}{" "}
-          {filteredPhysical === 1 ? "livro" : "livros"} na estante
-          {sharedVolumes > 0 && (
-            <>
-              <br />
-              <span className="text-sm not-italic text-ink-fade">
-                {filteredVolumes} volumes na estante — {sharedVolumes}{" "}
-                {sharedVolumes === 1
-                  ? "compõe o mesmo livro físico que outro"
-                  : "compõem o mesmo livro físico que outro"}
-                .
-              </span>
-            </>
-          )}
-        </>
-      );
-    } else {
-      subtitle = `${base} · ${filteredVolumes} ${
-        filteredVolumes === 1 ? "livro" : "livros"
-      } no filtro`;
-    }
+    } · ${counts.finished} lidos${comicsPart}`;
+  } else if (isNaEstante) {
+    // Recorte "na estante": conta exemplares físicos (dedup de bundled).
+    subtitle = (
+      <>
+        {filteredPhysical} {filteredPhysical === 1 ? "livro" : "livros"} na
+        estante
+        {sharedVolumes > 0 && (
+          <>
+            <br />
+            <span className="text-sm not-italic text-ink-fade">
+              {filteredVolumes} volumes na estante — {sharedVolumes}{" "}
+              {sharedVolumes === 1
+                ? "compõe o mesmo livro físico que outro"
+                : "compõem o mesmo livro físico que outro"}
+              .
+            </span>
+          </>
+        )}
+      </>
+    );
+  } else {
+    // Qualquer outro recorte: só a contagem do filtro, sem poluir.
+    const itemWord = onlyComics
+      ? filteredVolumes === 1
+        ? "HQ"
+        : "HQs"
+      : filteredVolumes === 1
+        ? "livro"
+        : "livros";
+    subtitle = `${filteredVolumes} ${itemWord} no filtro`;
   }
 
   return (
