@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { isComicBook } from "@/utils/comics";
+import { ownershipIsGone } from "@/utils/readingStatus";
 import type { Database } from "@/utils/typings/supabase";
 
 type BookRow = Database["public"]["Tables"]["book"]["Row"];
@@ -289,6 +290,9 @@ export async function bookListQuery(
     books = books.filter((b) => {
       const last = b.latest_reading?.status as ReadingStatus | undefined;
       if (last && readingSet.has(last)) return true;
+      // Livro que saiu do acervo (doado/vendido/trocado/perdido/devolvido)
+      // não tem TBR nem "não vou ler" — só conta pelo histórico de leitura.
+      if (ownershipIsGone(b.ownership_status)) return false;
       // TBR explícito (flag `is_tbr`): entra na lista independente do
       // histórico — cobre "livro já lido que quero reler".
       if (wantsTbr && b.is_tbr) return true;

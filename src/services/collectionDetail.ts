@@ -1,8 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
+import { deriveReadingStatus } from "@/utils/readingStatus";
 import type { Database } from "@/utils/typings/supabase";
 
 type CollectionRow = Database["public"]["Tables"]["collection"]["Row"];
 type ReadingStatus = Database["public"]["Enums"]["reading_status"];
+type OwnershipStatus = Database["public"]["Enums"]["ownership_status"];
 type WishlistPriority = Database["public"]["Enums"]["wishlist_priority"];
 
 export type CollectionItemBook = {
@@ -18,7 +20,8 @@ export type CollectionItemBook = {
     title: string;
     cover: string | null;
     authors: string[];
-    derived_status: ReadingStatus | "tbr" | "wont_read";
+    // null = livro que saiu do acervo (sem TBR/"não vou ler" nem leitura).
+    derived_status: ReadingStatus | "tbr" | "wont_read" | null;
     last_activity_at: string | null;
   };
 };
@@ -65,6 +68,7 @@ type RawBookFromQuery = {
   title: string;
   cover: string | null;
   wont_read: boolean | null;
+  ownership_status: OwnershipStatus | null;
   book_author: { author: { name: string } | null }[] | null;
   reading: RawReadingFromQuery[] | null;
 };
@@ -93,16 +97,12 @@ type RawCollectionItemFromQuery = {
 function deriveBookStatus(
   readings: RawReadingFromQuery[] | null,
   wontRead: boolean,
+  ownership: OwnershipStatus | null,
 ): {
-  status: ReadingStatus | "tbr" | "wont_read";
+  status: ReadingStatus | "tbr" | "wont_read" | null;
   last_activity_at: string | null;
 } {
-  if (!readings || readings.length === 0)
-    return {
-      status: wontRead ? "wont_read" : "tbr",
-      last_activity_at: null,
-    };
-  const sorted = [...readings].sort((a, b) => {
+  const sorted = [...(readings ?? [])].sort((a, b) => {
     const af = a.finish_date ?? "";
     const bf = b.finish_date ?? "";
     if (af !== bf) return bf.localeCompare(af);
@@ -111,9 +111,16 @@ function deriveBookStatus(
     return bs.localeCompare(as);
   });
   const last = sorted[0];
+  // Livro que saiu do acervo não tem TBR/"não vou ler" (status null).
   return {
-    status: last.status as ReadingStatus,
-    last_activity_at: last.updated_at ?? last.finish_date ?? last.start_date,
+    status: deriveReadingStatus(
+      (last?.status as ReadingStatus | undefined) ?? null,
+      wontRead,
+      ownership,
+    ),
+    last_activity_at: last
+      ? (last.updated_at ?? last.finish_date ?? last.start_date)
+      : null,
   };
 }
 
@@ -134,7 +141,7 @@ export async function getCollectionDetailBySlug(
     .select(
       `id, section, position, added_at, was_wishlist, book_id, wishlist_id,
        book:book_id(
-         id, slug, title, cover, wont_read,
+         id, slug, title, cover, wont_read, ownership_status,
          book_author(author(name)),
          reading(status, start_date, finish_date, updated_at)
        ),
@@ -160,6 +167,7 @@ export async function getCollectionDetailBySlug(
       const derived = deriveBookStatus(
         raw.book.reading,
         raw.book.wont_read ?? false,
+        raw.book.ownership_status,
       );
       if (
         derived.last_activity_at &&

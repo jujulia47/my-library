@@ -20,7 +20,7 @@ import {
 } from "./PageOrnaments";
 import { formatDate } from "@/utils/formatDate";
 import { labelForOwnershipStatus } from "@/utils/labels";
-import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
+import { deriveReadingStatus } from "@/utils/readingStatus";
 import type { Database } from "@/utils/typings/supabase";
 
 type ReadingEventType = Database["public"]["Enums"]["reading_event_type"];
@@ -931,11 +931,14 @@ function PageRating({ book }: { book: BookForOpenView }) {
 }
 
 function PagePhysicalStatus({ book }: { book: BookForOpenView }) {
-  // Status de leitura: pega o da reading mais recente.
+  // Status de leitura: da reading mais recente. Sem leitura, deriva de posse +
+  // `wont_read` — livro que saiu do acervo não tem TBR/"não vou ler".
   const latest = book.readings[0];
-  const readingStatus: LegacyReadingStatus =
-    (latest?.status as LegacyReadingStatus | null) ??
-    (book.wont_read ? "wont_read" : "tbr");
+  const readingStatus = deriveReadingStatus(
+    latest?.status ?? null,
+    book.wont_read,
+    book.ownership_status,
+  );
 
   return (
     <div>
@@ -953,7 +956,11 @@ function PagePhysicalStatus({ book }: { book: BookForOpenView }) {
           <p className="text-[10px] uppercase tracking-wider text-ink-fade mb-1.5">
             Status de leitura
           </p>
-          <StatusBadge kind="reading" status={readingStatus} size="md" />
+          {readingStatus ? (
+            <StatusBadge kind="reading" status={readingStatus} size="md" />
+          ) : (
+            <p className="font-display text-base text-ink-fade">—</p>
+          )}
         </div>
       </div>
     </div>

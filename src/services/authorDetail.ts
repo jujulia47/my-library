@@ -1,9 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { normalizeSearchQuery } from "@/utils/normalizeSearchQuery";
+import { deriveReadingStatus } from "@/utils/readingStatus";
 import type { Database } from "@/utils/typings/supabase";
 
 type AuthorRow = Database["public"]["Tables"]["author"]["Row"];
 type ReadingStatus = Database["public"]["Enums"]["reading_status"];
+type OwnershipStatus = Database["public"]["Enums"]["ownership_status"];
 
 export type AuthorDetailBook = {
   id: string;
@@ -359,7 +361,7 @@ export async function authorDetailBySlug(
       ? supabase
           .from("book")
           .select(
-            `id, slug, title, created_at, pages, wont_read,
+            `id, slug, title, created_at, pages, wont_read, ownership_status,
              reading(status, start_date, finish_date, current_page, rating, updated_at)`,
           )
           .in("id", bookIds)
@@ -379,6 +381,7 @@ export async function authorDetailBySlug(
     created_at: string;
     pages: number | null;
     wont_read: boolean | null;
+    ownership_status: OwnershipStatus | null;
     reading: {
       status: ReadingStatus;
       start_date: string | null;
@@ -423,11 +426,12 @@ export async function authorDetailBySlug(
       return (c.start_date ?? "").localeCompare(a.start_date ?? "");
     });
     const last = sortedR[0];
-    const status: ReadingStatus | "tbr" | "wont_read" = last
-      ? (last.status as ReadingStatus)
-      : b.wont_read
-        ? "wont_read"
-        : "tbr";
+    // Livro que saiu do acervo não tem TBR/"não vou ler" (status fica null).
+    const status = deriveReadingStatus(
+      (last?.status as ReadingStatus | undefined) ?? null,
+      b.wont_read,
+      b.ownership_status,
+    );
     const bibForYear = (bibRes.data ?? []).find(
       (bib) => normalize(bib.title) === titleKey,
     );

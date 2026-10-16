@@ -431,8 +431,8 @@ export default function CollectionDetailClient({ data }: Props) {
       // derived_status e some quando há filtro ativo.
       arr = arr.filter((i) => {
         if (i.kind !== "book") return false;
-        const s = (i.book.derived_status as LegacyReadingStatus) ?? "tbr";
-        return statusFilters.has(s);
+        const s = i.book.derived_status;
+        return s !== null && statusFilters.has(s);
       });
     }
     if (sortMode === "default") return arr;
@@ -440,8 +440,9 @@ export default function CollectionDetailClient({ data }: Props) {
     if (sortMode === "status") {
       const rank = (i: CollectionItem): number => {
         if (i.kind !== "book") return 99;
-        const s = (i.book.derived_status as LegacyReadingStatus) ?? "tbr";
-        return STATUS_RANK[s] ?? 6;
+        const s = i.book.derived_status;
+        // Livro que saiu do acervo (status null) vai depois dos conhecidos.
+        return s ? (STATUS_RANK[s] ?? 6) : 6;
       };
       sorted.sort((a, b) => {
         const ra = rank(a);
@@ -1236,7 +1237,7 @@ function ItemCard({
   showMarkPurchased?: boolean;
 }) {
   if (item.kind === "book") {
-    const status = (item.book.derived_status as LegacyReadingStatus) ?? "tbr";
+    const status = item.book.derived_status;
     return (
       <div className="relative group">
         <Link
@@ -1299,9 +1300,11 @@ function ItemCard({
                     : ""}
                 </p>
               )}
-              <div className="mt-1.5">
-                <StatusBadge kind="reading" status={status} size="sm" />
-              </div>
+              {status && (
+                <div className="mt-1.5">
+                  <StatusBadge kind="reading" status={status} size="sm" />
+                </div>
+              )}
             </div>
           </div>
         </Link>

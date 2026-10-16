@@ -1,5 +1,9 @@
 import { createClient } from "@/utils/supabase/server";
 import { getUserSecondsPerPage } from "@/services/readingPace";
+import { ownershipIsGone } from "@/utils/readingStatus";
+import type { Database } from "@/utils/typings/supabase";
+
+type OwnershipStatus = Database["public"]["Enums"]["ownership_status"];
 
 /** Paleta café — cor por gênero (mesma família da impressão digital). */
 const PALETTE = [
@@ -42,6 +46,7 @@ type BookRow = {
   created_at: string;
   wont_read: boolean;
   is_tbr: boolean;
+  ownership_status: OwnershipStatus | null;
   book_author: { author: { name: string | null } | null }[] | null;
   book_category: { category: { id: string; name: string } | null }[] | null;
 };
@@ -56,7 +61,7 @@ export async function getAntibiblioteca(
       supabase
         .from("book")
         .select(
-          "id, title, slug, cover, pages, created_at, wont_read, is_tbr, book_author(author(name)), book_category(category(id, name))",
+          "id, title, slug, cover, pages, created_at, wont_read, is_tbr, ownership_status, book_author(author(name)), book_category(category(id, name))",
         )
         .eq("user_id", userId),
       supabase.from("reading").select("book_id").eq("user_id", userId),
@@ -73,9 +78,12 @@ export async function getAntibiblioteca(
 
   // Antibiblioteca = "quero ler" (mesma regra da página Livros): marcado como
   // quero ler (is_tbr) OU sem nenhuma leitura registrada e não descartado
-  // (wont_read). Qualquer formato ou posse — físico ou não.
+  // (wont_read). Qualquer formato — físico ou não. Livro que saiu do acervo
+  // (doado/vendido/trocado/perdido/devolvido) não entra: não tenho mais.
   const unread = books.filter(
-    (b) => b.is_tbr || (!hasReading.has(b.id) && !b.wont_read),
+    (b) =>
+      !ownershipIsGone(b.ownership_status) &&
+      (b.is_tbr || (!hasReading.has(b.id) && !b.wont_read)),
   );
 
   // Cor por gênero: gêneros presentes em ordem alfabética → paleta cíclica.

@@ -17,7 +17,7 @@ import {
   BookCoverFallback,
   ConfirmDialog,
 } from "@/components/ui";
-import type { LegacyReadingStatus } from "@/components/ui/StatusBadge";
+import { deriveReadingStatus } from "@/utils/readingStatus";
 import type { BookListItem } from "@/services/bookList";
 import { deleteBook } from "@/actions/deleteBook";
 import { toggleBookFavorite } from "@/actions/toggleBookFavorite";
@@ -34,11 +34,13 @@ export default function BookCard({ book, priority = false }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Sem leitura registrada, o status deriva da flag `wont_read`:
-  // "não vou ler" se marcada, "quero ler" (tbr) se não.
-  const status: LegacyReadingStatus =
-    (book.latest_reading?.status as LegacyReadingStatus | null) ??
-    (book.wont_read ? "wont_read" : "tbr");
+  // Sem leitura registrada, o status deriva de posse + `wont_read`: livro que
+  // saiu do acervo não tem TBR/"não vou ler" (badge some).
+  const status = deriveReadingStatus(
+    book.latest_reading?.status ?? null,
+    book.wont_read,
+    book.ownership_status,
+  );
   // Sessão 17.2: o que era `disposed` virou 4 estados (donated/sold/traded/
   // lost) — todos significam "saiu do acervo". Mostra o card esmaecido e
   // badge correspondente; pra `returned` (livro emprestado que voltou)
@@ -145,9 +147,11 @@ export default function BookCard({ book, priority = false }: Props) {
                 {moreAuthors > 0 && ` +${moreAuthors}`}
               </p>
             )}
-            <div className="mt-2">
-              <StatusBadge kind="reading" status={status} size="sm" />
-            </div>
+            {status && (
+              <div className="mt-2">
+                <StatusBadge kind="reading" status={status} size="sm" />
+              </div>
+            )}
           </div>
         </Link>
 

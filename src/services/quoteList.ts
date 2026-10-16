@@ -1,10 +1,12 @@
 import { createClient } from "@/utils/supabase/server";
 import { normalizeSearchQuery } from "@/utils/normalizeSearchQuery";
+import { deriveReadingStatus } from "@/utils/readingStatus";
 import type { Database } from "@/utils/typings/supabase";
 
 type QuoteRow = Database["public"]["Tables"]["quote"]["Row"];
 type ReadingRow = Database["public"]["Tables"]["reading"]["Row"];
 type ReadingStatus = Database["public"]["Enums"]["reading_status"];
+type OwnershipStatus = Database["public"]["Enums"]["ownership_status"];
 
 export type LegacyStatus = ReadingStatus | "tbr" | "wont_read";
 
@@ -18,7 +20,8 @@ export type QuoteListItem = QuoteRow & {
     slug: string;
     title: string;
     author: string | null;
-    status: LegacyStatus;
+    // null = livro que saiu do acervo (sem TBR/"não vou ler" nem leitura).
+    status: LegacyStatus | null;
   } | null;
   /** Atribuição final exibida no card. Para vinculadas, prefere `author_name`
    *  da quote, com fallback pro autor do livro. Para avulsas, somente
@@ -32,6 +35,7 @@ type RawQuote = QuoteRow & {
     slug: string;
     title: string;
     wont_read?: boolean | null;
+    ownership_status?: OwnershipStatus | null;
     book_author?: { author: { name: string } | null }[] | null;
     reading?: ReadingRow[] | null;
   } | null;
@@ -40,7 +44,8 @@ type RawQuote = QuoteRow & {
 function deriveBookStatus(
   reading: ReadingRow[] | null | undefined,
   wontRead: boolean,
-): LegacyStatus {
+  ownership: OwnershipStatus | null | undefined,
+): LegacyStatus | null {
   const sorted = (reading ?? []).slice().sort((a, b) => {
     const af = a.finish_date ?? "";
     const bf = b.finish_date ?? "";
@@ -49,7 +54,8 @@ function deriveBookStatus(
     const bs = b.start_date ?? "";
     return bs.localeCompare(as);
   });
-  return sorted[0]?.status ?? (wontRead ? "wont_read" : "tbr");
+  // Livro que saiu do acervo não tem TBR/"não vou ler" (status null).
+  return deriveReadingStatus(sorted[0]?.status ?? null, wontRead, ownership);
 }
 
 function flatten(raw: RawQuote): QuoteListItem {
@@ -66,7 +72,11 @@ function flatten(raw: RawQuote): QuoteListItem {
       slug: raw.book.slug,
       title: raw.book.title,
       author: bookAuthorJoined,
-      status: deriveBookStatus(raw.book.reading, raw.book.wont_read ?? false),
+      status: deriveBookStatus(
+        raw.book.reading,
+        raw.book.wont_read ?? false,
+        raw.book.ownership_status,
+      ),
     };
   }
 
@@ -109,7 +119,7 @@ export async function quoteListQuery(
   let query = supabase
     .from("quote")
     .select(
-      `*, book(id, slug, title, wont_read, book_author(author(name)), reading(status, start_date, finish_date))`,
+      `*, book(id, slug, title, wont_read, ownership_status, book_author(author(name)), reading(status, start_date, finish_date))`,
     );
 
   // Tipo: linked (book_id not null) / standalone (book_id null)

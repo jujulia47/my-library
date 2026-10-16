@@ -2,6 +2,11 @@ import { createClient } from "@/utils/supabase/server";
 import { imagesUrl } from "@/services/images";
 import { collectionTypeLabels } from "@/components/ui/CollectionTypeBadge";
 import { normalizeSearchQuery } from "@/utils/normalizeSearchQuery";
+import { deriveReadingStatus } from "@/utils/readingStatus";
+import type { Database } from "@/utils/typings/supabase";
+
+type ReadingStatus = Database["public"]["Enums"]["reading_status"];
+type OwnershipStatus = Database["public"]["Enums"]["ownership_status"];
 import type {
   SearchCategory,
   SearchResultGroup,
@@ -36,6 +41,8 @@ function sanitizeQuery(raw: string): string {
 
 function deriveBookStatus(
   readings: { status: string; finish_date: string | null; start_date: string | null }[] | null | undefined,
+  wontRead: boolean | null | undefined,
+  ownership: OwnershipStatus | null | undefined,
 ): string {
   const sorted = (readings ?? []).slice().sort((a, b) => {
     const af = a.finish_date ?? "";
@@ -43,9 +50,12 @@ function deriveBookStatus(
     if (af !== bf) return bf.localeCompare(af);
     return (b.start_date ?? "").localeCompare(a.start_date ?? "");
   });
-  const last = sorted[0];
-  if (!last) return "Quero ler";
-  switch (last.status) {
+  const status = deriveReadingStatus(
+    (sorted[0]?.status as ReadingStatus | undefined) ?? null,
+    wontRead,
+    ownership,
+  );
+  switch (status) {
     case "reading":
       return "Lendo";
     case "paused":
@@ -54,7 +64,12 @@ function deriveBookStatus(
       return "Lido";
     case "abandoned":
       return "Abandonado";
+    case "tbr":
+      return "Quero ler";
+    case "wont_read":
+      return "Não vou ler";
     default:
+      // null = livro que saiu do acervo: sem rótulo de status.
       return "";
   }
 }
@@ -119,7 +134,7 @@ async function searchBooks(
   pat: string,
   limit: number,
 ): Promise<SearchResultGroup> {
-  const select = `id, slug, title, cover, updated_at,
+  const select = `id, slug, title, cover, updated_at, wont_read, ownership_status,
     book_author(author(name)),
     reading(status, finish_date, start_date)`;
 
@@ -156,8 +171,15 @@ async function searchBooks(
         .book_author?.map((ba) => ba.author?.name)
         .filter((n): n is string => !!n) ?? [];
     const author = authors[0] ?? "Sem autor";
+    const bookRow = b as unknown as {
+      reading?: { status: string; finish_date: string | null; start_date: string | null }[] | null;
+      wont_read?: boolean | null;
+      ownership_status?: OwnershipStatus | null;
+    };
     const status = deriveBookStatus(
-      (b as unknown as { reading?: { status: string; finish_date: string | null; start_date: string | null }[] | null }).reading,
+      bookRow.reading,
+      bookRow.wont_read,
+      bookRow.ownership_status,
     );
     return {
       id: b.id,

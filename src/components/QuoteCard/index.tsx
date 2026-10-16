@@ -40,9 +40,10 @@ function buildAttribution(q: QuoteListItem): { main: string; muted?: boolean } {
 
 export default function QuoteCard({ quote }: { quote: QuoteListItem }) {
   const router = useRouter();
-  const borderClass = quote.book
-    ? statusBorderClass[quote.book.status]
-    : "border-l-terracota";
+  const borderClass =
+    quote.book && quote.book.status
+      ? statusBorderClass[quote.book.status]
+      : "border-l-terracota";
   const attribution = buildAttribution(quote);
 
   // Estado otimista da estrela — mesmo pattern do BookCard/CollectionCard.

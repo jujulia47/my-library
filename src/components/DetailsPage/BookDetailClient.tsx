@@ -32,6 +32,7 @@ import { removeReadingProgressNote } from "@/actions/removeReadingProgressNote";
 import { deleteQuoteById } from "@/actions/createQuoteForBook";
 import { deleteBook } from "@/actions/deleteBook";
 import { startReading } from "@/actions/startReading";
+import { deriveReadingStatus } from "@/utils/readingStatus";
 import { formatDate } from "@/utils/formatDate";
 import { formatBRL } from "@/utils/formatCurrency";
 import { formatDuration, formatDurationLabel } from "@/utils/formatDuration";
@@ -422,12 +423,14 @@ export default function BookDetailClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Última leitura para o badge no hero. Sem leitura, deriva da flag
-  // `wont_read`: "não vou ler" se marcada, "quero ler" (tbr) se não.
+  // Última leitura para o badge no hero. Sem leitura, deriva de posse +
+  // `wont_read`: livro que saiu do acervo não tem TBR/"não vou ler".
   const latestReading = readings[0] ?? null;
-  const latestStatus: LegacyReadingStatus =
-    (latestReading?.status as LegacyReadingStatus | null) ??
-    (book.wont_read ? "wont_read" : "tbr");
+  const latestStatus = deriveReadingStatus(
+    latestReading?.status ?? null,
+    book.wont_read,
+    book.ownership_status,
+  );
 
   // Planejar só faz sentido pra livros que você ainda vai (ou está) lendo.
   // Lido / abandonado / não vou ler ficam sem o bloco de plano.
