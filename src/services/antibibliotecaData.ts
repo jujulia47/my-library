@@ -4,6 +4,7 @@ import { ownershipIsGone } from "@/utils/readingStatus";
 import type { Database } from "@/utils/typings/supabase";
 
 type OwnershipStatus = Database["public"]["Enums"]["ownership_status"];
+type ReadingStatus = Database["public"]["Enums"]["reading_status"];
 
 /** Paleta café — cor por gênero (mesma família da impressão digital). */
 const PALETTE = [
@@ -47,6 +48,9 @@ type BookRow = {
   wont_read: boolean;
   is_tbr: boolean;
   ownership_status: OwnershipStatus | null;
+  // Status das leituras do livro — pra distinguir "em aberto" (lendo/pausado)
+  // de "resolvido" (terminou/abandonou).
+  reading: { status: ReadingStatus }[] | null;
   book_author: { author: { name: string | null } | null }[] | null;
   book_category: { category: { id: string; name: string } | null }[] | null;
 };
@@ -56,35 +60,36 @@ export async function getAntibiblioteca(
 ): Promise<AntibibliotecaData> {
   const supabase = await createClient();
 
-  const [{ data: booksRaw }, { data: readingsRaw }, secondsPerPage] =
-    await Promise.all([
-      supabase
-        .from("book")
-        .select(
-          "id, title, slug, cover, pages, created_at, wont_read, is_tbr, ownership_status, book_author(author(name)), book_category(category(id, name))",
-        )
-        .eq("user_id", userId),
-      supabase.from("reading").select("book_id").eq("user_id", userId),
-      getUserSecondsPerPage(userId),
-    ]);
+  const [{ data: booksRaw }, secondsPerPage] = await Promise.all([
+    supabase
+      .from("book")
+      .select(
+        "id, title, slug, cover, pages, created_at, wont_read, is_tbr, ownership_status, reading(status), book_author(author(name)), book_category(category(id, name))",
+      )
+      .eq("user_id", userId),
+    getUserSecondsPerPage(userId),
+  ]);
 
   const books = (booksRaw as unknown as BookRow[] | null) ?? [];
-  const hasReading = new Set(
-    ((readingsRaw as { book_id: string }[] | null) ?? []).map((r) => r.book_id),
-  );
 
   const now = Date.now();
   const YEAR = 365.25 * 24 * 3600 * 1000;
 
-  // Antibiblioteca = "quero ler" (mesma regra da página Livros): marcado como
-  // quero ler (is_tbr) OU sem nenhuma leitura registrada e não descartado
-  // (wont_read). Qualquer formato — físico ou não. Livro que saiu do acervo
-  // (doado/vendido/trocado/perdido/devolvido) não entra: não tenho mais.
-  const unread = books.filter(
-    (b) =>
-      !ownershipIsGone(b.ownership_status) &&
-      (b.is_tbr || (!hasReading.has(b.id) && !b.wont_read)),
-  );
+  // Antibiblioteca = "livros que você tem e ainda não leu": tudo que NÃO foi
+  // terminado nem abandonado. Entra quem nunca começou, está lendo ou pausado;
+  // sai quem terminou/abandonou. Marcado "quero ler" (is_tbr) entra sempre;
+  // "não vou ler" (wont_read) e livro que saiu do acervo (doado/vendido/
+  // trocado/perdido/devolvido) não entram.
+  const unread = books.filter((b) => {
+    if (ownershipIsGone(b.ownership_status)) return false;
+    if (b.is_tbr) return true;
+    if (b.wont_read) return false;
+    const statuses = (b.reading ?? []).map((r) => r.status);
+    const hasOpen = statuses.some((s) => s === "reading" || s === "paused");
+    // Resolvido = tem leitura, mas nenhuma em aberto (só terminou/abandonou).
+    const resolved = statuses.length > 0 && !hasOpen;
+    return !resolved;
+  });
 
   // Cor por gênero: gêneros presentes em ordem alfabética → paleta cíclica.
   const genreSet = new Set<string>();
