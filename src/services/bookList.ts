@@ -290,6 +290,14 @@ export async function bookListQuery(
     books = books.filter((b) => {
       const last = b.latest_reading?.status as ReadingStatus | undefined;
       if (last && readingSet.has(last)) return true;
+      // "Lido" = terminou ao menos uma vez — mesmo relendo agora ou marcado
+      // como "quero reler" (is_tbr), um livro já lido continua sendo lido.
+      // Alinha com a contagem de "lidos", que conta qualquer leitura finished.
+      if (
+        readingSet.has("finished") &&
+        b.reading.some((r) => r.status === "finished")
+      )
+        return true;
       // Livro que saiu do acervo (doado/vendido/trocado/perdido/devolvido)
       // não tem TBR nem "não vou ler" — só conta pelo histórico de leitura.
       if (ownershipIsGone(b.ownership_status)) return false;
