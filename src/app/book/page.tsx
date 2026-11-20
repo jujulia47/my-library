@@ -10,6 +10,7 @@ import {
   yearsWithFinishedReadings,
   type BookListSort,
 } from "@/services/bookList";
+import { listPeople } from "@/services/peopleList";
 import { createClient } from "@/utils/supabase/server";
 import { PageHeader, Button, Pagination } from "@/components/ui";
 import {
@@ -48,6 +49,7 @@ export default async function BookPage({
   const formats = parseList(sp.format);
   const authorSlugs = parseList(sp.author);
   const types = parseList(sp.type);
+  const owners = parseList(sp.owner);
   const yearStr = pickFirst(sp.year);
   const monthStr = pickFirst(sp.month);
   const year = yearStr ? Number(yearStr) || undefined : undefined;
@@ -77,13 +79,14 @@ export default async function BookPage({
     name: string;
   }[];
 
-  const [books, counts, years] = await Promise.all([
+  const [books, counts, years, people] = await Promise.all([
     bookListQuery({
       statuses,
       ownerships,
       formats,
       author_slugs: authorSlugs,
       types,
+      owners,
       year,
       month,
       favorite,
@@ -92,6 +95,7 @@ export default async function BookPage({
     }),
     bookCounts(),
     yearsWithFinishedReadings(),
+    listPeople(),
   ]);
 
   const pagination = parsePagination(sp);
@@ -108,6 +112,7 @@ export default async function BookPage({
     formats.length > 0 ||
     authorSlugs.length > 0 ||
     types.length > 0 ||
+    owners.length > 0 ||
     year !== undefined ||
     month !== undefined ||
     favorite ||
@@ -180,7 +185,11 @@ export default async function BookPage({
         subtitle={subtitle}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            <BookFilters yearsAvailable={years} allAuthors={allAuthors} />
+            <BookFilters
+              yearsAvailable={years}
+              allAuthors={allAuthors}
+              people={people}
+            />
             <Button as="Link" href="/book/new" variant="primary" size="sm">
               + Catalogar livro
             </Button>

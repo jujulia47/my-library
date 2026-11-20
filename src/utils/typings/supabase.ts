@@ -151,6 +151,7 @@ export type Database = {
           lent_out_at: string | null
           lent_to: string | null
           original_title: string | null
+          owner_person_id: string | null
           ownership_status: Database["public"]["Enums"]["ownership_status"]
           pages: number | null
           priority: Database["public"]["Enums"]["priority_level"] | null
@@ -194,6 +195,7 @@ export type Database = {
           lent_out_at?: string | null
           lent_to?: string | null
           original_title?: string | null
+          owner_person_id?: string | null
           ownership_status?: Database["public"]["Enums"]["ownership_status"]
           pages?: number | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
@@ -239,6 +241,7 @@ export type Database = {
           lent_out_at?: string | null
           lent_to?: string | null
           original_title?: string | null
+          owner_person_id?: string | null
           ownership_status?: Database["public"]["Enums"]["ownership_status"]
           pages?: number | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
@@ -267,6 +270,13 @@ export type Database = {
           wont_read?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "book_owner_person_id_fkey"
+            columns: ["owner_person_id"]
+            isOneToOne: false
+            referencedRelation: "person"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "book_serie_id_fkey"
             columns: ["serie_id"]
@@ -588,6 +598,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      person: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

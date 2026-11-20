@@ -30,9 +30,12 @@ export type BookListItem = BookRow & {
   is_comic: boolean;
   /** Nº de leituras finalizadas (>= 2 = releitura). */
   finished_count: number;
+  /** Dono do livro na casa; null = "Meu". */
+  owner: { id: string; name: string } | null;
 };
 
 type RawBookFromQuery = BookRow & {
+  owner?: { id: string; name: string } | null;
   book_author?: { author: { name: string } | null }[] | null;
   book_category?: { category: { name: string } | null }[] | null;
   reading?: ReadingRow[] | null;
@@ -90,6 +93,7 @@ function flatten(raw: RawBookFromQuery): BookListItem {
       (raw.book_category ?? []).map((bc) => bc.category?.name),
     ),
     finished_count,
+    owner: raw.owner ?? null,
     latest_reading: sorted[0]
       ? {
           status: sorted[0].status,
@@ -110,6 +114,8 @@ export type BookListParams = {
   author_slugs?: string[];
   /** Tipo de obra: "book" (livros) e/ou "comic" (HQ/quadrinhos). */
   types?: string[];
+  /** Dono: "mine" (sem dono = Meu) e/ou ids de pessoas da casa. */
+  owners?: string[];
   year?: number;
   month?: number;
   /** Quando true, lista só livros marcados como favoritos. */
@@ -146,7 +152,7 @@ export async function bookListQuery(
   let query = supabase
     .from("book")
     .select(
-      `*, book_author(author(name)), book_category(category(name)), reading(*)`,
+      `*, book_author(author(name)), book_category(category(name)), owner:person(id, name), reading(*)`,
     );
 
   // Ownerships: grupos vindos da UI. Quando há `fora_estante` na lista, o
@@ -337,6 +343,16 @@ export async function bookListQuery(
   const wantsComic = types.includes("comic");
   if (wantsBook !== wantsComic) {
     books = books.filter((b) => (wantsComic ? b.is_comic : !b.is_comic));
+  }
+
+  // Dono: "mine" = livros sem dono (Meu); demais valores = id da pessoa.
+  const owners = params.owners ?? [];
+  if (owners.length > 0) {
+    const wantsMine = owners.includes("mine");
+    const personIds = new Set(owners.filter((o) => o !== "mine"));
+    books = books.filter((b) =>
+      b.owner_person_id == null ? wantsMine : personIds.has(b.owner_person_id),
+    );
   }
 
   // Só releituras: lido 2+ vezes (mesma regra de "Livros relidos").

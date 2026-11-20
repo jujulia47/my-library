@@ -168,6 +168,11 @@ export async function updateBookFull(
   const volume = volumeRaw ? Number(volumeRaw) || null : null;
   // Checkbox "não vou ler" — `on` quando marcado, ausente quando não.
   const wont_read = formData.get("wont_read") === "on";
+  // Dono do livro na casa: "" = Meu (null). Só entra no update se o campo
+  // veio no form, pra não zerar o dono a partir de outros fluxos.
+  const ownerRaw = formData.get("owner_person_id");
+  const owner_person_id =
+    ownerRaw === null ? undefined : (ownerRaw as string).trim() || null;
 
   // bundled_with vem como CSV de IDs do BookMultiSelect.
   const bundledRaw = (formData.get("bundled_with") as string) ?? "";
@@ -429,6 +434,8 @@ export async function updateBookFull(
   }
   if (coverPath !== undefined) updateData.cover = coverPath;
   if (nextShelfId !== undefined) updateData.shelf_id = nextShelfId;
+  if (owner_person_id !== undefined)
+    updateData.owner_person_id = owner_person_id;
   // "Não vou ler" e "quero ler" (TBR) são opostos — marcar wont_read tira o
   // TBR pra os dois não ficarem ativos ao mesmo tempo.
   if (wont_read) updateData.is_tbr = false;

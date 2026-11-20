@@ -1,6 +1,7 @@
 import AppShell from "@/components/AppShell";
 import BookFull from "@/components/Update/BookFull";
 import { createClient } from "@/utils/supabase/server";
+import { listPeople } from "@/services/peopleList";
 import { notFound } from "next/navigation";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 
@@ -25,6 +26,7 @@ export default async function EditBookPage({
   if (!book) notFound();
 
   const bundledIds = (book.bundled_with ?? []) as string[];
+  const people = await listPeople();
 
   const [
     { data: bookAuthors },
@@ -137,6 +139,7 @@ export default async function EditBookPage({
           monthly_price:
             s.monthly_price !== null ? Number(s.monthly_price) : null,
         }))}
+        people={people}
       />
     </AppShell>
   );

@@ -65,6 +65,10 @@ export async function createBookMinimal(
   const volume =
     volumeRaw && volumeRaw !== "" ? Number(volumeRaw) || null : null;
 
+  // Dono do livro na casa: "" ou ausente = Meu (null).
+  const owner_person_id =
+    ((formData.get("owner_person_id") as string) || "").trim() || null;
+
   const cover = formData.get("cover") as File | null;
   let coverPath: string | null = null;
   if (cover && cover.size > 0) {
@@ -104,6 +108,7 @@ export async function createBookMinimal(
       serie_id: serieId,
       volume,
       user_id: user.id,
+      owner_person_id,
       ownership_status: "owned",
       acquired_at: null,
     })

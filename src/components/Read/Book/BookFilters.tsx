@@ -14,6 +14,7 @@ import {
   HeartIcon,
   ArrowPathIcon,
   Squares2X2Icon,
+  UsersIcon,
 } from "@heroicons/react/24/outline";
 import type { ComponentType, SVGProps } from "react";
 import { Button, Select, Card, Badge } from "@/components/ui";
@@ -92,11 +93,14 @@ export type BookFiltersProps = {
   yearsAvailable: number[];
   /** Todos os autores do usuário pra alimentar o filtro "Por autor". */
   allAuthors: { id: string; slug: string; name: string }[];
+  /** Pessoas da casa — alimentam o filtro "Dono". */
+  people: { id: string; name: string }[];
 };
 
 export default function BookFilters({
   yearsAvailable,
   allAuthors,
+  people,
 }: BookFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -107,6 +111,12 @@ export default function BookFilters({
   const formats = parseList(sp.get("format"));
   const authorSlugs = parseList(sp.get("author"));
   const types = parseList(sp.get("type"));
+  const owners = parseList(sp.get("owner"));
+  // "Meus" = livros sem dono; o resto são as pessoas da casa.
+  const ownerOptions = [
+    { value: "mine", label: "Meus" },
+    ...people.map((p) => ({ value: p.id, label: p.name })),
+  ];
   const year = sp.get("year") ? Number(sp.get("year")) : null;
   const month = sp.get("month") ? Number(sp.get("month")) : null;
   const favorite = sp.get("favorite") === "1";
@@ -158,6 +168,7 @@ export default function BookFilters({
       ownership: null,
       format: null,
       type: null,
+      owner: null,
       year: null,
       month: null,
       author: null,
@@ -172,6 +183,7 @@ export default function BookFilters({
     formats.length +
     authorSlugs.length +
     types.length +
+    owners.length +
     (year ? 1 : 0) +
     (favorite ? 1 : 0) +
     (rereads ? 1 : 0);
@@ -222,6 +234,16 @@ export default function BookFilters({
         label: opt.label,
         variant: opt.variant,
         onRemove: () => removeListItem("type", types, t),
+      });
+  }
+  for (const o of owners) {
+    const opt = ownerOptions.find((x) => x.value === o);
+    if (opt)
+      activeChips.push({
+        key: `owner:${o}`,
+        label: o === "mine" ? "Meus" : `De ${opt.label}`,
+        variant: "olive",
+        onRemove: () => removeListItem("owner", owners, o),
       });
   }
   for (const f of formats) {
@@ -402,6 +424,20 @@ export default function BookFilters({
                 onToggle={(v) => toggleListItem("type", types, v)}
               />
             </FilterGroup>
+
+            {people.length > 0 && (
+              <FilterGroup
+                label="Dono"
+                icon={UsersIcon}
+                iconColor="text-olive"
+              >
+                <CheckboxList
+                  options={ownerOptions}
+                  selected={owners}
+                  onToggle={(v) => toggleListItem("owner", owners, v)}
+                />
+              </FilterGroup>
+            )}
 
             <FilterGroup
               label="Status de leitura"

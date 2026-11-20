@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import LinkBookToSerieModal from "@/components/forms/LinkBookToSerieModal";
 import { createBookMinimal } from "@/actions/createBookMinimal";
+import OwnerPicker from "@/components/forms/OwnerPicker";
 import { playStamp } from "@/utils/sounds";
 import { lookupBookByIsbn } from "@/actions/lookupBookByIsbn";
 import { completeBookWithAI } from "@/actions/completeBookWithAI";
@@ -71,6 +72,8 @@ type Props = {
   initialAuthors?: AuthorOption[];
   initialTitle?: string;
   fromWishlist?: { id: string; title: string } | null;
+  /** Pessoas da casa — opções do seletor de dono. */
+  people?: { id: string; name: string }[];
 };
 
 export default function BookMinimal({
@@ -81,6 +84,7 @@ export default function BookMinimal({
   initialAuthors,
   initialTitle,
   fromWishlist = null,
+  people = [],
 }: Props = {}) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -503,6 +507,8 @@ export default function BookMinimal({
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
               />
+
+              <OwnerPicker people={people} />
 
               {/* Campos extras do merge do ISBN — salvos sem poluir o form. */}
               {enrichment && (

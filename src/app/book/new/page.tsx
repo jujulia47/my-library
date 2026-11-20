@@ -2,6 +2,7 @@ import AppShell from "@/components/AppShell";
 import BookMinimal from "@/components/Create/BookMinimal";
 import { createClient } from "@/utils/supabase/server";
 import { createAuthor } from "@/actions/createAuthor";
+import { listPeople } from "@/services/peopleList";
 import type { SerieOption, AuthorOption } from "@/components/ui";
 
 export default async function NewBookPage({
@@ -89,6 +90,8 @@ export default async function NewBookPage({
   // ?title= (vindo de bibliography "não tenho") — pré-preenche título.
   const initialTitle = typeof titleRaw === "string" ? titleRaw : undefined;
 
+  const people = await listPeople();
+
   return (
     <AppShell>
       <BookMinimal
@@ -99,6 +102,7 @@ export default async function NewBookPage({
         fromWishlist={fromWishlist}
         initialAuthors={initialAuthors}
         initialTitle={initialTitle}
+        people={people}
       />
     </AppShell>
   );

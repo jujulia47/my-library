@@ -14,6 +14,7 @@ import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { imagesUrl } from "@/services/images";
 import {
   StatusBadge,
+  Badge,
   BookCoverFallback,
   ConfirmDialog,
 } from "@/components/ui";
@@ -147,9 +148,17 @@ export default function BookCard({ book, priority = false }: Props) {
                 {moreAuthors > 0 && ` +${moreAuthors}`}
               </p>
             )}
-            {status && (
-              <div className="mt-2">
-                <StatusBadge kind="reading" status={status} size="sm" />
+            {(status || book.owner) && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {status && (
+                  <StatusBadge kind="reading" status={status} size="sm" />
+                )}
+                {/* Livro de outra pessoa da casa — "Meu" não ganha selo. */}
+                {book.owner && (
+                  <Badge variant="olive" size="sm">
+                    De {book.owner.name}
+                  </Badge>
+                )}
               </div>
             )}
           </div>

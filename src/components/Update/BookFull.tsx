@@ -39,6 +39,7 @@ function safeFrom(value: string | null): string | null {
   return value;
 }
 import { imagesUrl } from "@/services/images";
+import OwnerPicker from "@/components/forms/OwnerPicker";
 import type { Database } from "@/utils/typings/supabase";
 
 type BookRow = Database["public"]["Tables"]["book"]["Row"];
@@ -65,6 +66,8 @@ export type BookFullProps = {
   allCategories: CategoryOption[];
   allSeries: Pick<SerieRow, "id" | "name">[];
   subscriptions: SubscriptionOption[];
+  /** Pessoas da casa — opções do seletor de dono. */
+  people: { id: string; name: string }[];
 };
 
 export default function BookFull({
@@ -76,6 +79,7 @@ export default function BookFull({
   allCategories,
   allSeries,
   subscriptions,
+  people,
 }: BookFullProps) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -416,6 +420,10 @@ export default function BookFull({
               </span>
             </span>
           </label>
+
+          <div className="mb-6 max-w-sm">
+            <OwnerPicker people={people} initialOwnerId={book.owner_person_id} />
+          </div>
 
           <OwnershipFields
             initial={{
