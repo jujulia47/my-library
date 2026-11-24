@@ -25,7 +25,7 @@ export default async function Page({
   const { data: book } = await supabase
     .from("book")
     .select(
-      "*, serie:serie!book_serie_id_fkey(name, slug), subscription(id, name)",
+      "*, serie:serie!book_serie_id_fkey(name, slug), subscription(id, name), owner:person!book_owner_person_id_fkey(id, name)",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -266,6 +266,8 @@ export default async function Page({
     : [];
 
   const serie = (book.serie as { name: string; slug: string } | null) ?? null;
+  // Dono na casa; null = "Meu".
+  const owner = (book.owner as { id: string; name: string } | null) ?? null;
   const subscription =
     (book.subscription as { id: string; name: string } | null) ?? null;
 
@@ -295,6 +297,7 @@ export default async function Page({
           serie_slug: serie?.slug ?? null,
           volume: book.volume,
           ownership_status: book.ownership_status,
+          owner_name: owner?.name ?? null,
           disposed_date: book.disposed_date,
           formats_owned: book.formats_owned,
           comments: book.comments,

@@ -85,6 +85,8 @@ export type BookDetail = {
   serie_slug: string | null;
   volume: number | null;
   ownership_status: OwnershipStatus;
+  /** Dono na casa; null = "Meu" (sem selo). */
+  owner_name: string | null;
   disposed_date: string | null;
   formats_owned: BookFormat[] | null;
   comments: string | null;
@@ -820,6 +822,9 @@ export default function BookDetailClient({
             <div className="flex flex-wrap gap-2 mb-4">
               <StatusBadge kind="reading" status={latestStatus} />
               <StatusBadge kind="ownership" status={book.ownership_status} />
+              {book.owner_name && (
+                <Badge variant="olive">De {book.owner_name}</Badge>
+              )}
             </div>
 
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
